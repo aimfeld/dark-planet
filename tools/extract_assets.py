@@ -1,7 +1,8 @@
 """Extract Dark Planet's original assets into modern formats for inspection.
 
 Writes into <output_dir>:
-  sfx/    one WAV per sound in the SMIX resource files (AREA.SND, AREA2.SND)
+  sfx/    one WAV per sound in the SMIX resource files (AREA.SND, AREA2.SND),
+          11025 Hz mono; the signed samples are converted to WAV's unsigned 8-bit
   pics/   full-screen pictures (.PIC + .PAL) as PNG, scaled 3x
   music/  the CD soundtrack split at the candidate track boundaries (see
           build_cd_image.py, which owns the boundary list)
@@ -22,7 +23,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 from build_cd_image import DATA_BYTES, TRACK_STARTS, sector_aligned_frame  # noqa: E402
 
-SFX_RATE = 22050  # assumed SMIX default; not yet verified against DP.EXE
+SFX_RATE = 11025  # SMIX in DP.EXE programs the DSP for 11025 Hz (@0x27A3D, see re-notes)
 PICTURES = [('OMBILD.PIC', 'EPIS1.PAL'), ('UMBILD.PIC', 'UMBILD.PAL'),
             ('HMBILD.PIC', 'HMBILD.PAL'), ('RASTER.PIC', 'EPIS1.PAL')]
 
@@ -59,9 +60,9 @@ def main(src, out):
         for i, name, pcm in read_smix(os.path.join(game, snd)):
             with wave.open(os.path.join(out, 'sfx', f'{snd[:-4]}_{i:02d}_{name}.wav'), 'wb') as w:
                 w.setnchannels(1)
-                w.setsampwidth(1)  # 8-bit unsigned
+                w.setsampwidth(1)  # WAV 8-bit is unsigned; SMIX samples are signed
                 w.setframerate(SFX_RATE)
-                w.writeframes(pcm)
+                w.writeframes(bytes(b ^ 0x80 for b in pcm))
 
     for pic, pal in PICTURES:
         pixels = read_palette(os.path.join(game, pal))[read_pic(os.path.join(game, pic))]
