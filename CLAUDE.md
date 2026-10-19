@@ -31,6 +31,6 @@ Update them at the end of each piece of work, not only at session end.
 - Library sources (AniVGA 1.2, SMIX) and the prototype `original_source/CD/Wasndas/SLY/SLYVERS.PAS` help name routines.
 
 ## Key facts (details in docs/re-notes.md)
-- Soundtrack: raw PCM in `Image/DPImage.iso` from byte 75274240 to EOF. The disc needs ≥ 9 tracks, but the current silence-based split gives only 7 audio tracks, so a boundary is missing.
+- Soundtrack: raw PCM in `Image/DPImage.iso` from byte 75274240 to EOF, split into 8 audio tracks (2–9) by `tools/build_cd_image.py` (verified, see re-notes).
 - `STARTAUD.EXE` plays CD track number = **number of command-line arguments**.
-- DP.EXE string `startaud 1 2 3 4 5 6 7 8 9` is at linear 0x1AC44. Its caller hasn't been found yet.
+- DP.EXE never touches CD audio. On game completion, `WriteEndVideoBat` @0x1AC74 writes `endvideo.bat` (`startaud …9` = ending track 9), and `DPMAX.BAT` runs it.

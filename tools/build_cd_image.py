@@ -16,9 +16,13 @@ DATA_BYTES = 36755 * 2048          # end of the ISO 9660 filesystem
 FRAME_BYTES = 4                     # 16-bit stereo
 CDDA_SECTOR_FRAMES = 588            # 2352 bytes per CD-DA sector
 
-# Track starts in seconds (relative to start of audio), placed inside the
-# silence gaps found by analysis. Not yet confirmed by ear.
-TRACK_STARTS = [0.0, 196.85, 479.07, 673.12, 907.3, 1090.88, 1283.9]
+# Track starts in seconds (relative to start of audio) -> CD tracks 2..9.
+# Songs were identified by sample-exact repeats (tracker loops) and by tempo;
+# see docs/re-notes.md "Soundtrack". Track 4 is the intro music (DPMAX.BAT runs
+# `startaud 1 2 3 4`), track 9 the ending jingle (DP.EXE writes
+# `startaud 1 2 3 4 5 6 7 8 9` into endvideo.bat). The 0.07 s gap at 1283.9 s
+# is a break inside track 7, not a boundary.
+TRACK_STARTS = [0.0, 196.85, 479.07, 673.12, 907.3, 1090.88, 1317.01, 1428.23]
 
 
 def sector_aligned_frame(seconds):

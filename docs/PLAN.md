@@ -26,9 +26,10 @@
 ### Phase 1: Original playable with music, plus asset pipeline 🔄
 - [x] `tools/build_cd_image.py` → `original_source/Image/fixed/` (DATA.ISO + WAVs + CUE).
 - [x] `original_source/dplanet-cd.conf` (mounts the CUE, runs `dpmax.bat`).
-- [ ] **User:** test `dplanet-cd.conf` in DOSBox-X; listen to the tracks and identify the missing boundary (≥ 8 audio tracks needed).
-- [ ] Find out how DP.EXE calls `startaud` (fixed track 9, or per level?).
-- [ ] Fix `TRACK_STARTS`, rebuild the image, verify music in-game.
+- [x] **User:** WAVs play fine (session 2). TRACK01 is the data track.
+- [x] How DP.EXE calls `startaud`: it writes `endvideo.bat` with a fixed `startaud 1 2 3 4 5 6 7 8 9` when the game is completed, so the ending is **always track 9** (session 2).
+- [x] Fix `TRACK_STARTS` (8 audio tracks, found by sample-exact repeat fingerprinting), rebuild the image, verify in DOSBox-X (`Playing track # 9`).
+- [ ] **User:** play through `dplanet-cd.conf` and confirm the intro music (track 4) fits the intro video. Optionally confirm by ear that track 8 starts at 21:57 (1317 s) and not at 22:08.
 - [ ] Investigate the garbled SFX in DOSBox-X (try sbtype sb16/sbpro2, cycles auto/max, goldplay; check the SMIX sample rate).
 - [ ] Decode AniVGA `.LIB`/`.COD` sprites and `.FNT` fonts → PNG atlases.
 - [ ] Decode `.LEV` level maps + `TI1/TI2.LIB` tiles → render full level images.
@@ -57,4 +58,4 @@
 2. Language: German only, or add English? Some humour may need care in translation.
 3. Is local two-player a must for the remake?
 4. Confirm the tech stack (TS + PixiJS) and the browser-first approach.
-5. Does the soundtrack split sound right? Which tracks are intro, in-game and boss music?
+5. ~~Soundtrack split~~: resolved in session 2. Track 4 = intro, 9 = ending; in-game music is the CD continuing 4→9 once. Tracks 2–3 aren't used by the game. For the remake: which songs go with which level/boss?
