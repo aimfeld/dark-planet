@@ -85,4 +85,4 @@
 8. Original bugs are fixed in the remake, including any found later (user, session 4). List: `docs/gameplay-spec.md` §12.
 9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
-11. Engine data generated from `original_source/` (sprites, tiles, levels, tables) stays local (`game/public/data/`, gitignored), like the original files (session 5; not yet confirmed by the user).
+11. Engine data generated from `original_source/` (sprites, tiles, levels, tables) stays local (`game/public/data/`, gitignored), like the original files (confirmed by the user, session 5).
