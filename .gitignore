@@ -1,0 +1,12 @@
+# Original game files are kept locally only (not published)
+original_source/
+
+# Local tool/IDE state
+.claude/settings.local.json
+.idea/
+.rea/
+__pycache__/
+
+# Build output
+node_modules/
+dist/
