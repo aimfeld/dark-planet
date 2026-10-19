@@ -64,8 +64,10 @@ npm run data   # once: exports sprites, tiles, levels and tables from original_s
 npm run dev    # http://localhost:5173
 npm test       # simulation tests (the data-dependent ones need npm run data)
 ```
-Keys: arrows move, Ctrl or X fires, Alt or C switches altitude, P pauses, Esc restarts. The current slice is level 1
-up to the boss (see `docs/PLAN.md` Phase 3).
+Keys: Enter starts, arrows move, Ctrl or X fires, Alt or C switches altitude, Space selects a bonus, Ctrl+Space
+(or X+Space) uses it, P pauses, Esc aborts to the menu, F toggles fullscreen (in Chrome with Keyboard Lock, so
+desktop shortcuts don't take Ctrl/Alt combinations). Level 1 plays to the end, boss included; the menus are
+placeholders (see `docs/PLAN.md` Phase 3). After pulling, run `npm run data` again when the exported files change.
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions

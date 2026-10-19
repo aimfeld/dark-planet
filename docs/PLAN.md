@@ -65,10 +65,12 @@
 - [x] First playable slice (session 5): level 1 scrolling with tiles; spawning from the level records; player movement, altitude and draw-order swap, shadows; Firestorm and the other standard weapons and simple pods; enemy subs used in level 1 (0–6, 9–0x11) with their guns and enemy shots (patterns 1–5, 8–16, 18, 20); hit test, shot/enemy-shot/ramming collisions, damage, death, respawn and invulnerability; explosions, sprite animations and cycles; HUD bars, money and lives. Level 1 runs to the boss trigger (scroll stops at y −5561). Side by side with the DOSBox-X capture `dp_002.avi` at scrollY −1349: tiles and spawned objects line up exactly.
 - [ ] **User:** play the slice (`cd game && npm run data && npm run dev`) next to DOSBox-X and report what feels different (speed, steering, enemy paths, shot speeds).
 - [ ] Decide: square pixels (now) or 4:3 aspect correction (320×200 shown as 320×240, as on a CRT).
-- [ ] Audio: SFX → OGG/WAV and Web Audio playback (the sim already emits sound events); CD music later.
-- [ ] Fullscreen key with the Keyboard Lock API (`navigator.keyboard.lock()`, Chromium only) so desktop shortcuts don't steal the original keys: on Linux Mint/Cinnamon (X11) Ctrl+Alt+arrows switch workspaces (user, session 5). Untested whether the lock beats Cinnamon's grabs; keep X/C as alternates.
-- [ ] Remaining level-1 content: bonus drops, pickups and inventory; the level 1 boss (escort pair, sub 0x14) and level end; game over and back to the menu.
-- [ ] Remaining weapons: Autogun targeting, Flamer, Windstorm, ball pods, bonus shots (shot patterns 2, 7, 9–13, 22, 23).
+- [x] Audio (session 6): the SFX are exported as signed 8-bit PCM (`sounds.bin` + `sounds.json`, index = PlaySound number; raw PCM instead of OGG, decision 7 left the format open) and played with Web Audio at 11025 Hz (`src/audio/sfx.ts`): looped sounds and stops, SMIX's 32 voices and the original's voice-count conditions (shots < 5, enemy fire < 4, explosions < 7, "only if not playing"). CD music later.
+- [x] Fullscreen key F with the Keyboard Lock API (session 6, `src/input/fullscreen.ts`; all keys locked, so Chrome asks to hold Esc to leave fullscreen). X/C stay as alternates.
+- [ ] **User:** in Chrome on Linux Mint/Cinnamon, press F and check whether Ctrl+Alt+arrows now reach the game instead of switching workspaces (theory: an active X11 keyboard grab beats the window manager's passive key grabs).
+- [x] Remaining level-1 content (session 6): bonus drops, wobbling objects, pickups (only while flying high), the 3-slot inventory (Space selects, Ctrl+Space uses), all 10 bonus effects with shot patterns 10–13 and 22, the atom bomb's grey flash, ×5 damage; StartBossFight (clearing, fades, parts in fixed slots, frozen ticks), the level 1 boss (sub 0x14, scripted 3-way fire, hit sounds), the core's death and the level-end autopilot; game over ("Loser!", 120-tick countdown); a placeholder flow main menu → level → fade → hangar → next level (`src/game.ts`).
+- [ ] **User:** play level 1 to the end (bonuses, boss, level end, game over) and report differences; listen to the sounds.
+- [ ] Remaining weapons: Autogun targeting, Flamer, ball pods, G-Destructor (shot patterns 2, 7, 9, 23; Windstorm's pattern 10 is ported).
 - [ ] Enemy subs 7, 8, 0x12–0x2A and enemy-shot patterns 6, 7, 17, 19, 21, 22 (episode 2 and bosses), then levels 2–6.
 - [ ] Menus, hangar, shop, saves, options, mission briefings, two players (mouse/joystick/gamepad input).
 
@@ -87,3 +89,9 @@
 9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
 11. Engine data generated from `original_source/` (sprites, tiles, levels, tables) stays local (`game/public/data/`, gitignored), like the original files (confirmed by the user, session 5).
+
+## Notes (session 6, not yet confirmed by the user)
+- Two new original bugs are fixed per decision 8: §12 #13 (two inventory pickups in one tick lose one) and #14 (bonus shots read and unload mount records out of range).
+- Spec corrections from the code: bonuses are picked up only while flying high; atom-bomb kills can drop bonuses; the bonus wobble is 7°·frame; shot patterns 11/22 use angle°, not 2·angle.
+- StartBossFight's blocking fades and pause are mapped to 11 + 48 + 11 frozen ticks (our 40 Hz mapping of 20 retraces at 70 Hz and Delay(1200)).
+- Levels 2–6 can be started from the placeholder hangar, but their enemy subs and bosses are not ported yet.

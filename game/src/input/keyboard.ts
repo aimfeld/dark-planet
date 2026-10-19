@@ -12,7 +12,7 @@ const BINDINGS: Record<keyof PlayerInput, string[]> = {
   altitude: ['AltLeft', 'AltRight', 'KeyC'],
   bonus: ['Space'],
 };
-const OTHER = ['KeyP', 'Escape'];
+const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF'];
 const CAPTURED = new Set([...Object.values(BINDINGS).flat(), ...OTHER]);
 
 export class Keyboard {
