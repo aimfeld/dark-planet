@@ -136,7 +136,8 @@ Evidence IDs: `ev_dc9ad07c…` (LoadLib instructions), `ev_35c25285…` (LoadTil
 
 ## Gameplay (session 4)
 Static analysis only (REA/Ghidra decompiles + objdump of segments 0x1000 and 0x1D9E, initialised DS); nothing
-here was observed in DOSBox-X yet. The rules are written up in `docs/gameplay-spec.md`; this section is the
+here was observed in DOSBox-X yet, except that the level 4 boss core can't be hit before its parts are
+destroyed (the user confirmed it in the game, session 4). The rules are written up in `docs/gameplay-spec.md`; this section is the
 address ledger. Everything is **Observed** unless marked. "1d9e:XXXX" = linear 0x1D9E0 + XXXX.
 Evidence IDs (session 4): game loop `ev_243f3ace…`; input `ev_8e5292c1…` (a1dd/a73e), `ev_f5831e6f…` (a34b/a58f);
 player `ev_cb8af923…` (0fa3/0d24/0742/0f30), `ev_ca54fd31…` (07a4/055f/0cd5/05ca/0637), `ev_d4a118fd…` (330c/8978),
