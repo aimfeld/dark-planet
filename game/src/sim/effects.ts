@@ -50,12 +50,21 @@ export function explosionTick(w: World): void {
     w.spr.n[e.slot] = e.frame;
     w.spr.x[e.slot] = e.x;
     w.spr.y[e.slot] = e.y;
-    if (e.frame === a.first) playSound(w, a.sound);
+    if (e.frame === a.first) playSound(w, a.sound, { belowVoices: 7 });
     if (e.frame > a.last) {
       e.active = false;
       w.spr.n[e.slot] = 0;
     }
     e.frame += 1;
+  }
+}
+
+/** RemoveExplosion 1d9e:0FA4 for all 40 (StartBossFight). */
+export function clearExplosions(w: World): void {
+  for (let i = 1; i <= 40; i++) {
+    const e = w.explosions[i];
+    if (e.active) w.spr.n[e.slot] = 0;
+    e.active = false;
   }
 }
 

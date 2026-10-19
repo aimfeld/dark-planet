@@ -82,6 +82,8 @@ export interface Tables {
   ball_pods: Pod[];
   mount_offsets: { mount: number; x_from: 'cx' | 'l' | 'r'; dx: number; dy: number }[];
   no_engine_max_speed: number;
+  boni: { kind: number; name: string; price: number; sprite: number; hud_offset: number; inventory: boolean; pickup_sound: number }[];
+  bonus_drop: { chance_below: number; thresholds: number[] };
   shot_types: { type: number; sprite: number; speed: number; damage: number }[];
   enemy_types: EnemyType[];
   enemy_shot_kinds: { kind: number; sprite: number; damage: number; sound: number; speed: number }[];
@@ -90,7 +92,14 @@ export interface Tables {
   quake_ticks: Record<string, number>;
   sprite_anims: { anim: number; first: number; last: number; ping_pong: boolean; rest: number; rate: number; reverse: boolean }[];
   sprite_cycles: Record<'global' | 'episode1' | 'episode2', { first: number; last: number; rate: number }[]>;
-  levels: { level: number; episode: number; boss_trigger_y: number; boss_core: number }[];
+  levels: {
+    level: number;
+    episode: number;
+    cd_track: number;
+    boss_trigger_y: number;
+    boss_core: number;
+    boss: { sounds: number[]; loop_sound: number | null; spawns: { x: number; dy: number; type: number; sub: number }[] };
+  }[];
   sounds: string[];
 }
 

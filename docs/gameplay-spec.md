@@ -127,10 +127,13 @@ Life never regenerates (only Aid, respawn, next level). At every level start lif
   shield refilled; lives −= 1; invulnerable for 100 ticks; fly-in: y −= 3 per tick until the jet's bottom is above
   screen y 200 (input, firing and collisions stay active).
 - **Lives** start at 5 (spare ships; 6 ships in all). Lives < 0 → the player is out for the rest of the game
-  (ship, pods, bonuses and shots removed). When every player is out, a 120-tick game-over countdown runs (the game
-  continues; sound 42 SLOSER ×2 at 110), then back to the main menu. Unsaved progress is lost.
+  (ship, pods, shadows, label, bonus inventory and shots removed, invulnerability ended, life and shield 0; the
+  lives number becomes the text "Loser!" under the money and the lives icon goes; O, 0x10D24). When every player
+  is out, a 120-tick game-over countdown runs (the game continues; sound 42 SLOSER ×2 at 110) and the level ends
+  when it reaches 1 (119 ticks), straight back to the main menu without a fade. Unsaved progress is lost.
 - Invulnerability (respawn 100 ticks, bonus 200 ticks): blue arc (sprite 544) and a countdown digit
-  (counter div 20) above the jet, refreshed every 20 ticks; loops sound 16, sound 44 on, 43 off.
+  (counter div 20) above the jet, refreshed every 20 ticks; sound 16 looping (started only if not already
+  playing), sound 44 ×3 on; at the end 43 ×3 and sound 16 stops (also while the other player is still covered).
 
 ### 3.5 HUD (O, 0x107F8, 1d9e:1176)
 - Bar frames: sprite 490 at x 0 (P1) and x 311 (P2), always both. Each bar is 33 lines, 3 px wide (x 3–5 for P1,
@@ -261,13 +264,13 @@ enemies on contact every tick.
 | 7 | aimed: straight line from the start through the target point fixed at spawn (major axis s px, minor interpolated) |
 | 9 | flame glued to the pod mount (px + mx − 39, py + my − 64); removed when c > 18 |
 | 10 | y −= s; x = startX + round(c·sin(oldY·3°)) (wave widening with age) |
-| 11 | spiral: angle += s; r = 3c + 20; position = jet centre − 6 + r·(cos 2·angle, −sin 2·angle); removed when c > 60 |
-| 12 | y −= 3; angle += 15; x = startX + round(40·sin angle°) − 5 |
-| 13 | atom bomb: y −= 1; at c > 80 removed, bomb timer := 5, big explosion |
+| 11 | Blast spiral: angle += s (start Random(360)); r = 3c + 20; x = jet x + cx − 6 + round(r·cos angle°), y = jet y + B div 2 − 6 − round(r·sin angle°); removed when c > 60 |
+| 12 | Twin-Laser: y −= 3; angle += 15 (start 0 / 180 for the two beams); x = round(startX + 40·sin angle°) − 5 |
+| 13 | atom bomb: y −= 1; at c > 80 removed, bomb timer := 5, explosion kind 14 at (x − 65, y − 65) |
 | 14 | y −= s + c div 3 |
 | 15 / 16 / 17 / 18 | (x+s, y−s) / (x−s, y−s) / (x+s, y+s) / (x−s, y+s) |
 | 19 / 20 / 21 | x += s / x −= s / y += s |
-| 22 | orbit: angle += s; r = c + 15; position = jet centre + (−53, −42) + r·(cos 2·angle, −sin 2·angle); animation at c = 20 |
+| 22 | Star: angle += s (start 72°·i for shot i = 0…4); r = c + 15; x = jet x + cx − 53 + round(r·cos angle°), y = jet y + B div 2 − 42 − round(r·sin angle°); at c = 20 anim 0xD (sprites 206–221, 2 ticks each, rest 0), so the shot burns out at c ≈ 52 |
 | 23 | x ±= 7 (random side), y −= 4 + Random(6) |
 Removal: off-screen x (< 0 or > 319; not types 5, 6, 10, 11, 22); above the screen top by the sprite height or
 below screen y 199 (not beams and not types 5, 10, 22); pattern lifetimes above.
@@ -282,37 +285,48 @@ below screen y 199 (not beams and not types 5, 10, 22); pattern lifetimes above.
 - Small hit explosion by shot type (e.g. kind 1 at the shot for bullets).
 
 ## 5. Bonuses
-### 5.1 Drops (O, 0x11A08, 1d9e:0F5D)
-- When an enemy that pays positive money is **shot** to death while the level scrolls: Random(100) + 1 < 15 →
-  drop (14 %). No drops from ramming, bombs or during boss fights.
+### 5.1 Drops (O, 0x11A08, 1d9e:0F5D / 0DC1 / 0BE2, session 6)
+- When an enemy that pays positive money is destroyed by a **shot or an atom bomb** while the level scrolls:
+  Random(100) + 1 < 15 → drop (14 %). No drops from ramming, Death, or during boss fights. (Session 6 correction:
+  EnemyDestroyed is called with drop = 1 by the bomb timer, so bomb kills can drop.)
 - Item by roll = Random(100) + 1: 1–54 → 1 (+1000), 55–59 → 2 Atombombe, 60–64 → 3 invulnerability,
   65–66 → 4 1 Leben, 67–71 → 5 Blast, 72–73 → 6 Death, 74–80 → 7 Twin-Laser, 81–87 → 8 Aid,
   88–97 → 9 Star, 98–99 → 10 pentagram, 100 → nothing.
-- Up to 10 bonus objects. A bonus sits where the enemy died (level coordinates, so it drifts down with the ground),
-  wobbling on a radius-5 circle (14° per tick, updated every 2nd tick); removed below screen y 210.
-- Picked up by touching it at any altitude.
+- Up to 10 bonus objects (sprite slots 22–31, in front of nearly everything). The circle centre is the dead
+  enemy's top-left corner (level coordinates, so it drifts down with the ground); position = centre +
+  (round(5·cos a), −round(5·sin a)) with **a = 7°·frame** (the global frame counter), recomputed every 2nd tick
+  (so it jumps 14° per update); removed when its sprite y > scrollY + 210.
+- **Picked up only while flying high** (PickupBonuses takes the altitude flag; session 6 correction), by touching
+  it. The pickup sound plays twice unless it is 4.
 
 ### 5.2 Items (O, 0x12CA2; names from INFO.PAS THEMA3, I for kinds 1, 3, 10)
 | Kind | Name | On pickup | Effect when used |
 |---|---|---|---|
-| 1 | (money) | immediate | +1000 money (+2000 label in two-player), label for 100 ticks |
-| 2 | Atombombe | inventory | bomb shot (§4.5 pattern 13); when it explodes, a 5-tick flash, then every active enemy −100 energy (no money) |
+| 1 | (money) | immediate | +1000 money (AddMoney, so +2000 in two-player); the object becomes the label sprite 567 "+1000" (572 "+2000"), still wobbling, shown for 100 frames |
+| 2 | Atombombe | inventory | sound 15; shot type 12 pattern 13 from (cx − 3, 0) relative to the jet; when it explodes the palette turns flat grey (every DAC value 50) for 4 frames, then every active enemy −100 energy (no money, drops possible) |
 | 3 | (shield) | immediate | invulnerable 200 ticks |
 | 4 | 1 Leben | immediate | lives + 1 |
-| 5 | Blast | inventory | clears own shots; ring of 20 spiral shots (type 10) |
-| 6 | Death | inventory | while scrolling: kills every active enemy (money to the user); boss fight: −150 energy each |
-| 7 | Twin-Laser | inventory | 2 sine shots (type 11) |
-| 8 | Aid | inventory | life and shield + round(40 % of max), capped |
-| 9 | Star | inventory | 5 orbiting shots (type 22) |
-| 10 | (pentagram) | immediate | own shots deal ×5 damage for 666 ticks (icon 464) |
+| 5 | Blast | inventory | sound 31; clears own shots; ring of 20 spiral shots (type 10, pattern 11) |
+| 6 | Death | inventory | explosion kind 12 (screen-wide) from the jet; while scrolling: kills every active enemy (money to the user, no drops); boss fight: −150 energy each; sound 14, 50-tick quake |
+| 7 | Twin-Laser | inventory | sound 11; frees shot slots 46/47; 2 sine shots (type 11, pattern 12) from (cx, 0) |
+| 8 | Aid | inventory | sound 20; life and shield + Round(max/100·40), capped |
+| 9 | Star | inventory | sound 20; frees shot slots 42–47; 5 orbiting shots (type 22, pattern 22) |
+| 10 | (pentagram) | immediate | own shots deal ×5 damage for 666 ticks; icon 464 at jet + (cx − 12, T + (B−T) div 2 − 12), following the jet |
 | 11 | Save | shop only | saves the game |
 Pickup sounds: 4 GETBONUS; Death 13 LACHEN; Aid/Star 20; pentagram 36.
 
 ### 5.3 Inventory (O, 0x13534, 0x1330C)
-- 3 slots, compacted to the left every tick. Select (on press): next filled slot, wrapping to 0.
-  Fire (on press): use the selected item, clear it, selection −1 (min 0).
-- With 3 items, a new inventory item is used at once on pickup.
-- The selection frame is shown only when slot 0 is filled.
+- Keys (keyboard): select = Space; use = Ctrl + Space. One latch for both: an action happens on the press, and
+  the latch clears when both are released. Use first: if the selected slot is filled, use it, clear it,
+  selection −1 (min 0). Then select (if the latch is still free): selection + 1 if that slot is filled and the
+  selection is < 2, else 0.
+- 3 slots, compacted one step to the left per tick ([0, 0, X] takes two ticks).
+- HUD: slot i at x = HUD x + 30·i + the item's offset (table `boni.hud_offset`), y = scrollY + 171; HUD x 25 (P1) /
+  210 (P2); sprite slots 9–11 (P1) / 12–14 (P2). Selection frame 492 at x = HUD x + 30·selection, y = scrollY + 168
+  (slots 15/16), shown only when slot 0 is filled.
+- A picked-up inventory item goes to the first empty slot (the original delivers it one tick later, see §12 #13);
+  with 3 items it is used at once.
+- P1's inventory routine runs even after P1 is out; P2's only while P2 is active.
 
 ## 6. Levels and spawning
 - A level is 6400 px tall (see `docs/file-formats.md` LEV). Scrolling runs at 1 px/tick from scrollY 0 until the
@@ -541,8 +555,13 @@ tables").
 ### 8.1 Common flow (O, 0x1627E)
 1. When scrollY reaches the boss record's y (level 1: −5561, 2: −5573, 3: −5898, 4: −5873, 5: −6017,
    6: −5711): scrolling stops for good; fade to black; CD track 8; players moved to screen y 160; all enemies,
-   enemy shots, player shots and explosions cleared; the level's boss parts spawn at fixed positions (the
-   record's x/sub are ignored), parts first, so they take enemy slots 1, 2, 3…; 1.2 s black pause; fade in.
+   enemy shots, player shots, explosions and bonus objects cleared; the level's boss parts spawn at fixed positions
+   (the record's x/sub are ignored), parts first, so they take enemy slots 1, 2, 3…; 1.2 s black pause; fade in.
+   StartBossFight blocks the game loop: the fades are AniVGA's 20 palette steps, one per vertical retrace (≈ 0.29 s
+   each), the pause is `Delay(1200)`. The remake freezes the game for 11 + 48 + 11 ticks (I: the 40 Hz mapping is
+   ours) with the last frame fading out, then draws the new scene while black.
+2. Hits on a boss core: BossScript(5): level 1 with probability 1/3 plays one of sounds 35–37 twice, level 2 one of
+   17–19 twice (session 6).
 2. No level spawns and no bonus drops during the fight.
 3. The fight ends when the **core** dies (types 0x23, 0x05, 0x20, 0x3C, 0x43, 0x48 for levels 1–6): its money is
    split between the players, explosion kind 15 (+ shake), its wreck stays and every other enemy is removed.
@@ -550,11 +569,13 @@ tables").
 Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = the part's counter.
 
 ### 8.2 Level 1: escort pair (core 0x23 + escort 0x24)
-- Spawn: sound 35 ×2; escort 0x24 at (117, s+59); core at (130, s+5). Both sub 0x14.
+- Spawn: sound 35 ×2; escort 0x24 with its bottom edge at (117, s+117), core at (130, s+100) (SpawnEnemy subtracts
+  the height). Both sub 0x14. The core is the head on the escort's body.
 - Shared path, counter c (+1 per tick), 426-tick loop: 1–50 y+1 · 51–100 x−1, y−1 · 101–140 x−1 · 141–165 y+4 ·
   166–215 y−2 · 216–305 x+2 · 306–330 y+4 · 331–380 y−2 · 381–425 x−2 · 426 c := 0. Sound 37 at c 140 and 305.
-- Core fires a 3-way spread (kind 10, damage 30: straight, down-right, down-left) at c 50, 140, 305. Escort fires
-  2 guns automatically (kind 11, salvos of 4).
+- Core fires a 3-way spread (FireAllGuns: kind 10, damage 30: straight, down-right, down-left) at c 50, 140, 305.
+  Escort fires 2 guns automatically (kind 11, salvos of 4). c starts at 1, so the path starts at c 2; the loop has no
+  net drift.
 
 ### 8.3 Level 2: core 0x05 with parts 0x0C and 0x0D
 - Spawn: sound 17 ×2; 0x0C at (141, s+80); 0x0D at (115, s+51); core at (125, s+55), sub 7. The parts follow the
@@ -610,8 +631,10 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
 ## 9. Game flow
 ### 9.1 Level end (O, 0x1A951, 0x1B6D1)
 - Autopilot: players can't steer and don't collide; each flies up 3 px/tick and toward x 158–162 (P1) / 128–132
-  (P2) at 3 px/tick. When every active player is 30 px above the screen top: level complete; level + 1 (after
-  level 6: game completed). Fade out, back to the hangar.
+  (P2) at 3 px/tick. When every active player is 30 px above the screen top: sound 5 stops, level complete;
+  level + 1 (after level 6: game completed). AfterLevel: fade out (20 steps), every sound stops except 50, back to
+  the hangar. Input isn't read during the autopilot, so a jet whose fire key was held at the core's death keeps
+  firing (O).
 - After level 6: the ending text (MISSIONS.PAS lines 98–119, scrolling over RASTER.PIC), then the program exits so
   the batch file plays the ending video (CD track 9).
 - Abort (Esc) and game over return to the main menu.
@@ -625,7 +648,8 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
 - New game: level 1, P1 only, 5 lives, 0 money, Firestorm, engine 1, shield 1, no pods, no bonuses. A joining P2
   starts with the same. Lives, money, jet and equipment carry over between levels; life and shield are refilled
   and both players start high at (60, 140) (P1) and (140, 140) (P2).
-- During a level the engine sound 5 loops (heli: sound 49).
+- During a level the engine sound 5 loops (heli: sound 49); "Shoot em all" starts 5 if an active player flies a
+  jet other than the Steptokopter and 49 if one flies the Steptokopter (both can run).
 
 ### 9.3 Sprite cycles (O, 1d9e:3105)
 Many sprites animate by themselves: every tick, any sprite whose number lies in a cycle range [first, last)
@@ -671,6 +695,13 @@ Sound numbers (0-based; 0–34 AREA.SND, 35–58 AREA2.SND):
 42 SLOSER 43 SSDEAKT 44 SSHIELD 45 SZIVIL 46 AC 47 DOORUP 48 DUKE 49 HELI 50 SWARRIOR 51 PANZER 52 PTURN
 53 GOLEM 54 GOLEM2 55 GOLEM3 56 GOLEM4 57 GOLEM5 58 GLASER.
 
+Sound playback (O, session 6): SMIX mixes up to 32 voices (StartSound 2769:09DC; DS:0x87EA counts them). The game
+gates some sounds on that count: player shot sounds play only while < 5 voices play, enemy fire < 4, explosion
+frames < 7; the civilians' sound 45 ×3 and the invulnerability loop 16 only if that sound isn't already playing.
+Looped sounds: 5 / 49 engines, 16 invulnerability, 51 level 4 tank, 31 Golem bounce. Stops: 16 at the end of
+invulnerability, 5 by the level-end autopilot, 51 at the level 4 core's death, 31 by the Golem, and AfterLevel
+stops all but 50.
+
 ## 12. Original bugs: the remake fixes them (decision, user, session 4)
 The user decided that the remake fixes original bugs, including any found later. Classic mode keeps the original
 feel otherwise. "Fix" states the intended behaviour; values marked *design* are our choice, not from the original.
@@ -688,6 +719,8 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 10 | Mouse control: the "move up" limit compares x instead of y | compare y (screen y ≥ 10) |
 | 11 | Joining P2 sets P1 active again even if P1 was out (I) | joining only adds P2 |
 | 12 | Collisions keep testing an enemy after it was destroyed in the same tick; for types with a wreck a second shot hits the wreck and pays the reward (and explodes) again (I, from 0x18978) | stop testing an enemy once it is destroyed |
+| 13 | A picked-up inventory bonus waits one tick in a single "pending" variable (DS:0x5537/0x5539), so a second inventory pickup in the same tick overwrites it and the first is lost (O, 0x1330C, 1d9e:27CA) | the item goes into its slot at once |
+| 14 | Bonus shots pass mount −1/−2 (or the Star's shot number 0–4) to SpawnShot, which reads that mount record for the fire sound and unloads it: out-of-range memory for −1/−2 (for P2 that is P1's ball-pod record), and the Star unloads mounts 0–4 and plays their sounds (O, 0x111A4) | bonus shots play only the bonus's own sound and leave the mounts alone |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.
@@ -705,3 +738,5 @@ Priority order; each needs one short capture (`original_source/capture/`) or a d
    tank engine sound loops; level 3 debris direction; Golem curse removes all pods except the standard weapon.
 6. ~~**Hit test precision**~~: answered from the code (session 5): row and column extent test, not pixel-exact (§0).
 7. Debugger (optional): `bpm ds:16c2` never triggers; bonus drop rate ≈ 14 % over a level.
+8. Bonuses (session 6): a bonus can only be picked up while flying high; the atom bomb's grey flash; the level 1
+   boss hit sounds.

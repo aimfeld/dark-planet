@@ -368,6 +368,80 @@ Static analysis for the table export (`tools/game_tables.py`) and the engine. Ev
   longints (base + 4·i); jet frame base, shield recharge and ball-pod reload are words (the session-4 ledger did not
   give sizes).
 
+## Bonuses, boss start/end, sounds (session 6)
+Static analysis (REA CLI decompiles/instructions of DP.EXE, objdump of segments 0x1000/0x1D9E). Everything
+**Observed** unless marked. Evidence IDs are in the scratch decompiles of this session (`ev_f0f453b3…` for
+DropBonus 1d9e:0F5D; the others were not kept). Rules in `docs/gameplay-spec.md` §5, §8.1–8.2, §9.1, §11, §12.
+- **Real constants** (TP Real48 in CX:SI:DI, CL = exponent, DI = high word): (0x82, DAA2:490F/2182) = π,
+  (0x83, …) = 2π, (0x89, 0x3400) = 360, (0x83, 0x6000) = 7, (0x83, 0x2000) = 5, (0x86, 0x2000) = 40,
+  (0x82, 0x4000) = 3, (0x87, 0x4800) = 100. `x·2·π/360` = x degrees, so "(angle shl 1)·π/360" is angle°, not 2·angle.
+- `DropBonus(x, y, roll, reward)` 1d9e:0F5D: for i = 1..12, `byte[0x1767+i] ≤ roll < byte[0x1768+i]` →
+  `PickBonus(i)` 1d9e:0DC1 (rejects i > 11). Bytes 0x1767… = 0, 0, 55, 60, 65, 67, 72, 74, 81, 88, 98, 100, 100, 137:
+  kind 11 is never dropped, roll 100 only matches i = 12 (rejected). KillEnemy @0x11A08 calls it with the enemy's
+  SpriteX/Y after `drop ∧ reward > 0 ∧ Random(100)+1 < 15`, after the sprite is cleared and before the wreck.
+- Bonus record (8 B at DS:0x8582 + 8i): +0 x0, +2 y0, +4 word (the reward at the drop; the label countdown), +6
+  active, +7 kind (0xFF = label). Sprite slot 21 + i. Position (0DC1 and wobble 1d9e:0BE2): x0 + Round(5·cos(7·frame°)),
+  y0 − Round(5·sin(7·frame°)), frame = DS:0x552E; 0BE2 runs when the counter DS:0x6C6B drops below 1 (reset to 2)
+  and removes objects below scrollY + 210 (`RemoveBonus` 1d9e:0D97 clears +6 and the sprite only).
+- Game loop @0x1BA9C: label countdown (+4 −= 1, at < 1 kind := 0 and remove); ×5 timers DS:0x5532/0x5534 clear the
+  icon slot (list +0x12) at 0. Then later: BombTimer(P1/P2) after SpawnFromLevel, MoveShots, BonusInventory (P1
+  unconditionally, P2 if active), MemoryGuard, PickupBonuses (if active).
+- `PickupBonuses(altitude, …)` @0x1330C: returns at once unless the altitude flag (6C40/6C4B) is 1 (high). HitDetect
+  jet ↔ slot 21+i; PlaySound(pickup[kind]) and again if ≠ 4; non-inventory kinds (DS:0x1789 = 0) → UseBonus, kind 1
+  becomes a label (+4 := 100, active 0, kind 0xFF, sprite 0x237/0x23C in two-player); inventory kinds → first empty
+  slot via `Install(player, cat 3, bonus, slot)` 1d9e:2A0C → 1d9e:27CA, which only sets pending slot/item
+  (DS:0x5537/0x5539, P2 0x5538/0x553A); with no empty slot → UseBonus.
+- `BonusInventory` @0x13534: delivers the pending item (sprite DS:0x1772[kind] into slot 9 + pending slot),
+  use/select/latch, one compaction pass, positions (30i + HUD x + DS:0x1795[kind], scrollY + 171), selection frame
+  0x1EC at 30·sel + HUD x (y set by ScrollStep: scrollY + 168, slots 15/16). HUD x 0x19 / 0xD2; slots 9 / 12.
+- Keyboard @0x1A1DD: 6C41 (select) := Space, 6C3D (fire) := Ctrl, 6C42 (use) := Ctrl ∧ Space.
+- `UseBonus(kind, jet)` @0x12CA2 — 1: AddMoney 1000; 2: KillShot 47, SpawnShot(12, 13, cx − 3, 0, jet, −1), sound 15;
+  3: invulnerable 200; 4: lives + 1; 5: sound 31, KillShot 0..47, 20 × SpawnShot(10, 11, 0, 0, −1); 6: Explode(jet x,
+  jet y, 12, low), scrolling: energy := 0 and EnemyDestroyed(jet, i, explode 1, drop 0) for every active enemy, else
+  energy −= 150 and the same when < 1; sound 14; Quake(50); 7: KillShot 46, 47, SpawnShot(11, 12, cx, 0, −1) and
+  (…, −2), sound 11; 8: life/shield += Round(max/100·40), capped (shield table DS:0x1802[type]), sound 20; 9: KillShot
+  42..47, 5 × SpawnShot(22, 22, cx, 0, mount = i), sound 20; 10: ×5 timer := 666, icon 0x1D0 at jet + (cx − 12,
+  13BF − 12) where 1d9e:13BF = T + (B − T) div 2.
+- `SpawnShot` @0x111A4 initial angles: type 10 Random(360); type 11 with mount −1 → 0; mount −2 → 180; type 22 → 72·mount.
+  For mount ≥ 0 or −2 it writes `mount[m].loaded := 0`, and the sound path reads mount[m] (spec §12 #14).
+- `BombTimer(&t)` @0x12C03: at t = 5 FillChar(DS:0x3E40, 768, 0x32) and SetPalette (flat grey, DAC 50); t −= 1; at 0
+  SetPalette(DS:0x4140) and every active enemy −100, EnemyDestroyed(nobody (0), i, explode 1, drop 1).
+- `EnemyDestroyed(player, i, explode, drop)` @0x12A1E (parameter order corrected: the earlier ledger had drop/explode
+  swapped in name only); drop := 0 when not scrolling; civilians: if not SoundPlaying(45) → PlaySound(45) ×3; type
+  0x21 refills and calls BossScript(1) instead of KillEnemy.
+- MoveShots @0x13C37: pattern 10 x = Round(sx + c·sin(3·oldY°)) (oldY = SpriteY before moving, local BP−4);
+  11/22 use cos/sin of angle° with r = 3c + 20 / c + 15 around (jet x + cx − 6, jet y + B div 2 − 6) /
+  (… − 53, … − 42); 12 x = Round(sx + 40·sin angle°) − 5; 13 at c > 80: bomb timer := 5, Explode(x − 65, y − 65, 14, 0).
+- KillEnemy boss end @0x11A08: boss core → DS:0x15E4 := 1; level 4: StopSound(0x33), PlaySound(0x32) ×2; every other
+  active enemy except type 0x48 is cleared (active, wreck flag, sprite, shadow, energy). Type 0x0D → BossScript(1);
+  type 0x48 → sprite 0x535, sub 0x2A, t := 0.
+- EnemyUpdate sub 0x14 @0x16C0E: c (+0x16) += 1; ranges 1–50 / 51–100 / 101–140 / 141–165 / 166–215 / 216–305 /
+  306–330 / 331–380 / 381–425 as in spec §8.2; c > 425 → 0; sound 0x25 ×2 at c 140 and 305; type 0x23 calls
+  FireAllGuns(0, i) @0x16B91 (every gun with a kind ≠ 0 → EnemyFire) at c 50, 140, 305.
+- BossScript(5) @0x122C3 (called from Collisions for boss types on every hit): level 1 `if Random(3) = 0` →
+  PlaySound(0x23 + Random(3)) ×2; level 2 the same with 0x11.
+- StartBossFight @0x1627E: `FadeOut(0, 20, 0)` 1d9e:0907 = FillChar(black) + AniVGA Fade 28be:027F(20 steps) +
+  SetPalette; CDPlay(8); players' SpriteY := scrollY + 160; ScrollStep; clears 29 enemies, 2 × 48 shots (0x0CD5),
+  49 enemy shots (0x5041), 40 explosions (1d9e:0FA4), 10 bonus objects; per-level sounds and SpawnEnemy;
+  `Delay(1200)`; sprite cache, Shadows, Animate; `FadeIn(20, 0)` 1d9e:098A.
+- AniVGA Fade 28be:027F(steps, target): 19 interpolation steps `cur + (target − cur)·i/19` (i = 0..18), then the
+  target; each SetPalette 28be:01F6 waits for the start of a vertical retrace (port DS:0xFCC0 bit 3) and rebuilds the
+  shadow table. So a fade takes 20 retraces ≈ 0.29 s at 70 Hz.
+- LevelEndAutopilot @0x1A951: x > 162 → −3, x < 158 → +3 (P2 132/128), y −= 3; when both (P_n y ≤ scrollY − 30 or
+  inactive): StopSound(5) if sound is available, DS:0x6C52 := 1, level + 1 or DS:0x6C53 := 1 after level 6.
+- AfterLevel @0x1B6D1: DS:0x3E05 := 1 on abort or game over (no fade, back to the main menu), else FadeOut(1, 20, 0);
+  clears 920 sprite slots and the 40 anims; LevelReset; stops every playing sound except 0x32.
+- LevelReset 1d9e:0000 also clears: pending items 5539/553A, selections 5528/552A, bomb timers 25A3/25A4,
+  invulnerability counters 25AA/25AC, ×5 timers 5532/5534, quake 25A5.
+- PlayerOut @0x10D24: clears pods, pod shadows, jet, jet shadow, label, inventory (+ HUD slots), shots, selection
+  frame; ends invulnerability; life/shield := 0; lives text := "Loser!" (literal at 0x10D1D, CS-relative) and its x :=
+  the money's x; lives icon slot := 0; both out → DS:0x6C66 := 120. The game loop ends when the countdown is 1.
+- Sounds: PlaySound(n, loop) @1d9e:4173 pushes n first, then the loop flag. Looped call sites: 16 @0x1059D (only if
+  not SoundPlaying(16)), 0x33 @0x164F1, 0x1F @0x182F3/0x182FF, 5 @0x1D2F5, 0x31 @0x1D31D (hangar "Shoot em all":
+  5 if an active player's jet ≠ 4, 0x31 if = 4). StopSound 2769:0A75 sites: 16 @0x1062E, 0x33 @0x11F70, 0x1F
+  @0x1846A, 5 @0x1AA18, all @0x1B773. SMIX StartSound 2769:09DC takes the first of 32 free voices and counts them
+  in DS:0x87EA.
+
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.

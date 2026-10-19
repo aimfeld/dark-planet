@@ -1,11 +1,13 @@
 // Enemies: spawning, movement subs, guns, enemy shots, kills (docs/gameplay-spec.md §6-7).
 
 import type { EnemyType } from '../data';
-import { explode, startAnim } from './effects';
+import { clearBonuses, dropBonus } from './bonus';
+import { clearExplosions, explode, startAnim } from './effects';
 import { addMoney } from './player';
 import { centerX, spriteH, spriteW } from './sprites';
-import { playSound, type Enemy, type Player, type World } from './state';
+import { FADE_STEPS, playSound, stopSound, type Enemy, type Player, type World } from './state';
 import { cosDeg, mod, round, sinDeg } from './tp';
+import { killShot } from './weapons';
 
 export const BOSS_TYPES = new Set([0x05, 0x20, 0x23, 0x3c, 0x43, 0x48]);
 
@@ -94,12 +96,52 @@ export function spawnFromLevel(w: World): void {
   }
 }
 
+/** StartBossFight's blocking parts in ticks: fade out (20 retraces), Delay(1200), fade in. */
+export const BOSS_FADE_TICKS = 11;
+export const BOSS_BLACK_TICKS = 48;
+export const BOSS_FREEZE_TICKS = 2 * BOSS_FADE_TICKS + BOSS_BLACK_TICKS;
+
 /**
- * StartBossFight @0x1627E. TODO(slice): only stops the scrolling for now; the boss parts, their scripts
- * and the fade/music come with the boss fights (spec §8).
+ * StartBossFight @0x1627E: scrolling stops for good; boss music; players to screen y 160; enemies, shots,
+ * enemy shots, explosions and bonus objects cleared; the level's boss parts spawn at fixed positions (parts
+ * first, so they take enemy slots 1, 2, ...). The original then blocks (fade out, 1.2 s, fade in); the
+ * remake freezes the game for those ticks (tick.ts).
  */
 function startBossFight(w: World): void {
   w.scrolling = false;
+  w.track = 8;
+  for (const p of w.players) w.spr.y[p.slots.jet] = w.scrollY + 160;
+  for (let i = 1; i <= 29; i++) {
+    const e = w.enemies[i];
+    Object.assign(e, { active: false, dying: false, energy: 0 });
+    w.spr.n[e.slot] = 0;
+    w.spr.n[e.shadowSlot] = 0;
+  }
+  for (const p of w.players) for (let i = 0; i <= 47; i++) killShot(w, p, i);
+  for (let k = 1; k <= 49; k++) killEnemyShot(w, k);
+  clearExplosions(w);
+  clearBonuses(w);
+  const boss = w.data.tables.levels[w.level - 1].boss;
+  for (const n of boss.sounds) playSound(w, n);
+  if (boss.loop_sound !== null) playSound(w, boss.loop_sound, { loop: true });
+  for (const sp of boss.spawns) spawnEnemy(w, sp.x, w.scrollY + sp.dy, sp.type, sp.sub);
+  w.freeze = BOSS_FREEZE_TICKS;
+  w.fade = FADE_STEPS;
+}
+
+/** BossScript(5) @0x122C3: a boss core was hit. TODO(slice): levels 3-6 react differently or not at all. */
+export function bossHit(w: World): void {
+  if ((w.level === 1 || w.level === 2) && w.rng.next(3) === 0) {
+    const n = (w.level === 1 ? 0x23 : 0x11) + w.rng.next(3);
+    playSound(w, n);
+    playSound(w, n);
+  }
+}
+
+/** FireAllGuns(target, enemy) @0x16B91: scripted salvo from every gun of the enemy's class. */
+function fireAllGuns(w: World, i: number, target: number): void {
+  if (!w.enemies[i].active) return;
+  for (const gun of typeOf(w, w.enemies[i]).guns) if (gun.kind !== 0) enemyFire(w, i, gun.gun, target);
 }
 
 /**
@@ -118,7 +160,7 @@ function arc(w: World, e: Enemy, cx: number, cy: number, r: number, step: number
 }
 
 /** Movement by sub (EnemyUpdate @0x16C0E, spec §7.3). Screen-space: +1 dy = fixed to the ground. */
-function moveSub(w: World, e: Enemy): void {
+function moveSub(w: World, e: Enemy, i: number): void {
   const s = e.slot;
   const t = e.t;
   switch (e.sub) {
@@ -196,8 +238,29 @@ function moveSub(w: World, e: Enemy): void {
       w.spr.y[s] += 1;
       w.spr.x[s] += 1;
       break;
+    case 0x14: { // level 1 boss pair (core 0x23 + escort 0x24): a 426-tick loop
+      const c = ++e.c;
+      if (c >= 1 && c <= 50) w.spr.y[s] += 1;
+      else if (c <= 100) {
+        w.spr.x[s] -= 1;
+        w.spr.y[s] -= 1;
+      } else if (c <= 140) w.spr.x[s] -= 1;
+      else if (c <= 165) w.spr.y[s] += 4;
+      else if (c <= 215) w.spr.y[s] -= 2;
+      else if (c <= 305) w.spr.x[s] += 2;
+      else if (c <= 330) w.spr.y[s] += 4;
+      else if (c <= 380) w.spr.y[s] -= 2;
+      else if (c < 426) w.spr.x[s] -= 2;
+      if (e.c > 425) e.c = 0;
+      if (e.c === 140 || e.c === 305) {
+        playSound(w, 0x25);
+        playSound(w, 0x25);
+      }
+      if (e.type === 0x23 && (e.c === 50 || e.c === 140 || e.c === 305)) fireAllGuns(w, i, 0);
+      break;
+    }
     default:
-      // TODO(slice): subs 7, 8, 0x12-0x2A (bosses and the episode-2 enemies, spec §7.3 and §8).
+      // TODO(slice): subs 7, 8, 0x12, 0x13, 0x15-0x2A (bosses and the episode-2 enemies, spec §7.3 and §8).
       // Until then they hold their screen position.
       break;
   }
@@ -210,7 +273,7 @@ export function enemyUpdate(w: World): void {
     if (e.active || e.dying) {
       if (w.scrolling) w.spr.y[e.slot] -= 1;
       e.t += 1;
-      moveSub(w, e);
+      moveSub(w, e, i);
       const y = w.spr.y[e.slot], x = w.spr.x[e.slot];
       const exempt = BOSS_TYPES.has(e.type) || e.type === 0x4a;
       if (!exempt && (w.scrollY + 200 <= y || x < w.scrollX - 50 || w.scrollX + 370 < x)) killEnemy(w, i, false, false);
@@ -273,7 +336,7 @@ export function enemyFire(w: World, i: number, gunNo: number, target: number): v
     const s = w.enemyShots[k];
     if (s.active) continue;
     // The original always takes the sound of gun 1's shot kind (and only if < 4 voices play)
-    playSound(w, kinds[t.guns[0].kind - 1].sound);
+    playSound(w, kinds[t.guns[0].kind - 1].sound, { belowVoices: 4 });
     s.active = true;
     s.slot = k + 71;
     s.pattern = gun.flugart;
@@ -376,7 +439,7 @@ function nearestPlayer(w: World, slot: number): Player | undefined {
 }
 
 /**
- * KillEnemy(drop, explode, i) @0x11A08: explosion by type, wreck, bonus drop (TODO), boss end.
+ * KillEnemy(drop, explode, i) @0x11A08: explosion by type, boss end, bonus drop (14 %), wreck.
  * drop/explode false = silent removal (despawn).
  */
 export function killEnemy(w: World, i: number, drop: boolean, doExplode: boolean): void {
@@ -394,14 +457,31 @@ export function killEnemy(w: World, i: number, drop: boolean, doExplode: boolean
     if (t.kill_sound !== null) playSound(w, t.kill_sound);
     if (e.type === 0x2c) for (let n = 0; n < 3; n++) playSound(w, 0x30);
   }
-  // TODO(slice): a boss core's death ends the fight (autopilot, other enemies removed, spec §8.1)
+  if (BOSS_TYPES.has(e.type)) {
+    // the core's death ends the fight: level-end autopilot, every other active enemy vanishes
+    w.autopilot = true;
+    if (w.level === 4) {
+      stopSound(w, 0x33);
+      playSound(w, 0x32);
+      playSound(w, 0x32);
+    }
+    for (let j = 1; j <= 29; j++) {
+      const o = w.enemies[j];
+      if (o.type === 0x48 || !o.active) continue;
+      Object.assign(o, { active: false, dying: false, energy: 0 });
+      w.spr.n[o.slot] = 0;
+      w.spr.n[o.shadowSlot] = 0;
+    }
+  }
+  // TODO(slice): type 0x0D calls BossScript(1) (level 2), the Golem 0x48 drifts off as sprite 1333 (sub 0x2A)
   w.spr.n[e.slot] = 0;
   w.spr.n[e.shadowSlot] = 0;
   e.active = false;
   e.dying = false;
   e.energy = 0;
-  // TODO(slice): bonus drops (14 %, spec §5.1)
-  void drop;
+  if (drop && t.reward > 0 && w.rng.next(100) + 1 < w.data.tables.bonus_drop.chance_below) {
+    dropBonus(w, w.spr.x[e.slot], w.spr.y[e.slot], w.rng.next(100) + 1, t.reward);
+  }
   if (doExplode && t.wreck !== 0) {
     const ws = i + 873;
     w.spr.x[ws] = w.spr.x[e.slot];
@@ -419,8 +499,11 @@ export function killEnemy(w: World, i: number, drop: boolean, doExplode: boolean
   }
 }
 
-/** EnemyDestroyed(player, i, drop, explode) @0x12A1E: money, civilians' sound, then KillEnemy. */
-export function enemyDestroyed(w: World, p: Player, i: number, drop: boolean, doExplode: boolean): void {
+/**
+ * EnemyDestroyed(player, i, explode, drop) @0x12A1E: money, civilians' sound, then KillEnemy.
+ * p = null: nobody gets the money (atom bomb).
+ */
+export function enemyDestroyed(w: World, p: Player | null, i: number, drop: boolean, doExplode: boolean): void {
   const e = w.enemies[i];
   const t = typeOf(w, e);
   if (!w.scrolling) drop = false;
@@ -431,8 +514,9 @@ export function enemyDestroyed(w: World, p: Player, i: number, drop: boolean, do
     addMoney(w, p1.active ? p1 : p2, half);
     addMoney(w, p2.active ? p2 : p1, half);
   } else {
-    addMoney(w, p, t.reward);
-    if (t.reward < 0) for (let n = 0; n < 3; n++) playSound(w, 0x2d);
+    if (p) addMoney(w, p, t.reward);
+    if (t.reward < 0) playSound(w, 0x2d, { ifNotPlaying: true, copies: 3 });
   }
+  // TODO(slice): a level 3 body segment (0x21) refills and calls BossScript(1) instead of dying
   killEnemy(w, i, drop, doExplode);
 }

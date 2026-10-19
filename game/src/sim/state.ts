@@ -30,7 +30,7 @@ export interface PlayerInput {
   down: boolean;
   fire: boolean; // Ctrl
   altitude: boolean; // Alt
-  bonus: boolean; // Space
+  bonus: boolean; // Space: select a bonus; with fire (Ctrl) held: use it
 }
 
 export const NO_INPUT: PlayerInput = { left: false, right: false, up: false, down: false, fire: false, altitude: false, bonus: false };
@@ -69,6 +69,8 @@ export interface PlayerSlots {
   podShadows: number; // + mount index
   shot: number; // + shot index
   x5: number;
+  inv: number; // HUD bonus inventory, + slot index (P1 9-11, P2 12-14; not in the list, fixed)
+  selFrame: number; // HUD selection frame (P1 15, P2 16)
 }
 
 export interface Player {
@@ -97,7 +99,21 @@ export interface Player {
   mounts: Mount[];
   shots: Shot[];
   slots: PlayerSlots;
-  bonus: number[];
+  bonus: number[]; // inventory: 3 bonus kinds, 0 = empty (DS:0x550A)
+  selected: number; // inventory selection 0..2 (DS:0x5528)
+  selectKey: boolean; // bonus select / use flags as the input handler left them (DS:0x6C41 / 0x6C42)
+  useKey: boolean;
+  bombTimer: number; // atom bomb flash countdown (DS:0x25A3)
+  x5Timer: number; // pentagram: x5 damage ticks left (DS:0x5532)
+}
+
+/** Bonus object or money label (8 B at DS:0x8582 + 8 i, i = 1..10, sprite slot 21 + i). */
+export interface BonusObject {
+  active: boolean; // +6: can be picked up
+  kind: number; // +7: 1..10, 0xFF = "+1000" label counting down
+  x0: number; // +0: centre of the wobble circle (level coordinates)
+  y0: number; // +2
+  timer: number; // +4: the enemy's reward at the drop; the label's countdown
 }
 
 export interface Enemy {
@@ -147,9 +163,17 @@ export interface Anim {
   anim: number;
 }
 
+/**
+ * A PlaySound / StopSound call. The voice conditions of the original are passed on, so the audio layer
+ * can apply them without the simulation depending on audio state (SMIX voice count DS:0x87EA).
+ */
 export interface SoundEvent {
   n: number; // 0-based SMIX sound number
-  loop: boolean;
+  loop?: boolean;
+  stop?: boolean; // StopSound(n) (2769:0A75)
+  belowVoices?: number; // play only while fewer voices than this play
+  ifNotPlaying?: boolean; // play only if sound n isn't playing (SoundPlaying 2769:0AB9)
+  copies?: number; // PlaySound called this many times in a row after one check (louder)
 }
 
 export interface World {
@@ -175,12 +199,27 @@ export interface World {
   enemyShots: EnemyShot[]; // 1..49
   explosions: Explosion[]; // 1..40
   anims: Anim[]; // 1..40
+  bonuses: BonusObject[]; // 1..10
+  wobbleCounter: number; // bonus wobble every 2nd tick (DS:0x6C6B)
   quake: number; // screen-shake ticks (DS:0x25A5)
   gameOver: number; // countdown (DS:0x6C66)
+  levelDone: boolean; // DS:0x6C52
+  gameCompleted: boolean; // DS:0x6C53
+  /** Palette effects for the renderer: atom-bomb flash (FillChar 50) and the fade level (0 black .. FADE_STEPS). */
+  flash: boolean;
+  fade: number;
+  /** StartBossFight runs as a blocking routine in the original; the remake freezes the game for these ticks. */
+  freeze: number;
+  track: number; // CD track the game asked for (DS:0x3E03): level music, 8 = boss
   sounds: SoundEvent[]; // played this tick
 }
 
-const P1_SLOTS: PlayerSlots = { pods: 130, label: 129, jet: 128, arc: 125, digit: 126, shadow: 138, podShadows: 139, shot: 149, x5: 127 };
+/** AniVGA FadeIn/FadeOut: 20 palette steps, one per vertical retrace (70 Hz) -> about 11 ticks at 40 Hz. */
+export const FADE_STEPS = 19;
+
+export const P1_SLOTS: PlayerSlots = {
+  pods: 130, label: 129, jet: 128, arc: 125, digit: 126, shadow: 138, podShadows: 139, shot: 149, x5: 127, inv: 9, selFrame: 15,
+};
 export const LOW_SLOT_SHIFT = 398; // AltitudeSwap: P1 124 <-> 522, P2 249 <-> 647
 export const P2_SLOT_SHIFT = 125;
 
@@ -194,23 +233,28 @@ function newShot(): Shot {
 
 /** InitPlayer @0x1B2E3: a new pilot (5 spare ships, Firestorm, engine 1, shield 1, standard weapon). */
 export function newPlayer(index: number): Player {
-  const base = index === 0 ? P1_SLOTS : shiftSlots(P1_SLOTS, P2_SLOT_SHIFT);
+  const base = index === 0 ? P1_SLOTS : p2Slots();
   const p: Player = {
     index, active: false, life: 0, shield: 0, lives: 5, money: 0, jet: 1, engine: 1, shieldType: 1,
     vx: 0, vy: 0, high: true, altLatch: false, bonusLatch: false, pendingSwap: 0, flyIn: false, fire: false,
     invCounter: 0, invulnerable: false, shadowD: 12, drawnLife: 0, drawnShield: 0,
     mounts: Array.from({ length: 8 }, newMount), shots: Array.from({ length: 48 }, newShot),
-    slots: { ...base }, bonus: [0, 0, 0],
+    slots: { ...base }, bonus: [0, 0, 0], selected: 0, selectKey: false, useKey: false, bombTimer: 0, x5Timer: 0,
   };
   p.mounts[2] = { reload: 0, loaded: true, occupied: true, item: 1, cat: 8 };
   return p;
 }
 
+/** AltitudeSwap shifts the player's slot list (the HUD slots stay). */
 export function shiftSlots(s: PlayerSlots, d: number): PlayerSlots {
   return {
     pods: s.pods + d, label: s.label + d, jet: s.jet + d, arc: s.arc + d, digit: s.digit + d,
-    shadow: s.shadow + d, podShadows: s.podShadows + d, shot: s.shot + d, x5: s.x5 + d,
+    shadow: s.shadow + d, podShadows: s.podShadows + d, shot: s.shot + d, x5: s.x5 + d, inv: s.inv, selFrame: s.selFrame,
   };
+}
+
+export function p2Slots(): PlayerSlots {
+  return { ...shiftSlots(P1_SLOTS, P2_SLOT_SHIFT), inv: 12, selFrame: 16 };
 }
 
 function newEnemy(): Enemy {
@@ -229,10 +273,16 @@ export function createWorld(data: GameData, seed = 0): World {
     enemyShots: Array.from({ length: 50 }, () => ({ slot: 0, pattern: 0, active: false, kind: 0, sx: 0, sy: 0, tx: 0, ty: 0 })),
     explosions: Array.from({ length: 41 }, () => ({ slot: 0, x: 0, y: 0, frame: 0, delay: 0, active: false, anim: 0 })),
     anims: Array.from({ length: 41 }, () => ({ state: 0, slot: 0, anim: 0 })),
-    quake: 0, gameOver: 0, sounds: [],
+    bonuses: Array.from({ length: 11 }, () => ({ active: false, kind: 0, x0: 0, y0: 0, timer: 0 })),
+    wobbleCounter: 0, quake: 0, gameOver: 0, levelDone: false, gameCompleted: false, flash: false, fade: FADE_STEPS,
+    freeze: 0, track: 0, sounds: [],
   };
 }
 
-export function playSound(w: World, n: number, loop = false): void {
-  w.sounds.push({ n, loop });
+export function playSound(w: World, n: number, opts: Omit<SoundEvent, 'n'> = {}): void {
+  w.sounds.push({ n, ...opts });
+}
+
+export function stopSound(w: World, n: number): void {
+  w.sounds.push({ n, stop: true });
 }

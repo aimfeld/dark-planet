@@ -1,12 +1,14 @@
 // Player input, movement, damage, death and respawn (docs/gameplay-spec.md §2-3).
 
 import { explode } from './effects';
-import { LOW_SLOT_SHIFT, playSound, shiftSlots, type Player, type PlayerInput, type World } from './state';
+import { LOW_SLOT_SHIFT, playSound, shiftSlots, stopSound, type Player, type PlayerInput, type World } from './state';
 import { mod, round } from './tp';
 
 export const LIVES_TEXT = [813, 814]; // text sprites (07a4)
 export const DIGIT_TEXT = [815, 816];
 export const MONEY_TEXT = [837, 838];
+// HUD sprite slots (LevelStartSprites @0x107F8); slots 0-8 are drawn without the playfield clip
+export const HUD = { icon: [1, 2], lives: [3, 4], money: [5, 6], frameRight: 7, frameLeft: 8 };
 
 function jetOf(w: World, p: Player) {
   return w.data.tables.jets[p.jet - 1];
@@ -15,6 +17,8 @@ function jetOf(w: World, p: Player) {
 /** Keyboard handler @0x1A1DD: altitude toggle on press, velocity decay every 4th tick. */
 export function keyboardInput(w: World, p: Player, k: PlayerInput): void {
   p.fire = k.fire;
+  p.selectKey = k.bonus; // Space
+  p.useKey = k.bonus && k.fire; // Ctrl + Space
   if (!k.altitude) p.altLatch = false;
   else {
     if (!p.altLatch && p.pendingSwap === 0) {
@@ -95,7 +99,7 @@ export function addMoney(w: World, p: Player, amount: number): void {
 export function startInvulnerable(w: World, p: Player, ticks: number): void {
   p.invCounter = ticks;
   p.invulnerable = true;
-  playSound(w, 16, true);
+  playSound(w, 16, { loop: true, ifNotPlaying: true });
   for (let i = 0; i < 3; i++) playSound(w, 44);
 }
 
@@ -116,13 +120,17 @@ export function invulnerableTick(w: World, p: Player): void {
     w.spr.x[p.slots.digit] = x + cx - 5;
     w.spr.y[p.slots.digit] = y + jet.extents.t - 25;
   }
-  if (p.invCounter < 1 && p.invulnerable) {
-    // InvulnerabilityEnd @0x105CA
-    p.invulnerable = false;
-    w.spr.n[p.slots.arc] = 0;
-    w.spr.n[p.slots.digit] = 0;
-    playSound(w, 43);
-  }
+  if (p.invCounter < 1 && p.invulnerable) endInvulnerable(w, p);
+}
+
+/** InvulnerabilityEnd @0x105CA (the loop sound 16 is shared: it stops even if the other player is still covered). */
+function endInvulnerable(w: World, p: Player): void {
+  for (let i = 0; i < 3; i++) playSound(w, 43);
+  p.invulnerable = false;
+  w.spr.n[p.slots.arc] = 0;
+  w.spr.n[p.slots.digit] = 0;
+  p.invCounter = 0;
+  stopSound(w, 16);
 }
 
 /** LifeLost @0x10FA3: explosion, back to (150, below the screen), refill, one ship less. */
@@ -162,13 +170,34 @@ export function shieldRecharge(w: World, p: Player): void {
   }
 }
 
-/** PlayerOut @0x10D24 (lives < 0): the player leaves the game; both out starts the game-over countdown. */
+/**
+ * PlayerOut @0x10D24 (lives < 0): the player leaves the game (ship, pods, shadows, label, inventory, shots
+ * removed; the lives number becomes "Loser!" under the money); both out starts the game-over countdown.
+ */
 export function playerOut(w: World, p: Player): void {
+  const s = p.slots;
   p.active = false;
-  for (let i = 1; i <= 24; i++) w.spr.n[p.slots.arc - 1 + i] = 0;
-  for (const s of p.shots) {
-    if (s.active) w.spr.n[s.slot] = 0;
-    s.active = false;
+  for (let m = 0; m < 8; m++) {
+    w.spr.n[s.pods + m] = 0;
+    w.spr.n[s.podShadows + m] = 0;
   }
+  w.spr.n[s.jet] = 0;
+  w.spr.n[s.shadow] = 0;
+  w.spr.n[s.label] = 0;
+  for (let i = 0; i < 3; i++) {
+    p.bonus[i] = 0;
+    w.spr.n[s.inv + i] = 0;
+  }
+  for (const shot of p.shots) {
+    if (shot.active) w.spr.n[shot.slot] = 0;
+    shot.active = false;
+  }
+  w.spr.n[s.selFrame] = 0;
+  if (p.invulnerable) endInvulnerable(w, p);
+  p.life = 0;
+  p.shield = 0;
+  w.texts.set(LIVES_TEXT[p.index], 'Loser!');
+  w.spr.x[HUD.lives[p.index]] = w.spr.x[HUD.money[p.index]];
+  w.spr.n[HUD.icon[p.index]] = 0;
   if (!w.players.some((q) => q.active)) w.gameOver = 120;
 }

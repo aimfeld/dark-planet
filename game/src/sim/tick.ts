@@ -1,19 +1,18 @@
 // Level start and the per-tick order of the game loop @0x1B787 (docs/gameplay-spec.md §1).
 // One call of step() = one frame of the original = one 40 Hz tick.
 
+import { bombTimer, bonusInventory, bonusTimers, clearBonuses, pickupBonuses, placeInventory, x5IconFollow } from './bonus';
 import { collisions } from './collisions';
 import { animTick, explosionTick, shadows, spriteCycles } from './effects';
-import { enemyGuns, enemyUpdate, moveEnemyShots, spawnFromLevel } from './enemies';
+import { BOSS_BLACK_TICKS, BOSS_FADE_TICKS, BOSS_FREEZE_TICKS, enemyGuns, enemyUpdate, moveEnemyShots, spawnFromLevel } from './enemies';
 import {
-  addMoney, altitudeSwap, invulnerableTick, keyboardInput, lifeLost, LIVES_TEXT, MONEY_TEXT, movePlayer,
+  addMoney, altitudeSwap, HUD, invulnerableTick, keyboardInput, lifeLost, LIVES_TEXT, MONEY_TEXT, movePlayer,
   playerOut, respawnFlyIn, setLivesText, shieldRecharge,
 } from './player';
-import { newPlayer, NO_INPUT, P2_SLOT_SHIFT, shiftSlots, type PlayerInput, type World } from './state';
+import { FADE_STEPS, newPlayer, NO_INPUT, P1_SLOTS, p2Slots, playSound, stopSound, type PlayerInput, type World } from './state';
 import { firePods, mountPoint, moveShots, reloadPods } from './weapons';
 
-// HUD sprite slots (LevelStartSprites @0x107F8); slots 0-8 are drawn without the playfield clip
-export const HUD = { icon: [1, 2], lives: [3, 4], money: [5, 6], frameRight: 7, frameLeft: 8 };
-const P1_BASE = { pods: 130, label: 129, jet: 128, arc: 125, digit: 126, shadow: 138, podShadows: 139, shot: 149, x5: 127 };
+export { HUD };
 
 /** New game (main menu item 1 @0x1D769 + InitPlayer @0x1B2E3): level 1, P1 only (P2 joins in the hangar). */
 export function newGame(w: World, twoPlayer = false): void {
@@ -35,15 +34,22 @@ export function startLevel(w: World, level: number): void {
   w.frame = 0;
   w.quake = 0;
   w.gameOver = 0;
+  w.levelDone = false;
+  w.gameCompleted = false;
+  w.flash = false;
+  w.fade = FADE_STEPS;
+  w.freeze = 0;
+  w.track = w.data.tables.levels[level - 1].cd_track;
   w.spr.n.fill(0);
   w.spr.mode.fill(0);
   for (const e of w.enemies) Object.assign(e, { active: false, dying: false, energy: 0 });
   for (const s of w.enemyShots) s.active = false;
   for (const e of w.explosions) e.active = false;
   for (const a of w.anims) a.state = 0;
+  clearBonuses(w); // (the original leaves them to StartBossFight, which every level passes through)
   const t = w.data.tables;
   for (const p of w.players) {
-    p.slots = p.index === 0 ? { ...P1_BASE } : shiftSlots(P1_BASE, P2_SLOT_SHIFT);
+    p.slots = p.index === 0 ? { ...P1_SLOTS } : p2Slots();
     p.high = true;
     p.pendingSwap = 0;
     p.shadowD = 12;
@@ -53,6 +59,9 @@ export function startLevel(w: World, level: number): void {
     p.flyIn = false;
     p.invCounter = 0;
     p.invulnerable = false;
+    p.selected = 0;
+    p.bombTimer = 0;
+    p.x5Timer = 0;
     for (const m of p.mounts) m.loaded = true;
     for (const s of p.shots) s.active = false;
     p.life = p.active ? t.jets[p.jet - 1].max_life : 0;
@@ -78,7 +87,12 @@ export function startLevel(w: World, level: number): void {
       if (mt.occupied && mt.cat === 2) w.spr.n[p.slots.pods + m] = t.large_pods[mt.item - 1].sprite!;
     }
     if (w.twoPlayer) w.spr.n[p.slots.label] = 577 + i;
+    placeInventory(w, p);
   }
+  // engine sounds, started by the hangar's "Shoot em all" @0x1D2D2 (5 = jet, 49 = Steptokopter)
+  const [p1, p2] = w.players;
+  if ((p1.active && p1.jet !== 4) || (p2.active && p2.jet !== 4)) playSound(w, 5, { loop: true });
+  if ((p1.active && p1.jet === 4) || (p2.active && p2.jet === 4)) playSound(w, 0x31, { loop: true });
   w.spr.n[HUD.frameLeft] = 490;
   w.spr.n[HUD.frameRight] = 490;
   scrollHud(w);
@@ -103,6 +117,7 @@ function scrollStep(w: World): void {
     w.spr.y[HUD.money[0]] -= 1;
     w.spr.y[HUD.money[1]] -= 1;
     scrollHud(w);
+    for (const p of w.players) w.spr.y[p.slots.selFrame] = w.scrollY + 168;
   }
   const t = w.data.tables;
   for (const p of w.players) {
@@ -121,10 +136,13 @@ function scrollStep(w: World): void {
       w.spr.y[p.slots.label] = e.b + w.spr.y[jet] + 4;
     }
   }
+  for (const p of w.players) x5IconFollow(w, p);
 }
 
 /** What the renderer needs besides the sprite table, captured at the Animate call. */
 function snapshot(w: World): void {
+  // The boss start holds the last frame on screen while it fades out (see freezeTick).
+  if (w.freeze > 0) return;
   w.drawn.copyFrom(w.spr);
   w.drawnScrollX = w.scrollX;
   w.drawnScrollY = w.scrollY;
@@ -139,8 +157,57 @@ function snapshot(w: World): void {
   }
 }
 
+/**
+ * StartBossFight blocks the original game loop: fade out (the last frame stays on screen), 1.2 s black,
+ * draw the new scene, fade in. Here those are frozen ticks.
+ */
+function freezeTick(w: World): void {
+  w.freeze -= 1;
+  const t = BOSS_FREEZE_TICKS - w.freeze; // 1..BOSS_FREEZE_TICKS
+  const fadeInStart = BOSS_FADE_TICKS + BOSS_BLACK_TICKS;
+  if (t <= BOSS_FADE_TICKS) w.fade = Math.round((FADE_STEPS * (BOSS_FADE_TICKS - t)) / BOSS_FADE_TICKS);
+  else if (t <= fadeInStart) w.fade = 0;
+  else w.fade = Math.round((FADE_STEPS * (t - fadeInStart)) / BOSS_FADE_TICKS);
+  if (t === fadeInStart) {
+    const f = w.freeze;
+    w.freeze = 0;
+    snapshot(w); // the state as StartBossFight left it, drawn while the screen is black
+    w.freeze = f;
+  }
+}
+
+/** Ends the level (true) when the autopilot or the game-over countdown says so; Esc is the caller's. */
+export function levelOver(w: World): 'done' | 'gameover' | null {
+  if (w.levelDone) return 'done';
+  if (w.gameOver === 1) return 'gameover';
+  return null;
+}
+
+/** LevelEndAutopilot @0x1A951: fly up and to the middle; done when every active player is 30 px above the screen. */
+function levelEndAutopilot(w: World): void {
+  const [p1, p2] = w.players;
+  const target = [160, 130];
+  for (const p of w.players) {
+    if (!p.active) continue;
+    const s = p.slots.jet;
+    if (w.spr.x[s] > target[p.index] + 2) w.spr.x[s] -= 3;
+    if (w.spr.x[s] < target[p.index] - 2) w.spr.x[s] += 3;
+    w.spr.y[s] -= 3;
+  }
+  const out = (p: typeof p1) => !p.active || w.spr.y[p.slots.jet] <= w.scrollY - 30;
+  if (out(p1) && out(p2)) {
+    stopSound(w, 5);
+    w.levelDone = true;
+    if (w.level >= 6) w.gameCompleted = true;
+  }
+}
+
 export function step(w: World, inputs: PlayerInput[]): void {
   w.sounds = [];
+  if (w.freeze > 0) {
+    freezeTick(w);
+    return;
+  }
   w.frame += 1;
   const players = w.players;
   for (const p of players) if (p.active && p.pendingSwap !== 0) altitudeSwap(w, p);
@@ -148,7 +215,7 @@ export function step(w: World, inputs: PlayerInput[]): void {
     for (const p of players) if (p.active) keyboardInput(w, p, inputs[p.index] ?? NO_INPUT);
     for (const p of players) if (p.active) movePlayer(w, p, inputs[p.index] ?? NO_INPUT);
   }
-  // TODO(slice): bonus objects, money labels, x5 timers
+  bonusTimers(w);
   for (const p of players) if (p.active && p.life < 0) lifeLost(w, p);
   for (const p of players) if (p.active && p.lives < 0) playerOut(w, p);
   for (const p of players) if (p.flyIn) respawnFlyIn(w, p);
@@ -162,18 +229,22 @@ export function step(w: World, inputs: PlayerInput[]): void {
   enemyGuns(w);
   moveEnemyShots(w);
   if (w.scrolling) spawnFromLevel(w);
-  // TODO(slice): atom-bomb timers
+  for (const p of players) if (p.active) bombTimer(w, p);
   for (const p of players) if (p.invulnerable) invulnerableTick(w, p);
   for (const p of players) if (p.active) moveShots(w, p);
-  // TODO(slice): bonus inventory and pickups
+  // P1's inventory runs even after P1 is out (as in the original), P2's only while active
+  for (const p of players) if (p.index === 0 || p.active) bonusInventory(w, p);
+  for (const p of players) if (p.active) pickupBonuses(w, p);
   scrollStep(w);
   shadows(w);
   snapshot(w);
   if (!w.autopilot) for (const p of players) if (p.active) collisions(w, p);
+  if (w.autopilot) levelEndAutopilot(w);
   if (w.gameOver > 0) {
     w.gameOver -= 1;
     if (w.gameOver === 110) {
-      w.sounds.push({ n: 0x2a, loop: false }, { n: 0x2a, loop: false });
+      playSound(w, 0x2a);
+      playSound(w, 0x2a);
     }
   }
 }

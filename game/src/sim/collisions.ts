@@ -1,7 +1,7 @@
 // Collisions per player @0x18978: shots vs enemies, enemy shots vs the jet, ramming (spec §3.4, §4.6).
 
-import { explode } from './effects';
-import { BOSS_TYPES, enemyDestroyed, killEnemyShot, typeOf } from './enemies';
+import { explode, startAnim } from './effects';
+import { BOSS_TYPES, bossHit, enemyDestroyed, killEnemyShot, typeOf } from './enemies';
 import { damage } from './player';
 import { hitDetect, spriteH } from './sprites';
 import type { Player, World } from './state';
@@ -40,7 +40,7 @@ export function collisions(w: World, p: Player): void {
       if (!s.active || s.type === 12) continue;
       if (!(e.layer === (s.alt ? 1 : 0) || e.layer === 2 || s.type === 4)) continue;
       if (!hitDetect(w, s.slot, e.slot)) continue;
-      if (e.type !== 0x48 || e.t > 210) e.energy -= shotTypes[s.type - 1].damage; // TODO: x5 bonus damage
+      if (e.type !== 0x48 || e.t > 210) e.energy -= shotTypes[s.type - 1].damage * (p.x5Timer !== 0 ? 5 : 1);
       const hx = HIT_EXPLOSION[s.type];
       if (hx) {
         const sx = w.spr.x[s.slot], sy = w.spr.y[s.slot], ex = w.spr.x[e.slot], ey = w.spr.y[e.slot];
@@ -52,7 +52,8 @@ export function collisions(w: World, p: Player): void {
         else explode(w, sx - 18, sy - 5, hx[0], high);
       }
       if (e.energy < 1) enemyDestroyed(w, p, c, true, true);
-      // TODO(slice): boss hit reaction (BossScript(5)) and the anim of type 0x17
+      if (BOSS_TYPES.has(e.type)) bossHit(w);
+      if (e.active && e.type === 0x17) startAnim(w, 0x10, e.slot);
       const pierce = s.type === 5 || ((s.type === 11 || s.type === 22) && !BOSS_TYPES.has(e.type));
       if (!pierce) killShot(w, p, a);
     }

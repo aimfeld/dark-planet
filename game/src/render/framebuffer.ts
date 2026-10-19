@@ -2,7 +2,7 @@
 // No DOM here, so it also runs in tests.
 
 import type { GameData } from '../data';
-import { MODE_SHADOW, SLOTS, type World } from '../sim/state';
+import { FADE_STEPS, MODE_SHADOW, SLOTS, type World } from '../sim/state';
 
 export const W = 320;
 export const H = 200;
@@ -75,12 +75,22 @@ export class Framebuffer {
     }
   }
 
+  /** A placeholder screen: lines of FIRE text, centred, on black (menus are not ported yet). */
+  renderScreen(lines: [string, number][]): void {
+    this.px.fill(0);
+    const widths = this.data.fonts.FIRE.widths;
+    for (const [text, y] of lines) {
+      const w = [...text].reduce((a, ch) => a + widths[cp437(ch)], 0);
+      this.text(text, (W - w) >> 1, y, 0, W - 1);
+    }
+  }
+
   /** Text sprites (money, lives, invulnerability countdown) in the FIRE font. */
   private text(text: string, x: number, y: number, x0: number, x1: number): void {
     const f = this.data.fonts.FIRE;
     const px = this.px;
     for (const ch of text) {
-      const code = ch.charCodeAt(0) & 0xff;
+      const code = cp437(ch);
       const g = code * f.width * f.height;
       for (let j = 0; j < f.height; j++) {
         const sy = y + j;
@@ -117,9 +127,27 @@ export class Framebuffer {
   }
 }
 
-/** 32-bit RGBA lookup for the palette (little-endian ABGR words for ImageData). */
-export function paletteLut(data: GameData): Uint32Array {
+const CP437: Record<string, number> = { 'ä': 0x84, 'ö': 0x94, 'ü': 0x81, 'Ä': 0x8e, 'Ö': 0x99, 'Ü': 0x9a, 'ß': 0xe1 };
+const cp437 = (ch: string) => CP437[ch] ?? ch.charCodeAt(0) & 0xff;
+
+/** VGA DAC value (0..63) to 8 bits, as tools/export_engine_data.py converts the palette. */
+const dac8 = (c6: number) => Math.floor((c6 * 255) / 63);
+
+/**
+ * 32-bit RGBA lookup for the palette (little-endian ABGR words for ImageData), at fade level `fade`
+ * (0 = black .. FADE_STEPS = full; AniVGA's fade steps the 6-bit DAC values linearly).
+ */
+export function paletteLut(data: GameData, fade = FADE_STEPS): Uint32Array {
   const lut = new Uint32Array(256);
-  data.palette.rgb.forEach(([r, g, b], i) => (lut[i] = 0xff000000 | (b << 16) | (g << 8) | r));
+  data.palette.rgb.forEach((rgb, i) => {
+    const [r, g, b] = rgb.map((c8) => dac8(Math.trunc((Math.round((c8 * 63) / 255) * fade) / FADE_STEPS)));
+    lut[i] = 0xff000000 | (b << 16) | (g << 8) | r;
+  });
   return lut;
+}
+
+/** The atom-bomb flash: BombTimer fills the whole palette with DAC value 50 (FillChar(pal, 768, 50)). */
+export function flashLut(): Uint32Array {
+  const c = dac8(50);
+  return new Uint32Array(256).fill(0xff000000 | (c << 16) | (c << 8) | c);
 }
