@@ -51,9 +51,11 @@ out=original_source/extracted   # local only, like the rest of original_source/
 uv run --with numpy --with pillow python tools/extract_sprites.py original_source $out  # sprite sheets + sprites.json
 uv run --with numpy --with pillow python tools/extract_fonts.py original_source $out    # fonts
 uv run --with numpy --with pillow python tools/render_levels.py original_source $out    # full levels, spawn maps, levels.json
+python3 tools/enemy_table.py original_source --json $out/enemies.json                   # enemy, enemy-shot and sprite-cycle tables
 ```
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions
 - [docs/re-notes.md](docs/re-notes.md): reverse-engineering findings ledger
 - [docs/file-formats.md](docs/file-formats.md): original file formats
+- [docs/gameplay-spec.md](docs/gameplay-spec.md): gameplay rules for the classic mode, in 40 Hz ticks

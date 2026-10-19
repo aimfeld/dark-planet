@@ -42,15 +42,20 @@
 
 ### Phase 2: Reverse-engineer gameplay from DP.EXE
 - [x] Unit/segment map of DP.EXE: System, Crt, Dos, AniVGA, SMIX + Detect + XMS, CD stack, mouse, joystick, file reader, game unit (session 2).
-- [~] Name individual RTL/AniVGA/SMIX routines. First batch done (see re-notes); next: match AniVGA 1.2 / SMIX sources routine by routine.
-- [~] Main loop + game states: main body, main menu, game menu, game loop, boss start, end-of-game mapped (session 2). Next: shop (`FUN_1d9e_84bc`), options (`FUN_1000_c4cd`), level start (`0x1B582`), game over / level end (`0x1B6D1`, `0x1A951`).
-- [x] Tick timing (session 3): the loop is unthrottled (AniVGA `SetCycleTime(0)`, no vsync wait), scroll = 1 px/frame. Measured from a DOSBox-X capture at `cycles=64000`: ≈ 41 fps (37–46). **Decision (user, session 3): the remake uses a fixed 40 Hz tick** (1 px scroll per tick).
-- [ ] Player: movement, weapons/pods, shields, energy, the tank-vs-ship mechanics (see prototype).
-- [~] Enemies: spawning is data-driven (LEV records → `SpawnFromLevel` → `SpawnEnemy`); type → sprite/energy/layer tables found (session 3). Next: `sub` (movement patterns), enemy update code, `DS:0x16C2`, bosses (Golem…).
-- [ ] Shop: items, prices (`INFO.PAS` texts), refunds ("Rückzahlung", "Investiert").
-- [ ] Two-player mode, controls (keyboard/joystick), settings, save format, cheat.
-- [ ] Cross-check with the DOSBox-X debugger (memory diffing) and recorded gameplay.
-- Document everything in `docs/re-notes.md` (and later `docs/gameplay-spec.md`).
+- [~] Name individual RTL/AniVGA/SMIX routines. First batch done (see re-notes); next: match AniVGA 1.2 / SMIX sources routine by routine (only needed where gameplay depends on them, e.g. `HitDetect`).
+- [x] Main loop + game states (sessions 2 and 4): main menu, hangar, game loop with per-tick order, boss start, level end, game over, options, shop.
+- [x] Tick timing (session 3): scroll = 1 px/frame; measured ≈ 41 fps at `cycles=64000`. **Decision (user, session 3): fixed 40 Hz tick.** Session 4 correction: the loop has a per-frame `Delay(6/9/12/16 ms)` from the Options "CPU" line (12 ms in the reference), so it is not fully unthrottled.
+- [x] Player (session 4): input for keyboard/mouse/joystick, movement (accel 1, decel 1 per 4 ticks, max 2–5), bounds, altitude, damage (shield first), death/respawn/invulnerability, lives, game over, HUD, money.
+- [x] Weapons and pods (session 4): mounts per jet, standard weapons, 7 small + 11 large + 4 ball pods, 25 shot types, 24 shot patterns, reload, hit rules, bonus shots.
+- [x] Enemies (session 4): record layout, 43 movement subs, guns and salvo logic, 22 enemy-shot patterns, despawn, kills, wrecks, explosions, bonus drops (14 %), delayed spawns; `DS:0x16C2` is a constant (filter is a no-op). Per-type table: `tools/enemy_table.py`.
+- [x] Bosses (session 4): all six fights (parts, paths, guns, shields, Golem attacks), end of level, game completion.
+- [x] Shop (session 4): catalogue and prices, mount rules, buy/sell, money exchange, Save price. SAVE.DAT and SETTINGS.DAT decoded. Cheat: GEDANKE in the hangar.
+- [x] Two-player differences (session 4).
+- [x] `docs/gameplay-spec.md` written (session 4): the rules in 40 Hz ticks, with references to re-notes.
+- [ ] **User:** record the DOSBox-X checks in `docs/gameplay-spec.md` §13 (priority: CPU-option speed, draw order, shot speeds, one death, shop list, boss details).
+- [ ] **User:** decide per original bug (`docs/gameplay-spec.md` §12) whether classic mode keeps or fixes it.
+- [ ] Update the spec from the captures; then extract all gameplay tables (items, shots, enemies, bosses) to JSON for the engine (extend `tools/enemy_table.py`).
+- [ ] Not yet covered: the text viewer/menus in detail, mission briefing layout, exact HUD fonts, the ending sequence timing.
 
 ### Phase 3: Engine + classic mode
 - [ ] Project scaffold (Vite + TS + PixiJS), fixed-tick loop, input, audio.
@@ -59,10 +64,11 @@
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
 
-## Decisions (user, session 3)
+## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
 2. Language: classic version German only. An English translation can come later in the remastered version (settings switch). The remastered version waits until the classic version is finished.
 3. Local two-player is a must.
 4. Tech stack confirmed: TypeScript + PixiJS, browser-first.
 6. Simulation tick: fixed 40 Hz (measured ≈ 41 fps in the DOSBox-X reference; the original is CPU-bound).
 5. Soundtrack split: resolved in session 2 (2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending).
+7. Remaining Phase 1 conversions (FLI → WebM, SFX and music → OGG) wait until the engine scaffold needs them (user, session 4).

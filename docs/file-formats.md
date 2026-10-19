@@ -13,8 +13,8 @@ Status: ✅ decoded and verified · 🟡 understood, decoder not written · ❓ 
 | `.LIB` | `JETS`, `GEG*`, `SHOTS`, `EXPL`, … , `TI1`, `TI2` | AniVGA sprites, concatenated | ✅ `tools/extract_sprites.py` |
 | `.FNT` | `FIRE`, `SUPER`, `_BROADWA`, `DEFAULT` | AniVGA fonts | ✅ `tools/extract_fonts.py` |
 | `.TXT/.UNG/.PAS` | `STORY.TXT`, `ANLEIT.UNG`, `ABOUT.TXT`, `MISSIONS.PAS`, `INFO.PAS` | CP437 German text read by the game (**not source code**) | ✅ |
-| `SAVE.DAT` | 129 bytes | Save game, has anti-tamper check ("Saveschutz") | ❓ |
-| `SETTINGS.DAT` | 5 bytes (`01 02 01 01 03`) | Options (controls P1/P2, CD sound, SFX, …?) | ❓ |
+| `SAVE.DAT` | 129 bytes | Save game with a checksum ("Saveschutz"), see below | 🟡 (verified on the sample) |
+| `SETTINGS.DAT` | 5 bytes (`01 02 01 01 03`) | Options: controls P1/P2, CD sound, SFX, CPU delay, see below | 🟡 |
 
 ## SMIX sound resource (`.SND`)
 Ethan Brodsky's SMIX library format.
@@ -52,7 +52,8 @@ No header (unlike the prototype). Read by `LoadLevel` @0x1B3ED (see re-notes "Le
   i16  x      screen x (0..~300) of the sprite's left edge
   u8   type   enemy/object type 0..0x4A; boss triggers 05, 20, 23, 3C, 43, 48
   u8   sub    behaviour/variant, passed to SpawnEnemy
-  u8   flag   0 or 1; fires only if flag ≤ byte DS:0x16C2 (meaning unknown)
+  u8   flag   fires only if flag ≤ DS:0x16C2, a constant 1; every used record has 1
+              (0 only in empty slots), so in practice every record fires
 ```
 Level coordinates: tile row r (1-based) covers y = 168 − 32·(r−1) … +31, column c
 covers x = 32·(c−1) … +31, so the level spans y = −6200 … 199 (320 × 6400 px).
@@ -99,6 +100,46 @@ type & 0x80:     proportional, 256 advance widths follow the glyphs
 The loader rejects files whose size doesn't match. `DEFAULT` 6×6 mono,
 `SUPER` 8×8 mono, `_BROADWA` 9×16 mono (column 0 always empty), `FIRE` 13×16
 multicolour proportional (red gradient, colours 0xF0–0xFF and 0x1A).
+
+## SETTINGS.DAT
+Written when leaving the Options screen (@0x1AA85: Assign/Rewrite(f, 1)/5 × BlockWrite 1 byte), read at startup
+(@0x1AB37). Byte order = the Options lines.
+```
+0  u8  P1 control   1 keyboard, 2 mouse, 3 joystick
+1  u8  P2 control   same values; the Options screen never lets it equal P1's
+2  u8  CD sound     0/1 (can only be switched on if a CD drive was found)
+3  u8  SFX          0/1 (only on if a sound card was found)
+4  u8  CPU          1 "486", 2 "Pentium", 3 "Pentium II", 4 "Cray"
+                    -> Crt.Delay(6 / 9 / 12 / 16 ms) every game frame (@0x1AA36)
+```
+Sample `01 02 01 01 03`: P1 keyboard, P2 mouse, CD on, SFX on, Pentium II. Without the file the defaults are
+P1 = 1, P2 = 2, CD/SFX = hardware detected, and CPU = 0 (no delay; not defaulted).
+
+## SAVE.DAT
+One save slot, written only when the "Save" bonus is bought in the shop (1d9e:0350 @0x1DD30), read by
+"load game" (1d9e:05D9 @0x1DFB9). Little-endian, 129 bytes.
+```
+0    i32  checksum
+4    u8   two-player flag (DS:0x25A0)
+5    u8   P1 active
+6    u8   P2 active
+7    u8   level 1..6 (the level about to be played)
+8    u8   episode (level-1) div 3 + 1
+9    P1 block, 60 bytes:
+     +0   i16  lives (spare ships)
+     +2   i32  money
+     +6   u8   jet 1..5
+     +7   8 x 6 bytes mounts: i16 reload counter, u8 loaded, u8 occupied, u8 item id, u8 category
+               (index 0 large nose, 1 small, 2 standard weapon, 3-6 large, 7 ball pod)
+     +55  u8   engine 0..3
+     +56  u8   shield 0..3
+     +57  3 x u8 bonus item ids (0 = empty)
+69   P2 block, same layout (a never-joined P2 has lives 5, engine/shield 0)
+```
+Checksum (1d9e:02CC): 16-bit sum, sign-extended to i32, of level + episode + lives + low word of money + jet +
+engine + shield of P1 and the same five fields of P2. Mounts and bonuses are not covered. On a mismatch the game
+prints "Na du kleines Schlitzohr, so läuft das aber nicht! …Saveschutz…" and exits. The sample file
+(level 2, one player, 6 lives, 600 money, Duallaser) stores 618, which matches the computed sum.
 
 ## CD soundtrack
 See `docs/re-notes.md` → "Soundtrack". Raw 44.1 kHz 16-bit LE stereo PCM
