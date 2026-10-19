@@ -44,7 +44,7 @@
 - [x] Unit/segment map of DP.EXE: System, Crt, Dos, AniVGA, SMIX + Detect + XMS, CD stack, mouse, joystick, file reader, game unit (session 2).
 - [~] Name individual RTL/AniVGA/SMIX routines. First batch done (see re-notes); next: match AniVGA 1.2 / SMIX sources routine by routine.
 - [~] Main loop + game states: main body, main menu, game menu, game loop, boss start, end-of-game mapped (session 2). Next: shop (`FUN_1d9e_84bc`), options (`FUN_1000_c4cd`), level start (`0x1B582`), game over / level end (`0x1B6D1`, `0x1A951`).
-- [x] Tick timing (session 3): the loop is unthrottled (AniVGA `SetCycleTime(0)`, no vsync wait), scroll = 1 px/frame. Measured from a DOSBox-X capture at `cycles=64000`: ≈ 41 fps (37–46). Proposal: fixed 40 Hz tick in the remake.
+- [x] Tick timing (session 3): the loop is unthrottled (AniVGA `SetCycleTime(0)`, no vsync wait), scroll = 1 px/frame. Measured from a DOSBox-X capture at `cycles=64000`: ≈ 41 fps (37–46). **Decision (user, session 3): the remake uses a fixed 40 Hz tick** (1 px scroll per tick).
 - [ ] Player: movement, weapons/pods, shields, energy, the tank-vs-ship mechanics (see prototype).
 - [~] Enemies: spawning is data-driven (LEV records → `SpawnFromLevel` → `SpawnEnemy`); type → sprite/energy/layer tables found (session 3). Next: `sub` (movement patterns), enemy update code, `DS:0x16C2`, bosses (Golem…).
 - [ ] Shop: items, prices (`INFO.PAS` texts), refunds ("Rückzahlung", "Investiert").
@@ -64,4 +64,5 @@
 2. Language: classic version German only. An English translation can come later in the remastered version (settings switch). The remastered version waits until the classic version is finished.
 3. Local two-player is a must.
 4. Tech stack confirmed: TypeScript + PixiJS, browser-first.
+6. Simulation tick: fixed 40 Hz (measured ≈ 41 fps in the DOSBox-X reference; the original is CPU-bound).
 5. Soundtrack split: resolved in session 2 (2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending).
