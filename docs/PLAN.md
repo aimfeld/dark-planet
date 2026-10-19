@@ -66,6 +66,7 @@
 - [ ] **User:** play the slice (`cd game && npm run data && npm run dev`) next to DOSBox-X and report what feels different (speed, steering, enemy paths, shot speeds).
 - [ ] Decide: square pixels (now) or 4:3 aspect correction (320×200 shown as 320×240, as on a CRT).
 - [ ] Audio: SFX → OGG/WAV and Web Audio playback (the sim already emits sound events); CD music later.
+- [ ] Fullscreen key with the Keyboard Lock API (`navigator.keyboard.lock()`, Chromium only) so desktop shortcuts don't steal the original keys: on Linux Mint/Cinnamon (X11) Ctrl+Alt+arrows switch workspaces (user, session 5). Untested whether the lock beats Cinnamon's grabs; keep X/C as alternates.
 - [ ] Remaining level-1 content: bonus drops, pickups and inventory; the level 1 boss (escort pair, sub 0x14) and level end; game over and back to the menu.
 - [ ] Remaining weapons: Autogun targeting, Flamer, Windstorm, ball pods, bonus shots (shot patterns 2, 7, 9–13, 22, 23).
 - [ ] Enemy subs 7, 8, 0x12–0x2A and enemy-shot patterns 6, 7, 17, 19, 21, 22 (episode 2 and bosses), then levels 2–6.
