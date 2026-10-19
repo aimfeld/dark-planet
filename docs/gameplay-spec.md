@@ -29,7 +29,7 @@ Nothing in this file has been checked in DOSBox-X yet; §12 lists the checks.
 - The original runs one game-loop iteration per frame with no frame limiter, but `0x1AA36` adds a busy
   `Delay` every frame chosen by the Options "CPU" setting: 486 = 6 ms, Pentium = 9 ms, Pentium II = 12 ms,
   "Cray" = 16 ms (none without SETTINGS.DAT). The reference capture (DOSBox-X cycles=64000, CPU = Pentium II)
-  ran at ≈ 41 fps. **Remake: fixed 40 Hz; no CPU option.**
+  ran at ≈ 41 fps. **Remake: fixed 40 Hz; no CPU option** (decision, user, session 4).
 - Order of one tick (O, game loop 0x1B787). The remake should keep this order where it matters (input →
   movement → fire → enemies → spawn → shots → pickups → scroll → draw → collisions):
   1. CD repeat check every 40 ticks; `frame` += 1.
@@ -573,7 +573,7 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
   458-tick loop).
 - Turrets aim at the nearest player and fire along their facing; 0x3E fires a large shot (damage 70) every 80
   ticks; 0x3F fires falling salvos.
-- **The core can't be damaged until all four parts are destroyed.** Core death: engine stops, sound 50 ×2.
+- **The core can't be damaged until all four parts are destroyed** (confirmed by the user in the game, session 4). Core death: engine stops, sound 50 ×2.
 
 ### 8.6 Level 5: fortress (core 0x43 + 0x45, 0x47, 0x44, 0x46)
 - Spawn: 0x45 (140, s+96), 0x47 (139, s+69), 0x44 (97, s+53), 0x46 (161, s+35), core (80, s+140). Static except 0x45.
@@ -607,7 +607,7 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
 - Hangar (game menu, mouse): **Shoot em all** (mission briefing from MISSIONS.PAS, then the level),
   **Shop**, **Multiplayer** (P2 joins: "Verstärkung? Enter=Ja"; can't be undone), **Optionen**, back to the
   main menu.
-- Options: control type P1/P2, CD sound, sound effects, CPU (original only).
+- Options: control type P1/P2, CD sound, sound effects. The original's CPU line is dropped (decision, user, session 4).
 - New game: level 1, P1 only, 5 lives, 0 money, Firestorm, engine 1, shield 1, no pods, no bonuses. A joining P2
   starts with the same. Lives, money, jet and equipment carry over between levels; life and shield are refilled
   and both players start high at (60, 140) (P1) and (140, 140) (P2).
@@ -657,34 +657,35 @@ Sound numbers (0-based; 0–34 AREA.SND, 35–58 AREA2.SND):
 42 SLOSER 43 SSDEAKT 44 SSHIELD 45 SZIVIL 46 AC 47 DOORUP 48 DUKE 49 HELI 50 SWARRIOR 51 PANZER 52 PTURN
 53 GOLEM 54 GOLEM2 55 GOLEM3 56 GOLEM4 57 GOLEM5 58 GLASER.
 
-## 12. Original bugs (remake decision pending, user)
-Behaviour as the code reads; classic mode should probably keep the ones that affect feel and fix the ones that
-only remove content. To be decided by the user.
-1. Rocketlauncher (60000) is never offered: the shop drops items with the same price as the previous one (E-Shocker).
-2. Distroyer ball pod has reload 0: it fires once per level.
-3. Only P1's ball pod damages enemies (both destroy enemy shots).
-4. Autogun never plays its fire sound.
-5. P2's velocity isn't reset between levels.
-6. Save price on level 1 is negative (−6000) by the formula.
-7. Level 3 snake debris always flies toward x = 0 (its target is cleared before use).
-8. Golem curse: P2's pod explosions appear at P1's pod positions.
-9. Level 4 tank drifts 2 px left per loop.
-10. Mouse control: the "move up" limit compares x instead of y (no visible effect).
-11. Joining P2 sets P1 active again even if P1 was out (I).
+## 12. Original bugs: the remake fixes them (decision, user, session 4)
+The user decided that the remake fixes original bugs, including any found later. Classic mode keeps the original
+feel otherwise. "Fix" states the intended behaviour; values marked *design* are our choice, not from the original.
+| # | Bug (as the code reads) | Fix in the remake |
+|---|---|---|
+| 1 | Rocketlauncher (60000) is never offered: the shop's offer list drops an item priced the same as the previous one (E-Shocker) | list every item; equal prices ordered by item number |
+| 2 | Distroyer ball pod has reload 0, so it fires once per level | give it a reload (*design*: 10 ticks, like the Firestorm gun) |
+| 3 | Only P1's ball pod damages enemies (both destroy enemy shots) | both players' ball pods deal contact damage |
+| 4 | Autogun never plays its fire sound | play its table sound (2 MINIPOD) |
+| 5 | P2's velocity isn't reset between levels | reset both players' velocity at level start |
+| 6 | Save price on level 1 is negative (−6000) | price = 4000 + 10000·min(max(level − 2, 0), 4) (*design*: 4000 on level 1) |
+| 7 | Level 3 snake debris always flies toward x = 0 (target cleared before use) | fly toward the random target x the script picks |
+| 8 | Golem curse: P2's pod explosions appear at P1's pod positions | explode at P2's pods |
+| 9 | Level 4 tank drifts 2 px left per loop (I: unintended) | closed loop with no net drift (*design*) |
+| 10 | Mouse control: the "move up" limit compares x instead of y | compare y (screen y ≥ 10) |
+| 11 | Joining P2 sets P1 active again even if P1 was out (I) | joining only adds P2 |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.
-1. **CPU option vs speed**: record level 1 with CPU = 486 and CPU = "Cray" and run `tools/measure_scroll.py`;
-   fps should follow 1000 / (t + 6) and 1000 / (t + 16). Confirms the delay model.
-2. **Draw order** (high/low jet vs air/ground enemies, ground objects vs air enemies): a few screenshots in
+(The CPU-option capture is no longer needed: the remake has no CPU option, decision user, session 4.)
+1. **Draw order** (high/low jet vs air/ground enemies, ground objects vs air enemies): a few screenshots in
    level 1 flying low and high under/over a flyer.
-3. **Shot speeds on screen**: level 1 type-3 flyers fire kind 2 (speed 6) down → expect 7 px/tick on screen;
+2. **Shot speeds on screen**: level 1 type-3 flyers fire kind 2 (speed 6) down → expect 7 px/tick on screen;
    the standard shot (speed 6) should rise 5 px/tick.
-4. **Respawn and invulnerability**: one death: jet from below at x ≈ 150, 3 px/tick, arc with countdown 5…1 for
+3. **Respawn and invulnerability**: one death: jet from below at x ≈ 150, 3 px/tick, arc with countdown 5…1 for
    100 ticks; HUD lives 5 at start, game over after the 6th death.
-5. **Shop**: Grosse Pods list without Rocketlauncher; Save price shown on level 1.
-6. **Boss checks**: level 4 core invulnerable until the parts are gone; tank engine sound loops; level 3 debris
-   direction; Golem curse removes all pods except the standard weapon.
-7. **Distroyer / P2 ball pod** bugs (needs money: use the GEDANKE cheat).
-8. **Hit test precision**: a near miss on a large sprite (boss) — transparent corners should not collide.
-9. Debugger (optional): `bpm ds:16c2` never triggers; bonus drop rate ≈ 14 % over a level.
+4. **Shop**: Grosse Pods list without Rocketlauncher; Save price shown on level 1 (documents the original; the
+   remake fixes both, §12).
+5. **Boss checks**: ~~level 4 core invulnerable until the parts are gone~~ (confirmed by the user, session 4);
+   tank engine sound loops; level 3 debris direction; Golem curse removes all pods except the standard weapon.
+6. **Hit test precision**: a near miss on a large sprite (boss): transparent corners should not collide.
+7. Debugger (optional): `bpm ds:16c2` never triggers; bonus drop rate ≈ 14 % over a level.

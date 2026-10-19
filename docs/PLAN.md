@@ -52,8 +52,8 @@
 - [x] Shop (session 4): catalogue and prices, mount rules, buy/sell, money exchange, Save price. SAVE.DAT and SETTINGS.DAT decoded. Cheat: GEDANKE in the hangar.
 - [x] Two-player differences (session 4).
 - [x] `docs/gameplay-spec.md` written (session 4): the rules in 40 Hz ticks, with references to re-notes.
-- [ ] **User:** record the DOSBox-X checks in `docs/gameplay-spec.md` §13 (priority: CPU-option speed, draw order, shot speeds, one death, shop list, boss details).
-- [ ] **User:** decide per original bug (`docs/gameplay-spec.md` §12) whether classic mode keeps or fixes it.
+- [ ] **User:** record the DOSBox-X checks in `docs/gameplay-spec.md` §13 (priority: draw order, shot speeds, one death, shop list, boss details). Level 4 core invulnerability: confirmed by the user (session 4).
+- [x] **User:** original bugs: the remake fixes them (session 4; fixes listed in `docs/gameplay-spec.md` §12).
 - [ ] Update the spec from the captures; then extract all gameplay tables (items, shots, enemies, bosses) to JSON for the engine (extend `tools/enemy_table.py`).
 - [ ] Not yet covered: the text viewer/menus in detail, mission briefing layout, exact HUD fonts, the ending sequence timing.
 
@@ -72,3 +72,5 @@
 6. Simulation tick: fixed 40 Hz (measured ≈ 41 fps in the DOSBox-X reference; the original is CPU-bound).
 5. Soundtrack split: resolved in session 2 (2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending).
 7. Remaining Phase 1 conversions (FLI → WebM, SFX and music → OGG) wait until the engine scaffold needs them (user, session 4).
+8. Original bugs are fixed in the remake, including any found later (user, session 4). List: `docs/gameplay-spec.md` §12.
+9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
