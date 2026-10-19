@@ -6,7 +6,7 @@
 3. Modern game libraries are fine.
 4. Bonus: the original CD soundtrack playing.
 
-## Proposed architecture (not yet confirmed by the user)
+## Architecture (confirmed by the user in session 3)
 - **TypeScript + Vite + PixiJS (WebGL) + Web Audio.** Browser-first; host on itch.io or GitHub Pages; wrap with Tauri later if a desktop build is wanted. PixiJS was chosen over Phaser because classic mode needs tight control of the game loop.
 - **One simulation, two renderers:**
   - The game logic runs on a fixed tick that matches the original, and is shared by both modes, so gameplay is identical.
@@ -31,9 +31,12 @@
 - [x] Fix `TRACK_STARTS` (8 audio tracks, found by sample-exact repeat fingerprinting), rebuild the image, verify in DOSBox-X (`Playing track # 9`).
 - [ ] **User:** play through `dplanet-cd.conf` and check the music: menu = track 2, levels 1–3 = tracks 5–7, boss = track 8, and tracks loop. Optionally confirm by ear that track 8 starts at 21:57 (1317 s) and not at 22:08.
 - [–] ~~Fix DOSBox-X audio~~: **decision (user, session 2): not needed.** The target is the TypeScript version. In DOSBox-X the CD music plays fine with `dplanet-cd.conf` (confirmed by the user; an earlier choppiness came from a runaway analysis script loading the host CPU). Only the SFX are garbled (a known DOSBox issue; the user decoded the SFX correctly in Python before). Game speed is fine with `dplanet.conf`. DOSBox-X stays a reference for gameplay and visuals, not for audio.
-- [ ] Check by ear that the SFX WAVs from `tools/extract_assets.py` sound right (they feed the remake).
-- [ ] Decode AniVGA `.LIB`/`.COD` sprites and `.FNT` fonts → PNG atlases.
-- [ ] Decode `.LEV` level maps + `TI1/TI2.LIB` tiles → render full level images.
+- [x] SFX format verified in DP.EXE (session 3): signed 8-bit, 11025 Hz. `extract_assets.py` assumed unsigned 22050 Hz and is fixed.
+- [ ] **User:** listen to the corrected SFX WAVs (`original_source/extracted/sfx/`).
+- [x] Decode AniVGA `.LIB` sprites → PNG sheets + `sprites.json` (`tools/extract_sprites.py`, numbers as DP.EXE loads them).
+- [x] Decode `.FNT` fonts → PNG + widths (`tools/extract_fonts.py`).
+- [ ] **User:** compare sprite sheets, fonts and level renders with DOSBox-X screenshots (`original_source/extracted/`).
+- [x] Decode `.LEV` (tile grid + 600 spawn records) + `TI1/TI2.LIB` → full level PNGs, spawn maps with enemy sprites, `levels.json` (`tools/render_levels.py`). Tileset per episode: TI1 for levels 1–3, TI2 for 4–6.
 - [ ] Convert FLI videos → WebM; SFX → OGG; soundtrack → OGG.
 - [ ] Optional: package the original with js-dos as an instant browser-playable "museum" version.
 
@@ -43,7 +46,7 @@
 - [~] Main loop + game states: main body, main menu, game menu, game loop, boss start, end-of-game mapped (session 2). Next: shop (`FUN_1d9e_84bc`), options (`FUN_1000_c4cd`), level start (`0x1B582`), game over / level end (`0x1B6D1`, `0x1A951`).
 - [ ] Measure tick timing in DOSBox-X (PIT ch0 isn't reprogrammed; count `DS:0x552E` per second).
 - [ ] Player: movement, weapons/pods, shields, energy, the tank-vs-ship mechanics (see prototype).
-- [ ] Enemies: types, energy, movement patterns, wave/spawn scripting, bosses (Golem…).
+- [~] Enemies: spawning is data-driven (LEV records → `SpawnFromLevel` → `SpawnEnemy`); type → sprite/energy/layer tables found (session 3). Next: `sub` (movement patterns), enemy update code, `DS:0x16C2`, bosses (Golem…).
 - [ ] Shop: items, prices (`INFO.PAS` texts), refunds ("Rückzahlung", "Investiert").
 - [ ] Two-player mode, controls (keyboard/joystick), settings, save format, cheat.
 - [ ] Cross-check with the DOSBox-X debugger (memory diffing) and recorded gameplay.
@@ -56,9 +59,9 @@
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
 
-## Open questions for the user
-1. How strict is classic mode: frame-exact, or "plays and feels identical"? (Suggested: the latter.)
-2. Language: German only, or add English? Some humour may need care in translation.
-3. Is local two-player a must for the remake?
-4. Confirm the tech stack (TS + PixiJS) and the browser-first approach.
-5. ~~Soundtrack split~~: resolved in session 2. Track roles come straight from DP.EXE: 2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending.
+## Decisions (user, session 3)
+1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
+2. Language: classic version German only. An English translation can come later in the remastered version (settings switch). The remastered version waits until the classic version is finished.
+3. Local two-player is a must.
+4. Tech stack confirmed: TypeScript + PixiJS, browser-first.
+5. Soundtrack split: resolved in session 2 (2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending).

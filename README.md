@@ -46,6 +46,13 @@ uv run --with numpy --with pillow python tools/extract_assets.py original_source
 ```
 This produces SFX WAVs, the full-screen pictures as PNG, and the soundtrack tracks.
 
+```sh
+out=original_source/extracted   # local only, like the rest of original_source/
+uv run --with numpy --with pillow python tools/extract_sprites.py original_source $out  # sprite sheets + sprites.json
+uv run --with numpy --with pillow python tools/extract_fonts.py original_source $out    # fonts
+uv run --with numpy --with pillow python tools/render_levels.py original_source $out    # full levels, spawn maps, levels.json
+```
+
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions
 - [docs/re-notes.md](docs/re-notes.md): reverse-engineering findings ledger

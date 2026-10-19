@@ -103,6 +103,31 @@ System RTL entry points seen so far (offsets in seg 0x30EA): `0000` init, `0530`
 - `DS:0x25B4/0x25B6`: background scroll X/Y (inferred; used by AniVGA tile code at 28be:5443 with 40-column rows and by boss spawning as "scroll Y + offset").
 - **Frame timing: Unknown.** PIT channel 0 is never reprogrammed (the only PIT `out` is Crt's channel-2 `Sound`), and AniVGA reads the BIOS tick counter at 28be:5449. The pacing (vertical retrace in `Animate` vs. tick-based) needs DOSBox-X measurement.
 
+### Asset loading (session 3)
+Evidence IDs: `ev_dc9ad07c…` (LoadLib instructions), `ev_35c25285…` (LoadTile pseudocode),
+`ev_f50427d8…` (SpawnEnemy pseudocode). Other addresses come from `objdump` of the segments.
+- **Observed:** `LoadLib(name, base)` @0x137A0 (main program, near; the game's own loader, not AniVGA's `LoadSprite`). It reads a 50-byte header, checks `"KR"` at +38, allocates `length + 15` (paragraph-aligned), copies the header and reads `length − 50` more bytes, then registers the sprite through AniVGA (`2000:0630`, `2000:047D`) as number `base + i`, until EOF. The caller @0x13B84 loads, in order: `jets` 1, `pods` 43, `shots` 146, `expl` 293, `boni` 393, `anzeigen` 490, `shop` 493, `rest` 544, `geg1` 850, `aschen1` 1000, `geg2` 1024, `geg21` 1165, `geg22` 1243, `aschen2` 1355. The sprite counts fill these ranges exactly (REST ends at 678, so 679–849 are unused).
+- **Observed:** sprite pixel layout (4 planes, `pixel x = 4·col + plane`, 0 = transparent) is confirmed by the boundary tables in every record, which equal the opaque extents of the decoded image (all 1317 game sprites).
+- **Observed:** AniVGA `LoadTile(name, first)` @0x2D7DA (`28be:4bfa`): sprite records whose width and height are multiples of 16, cut into 16×16 tiles row by row, numbered from `first`, at most 256. Returns the tile count (stored in `DS:0x5520`).
+- **Observed:** AniVGA `LoadFont` @0x2A7AD: `"FNT"` (compared with `DS:0x2F2E`), width, height, type; bit 7 = proportional (width table at `DS:0xB0D8`), low bits 0 = mono / 1 = multicolour; mono rows are read as words (`ceil(w/8)` bytes) and the renderer @0x2AF3C tests bit `width−1−x` via the table at `DS:0x28F0` (`4000h >> i`). AniVGA's built-in default font is 6×6 mono (@0x2A6BD).
+- **Observed:** palette: only `EPIS1.PAL` exists for gameplay (loaded at 0x1AE7C and other places). Sprites, tiles and fonts all decode cleanly with it.
+- Decoders: `tools/anivga.py` (formats), `tools/extract_sprites.py`, `tools/extract_fonts.py`, `tools/render_levels.py`. Output goes to `original_source/extracted/` (local only).
+
+### Levels and spawning (session 3)
+- **Observed:** `StartLevel(levelFile)` @0x1B582: `CDPlay(LevelTrack[level])`; AniVGA `2bff(10, 0, 311, 199)` (inferred: clipping window x 10–311); scroll X/Y (`DS:0x25B4/0x25B6`) := 0; `LoadTile(TileSet[episode], 1)` with the string array at `DS:0xF38 + 0x100·episode` (`Ti1.lib`, `Ti2.lib`), so **levels 1–3 use TI1 and 4–6 use TI2**; then `LoadLevel` and `BuildLevel`. Level file names are a `string[255]` array at `DS:0xA32` (`level1.lev`…).
+- **Observed:** `LoadLevel` @0x1B3ED (nested in StartLevel): `Reset(f, 1)`; for y = 1..200, x = 1..10: `BlockRead(LevMap[x, y])` with `LevMap` at `DS:0x6CA3 + 200·x + y`; then `BlockRead(DS:0x4442, 4200)`. So a .LEV is 2000 bytes of tiles and **600 spawn records of 7 bytes**.
+- **Observed:** `BuildLevel` @0x1B4FF: AniVGA `50f2(0)`, `5063(1)`, `4feb(0, −6400, 320, 200)` (inferred: virtual background size/position), then for each map cell `PlaceTile32` @0x1B49E(tile, x = 32·(c−1), y = 168 − 32·(r−1)), which puts four 16×16 tiles `4(t−1)+1 … +4` (TL, TR, BL, BR) with AniVGA `5083`. The first file row is at the bottom; the level spans y = −6200 … 199.
+- **Observed:** `SpawnFromLevel` @0x16653 (game loop): for each record 1..600 (`DS:0x443B + 7·i`): if `rec.y = scrollY (DS:0x25B6)` and `rec.flag ≤ byte DS:0x16C2`, take the record with `y := scrollY`; skip types > 0x4A; add Y offsets for types 08 (+20), 0F (+25), 14 (+10), 2D (+130, x −50), 36 (+30); type 40 also spawns two type-0x41 enemies (sub 0x23 and 0x24) at (x∓22, y−17); types **05, 20, 23, 3C, 43, 48 call `StartBossFight` 0x1627E**; type 42 → `SpawnEnemy(x, y, type, sub, 0x50)`; all others `SpawnEnemy(x, y, type, sub, 0)`.
+- **Observed:** `SpawnEnemy(x, y, type, sub, mode)` @0x1163A: finds a free slot (< 30) in the enemy table at `DS:0x7C68`, 38 bytes per slot (`+0` AniVGA sprite slot = slot + 381 if `layer[type]` = 1 else slot + 813, `+2` type, `+5` sub, `+6` energy = word `DS:0x1966[type]`, increased in two-player mode (`DS:0x25A0`), `+0x18` x, `+0x1A` y, `+0x23` shadow slot = slot + 491 / 843). With mode 0 it sets `SpriteN := word DS:0x19FA[type]`, `SpriteX := x`, `SpriteY := y − height(sprite)` (so it enters from above the screen top), and plays type-specific sounds. `layer[type]` = byte `DS:0x191D[type]` (0/1/2; inferred: ground / air / special).
+- **Observed (data):** the type → sprite table puts types 1–36 in GEG1 (episode 1) and 37–72 in GEG2/GEG21/GEG22; 73/74 use SHOTS sprites. Houses, churches, trees and cars are spawn records too (ground objects), and on the rendered spawn maps they land on matching terrain, which supports the coordinate interpretation.
+- **Inferred:** the background scrolls 1 px per step in Y, since records fire on exact equality and odd Y values are common (162–230 per level). To be confirmed with the tick measurement.
+- **Unknown:** what `DS:0x16C2` is. It lies inside a word array (read as `DS:0x16C2 + 2·i` @0x2169A in the game unit); its initial byte is 6, which would let both flag values spawn. Candidates: difficulty, or a save-game value. Check in DOSBox-X.
+- **Unknown:** the meaning of `sub` (movement pattern?) and of mode 0x50 (a non-zero mode overwrites the energy field `+6` with the mode value and skips the sprite setup); `StartBossFight` per level.
+
+### SFX playback (session 3)
+- **Observed:** SMIX DSP setup @0x27A3D: on SB16 (`DS:0x87E9`) DSP command 0x41 with 0x2B, 0x11 (**11025 Hz**); otherwise 0xD1, 0x40 and a time constant from `TimeConstant(11025)` @0x27A04 (`256 − 1000000 div rate`).
+- **Observed:** the mixer @0x288EB sign-extends sample bytes (`cbw`) into a 16-bit buffer; the clip table built @0x282EB clamps to −128..127 and adds 0x80. So the .SND samples are **signed 8-bit at 11025 Hz**. `tools/extract_assets.py` now writes them correctly (it used to assume unsigned 22050 Hz).
+
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.
@@ -134,7 +159,7 @@ System RTL entry points seen so far (offsets in seg 0x30EA): `0000` init, `0530`
 ## Open questions (gameplay RE)
 - Game tick rate / frame timing (vsync-locked 70 Hz? timer-based?). PIT ch0 is not reprogrammed. Measure in DOSBox-X: count game-loop iterations (`DS:0x552E`) per second.
 - Entity tables: enemies, shots, bonuses, shop items/prices (`INFO.PAS` holds the shop texts).
-- LEV format as used by DP.EXE, and how enemy waves are scripted (in code, or in data?).
-- SFX sample rate passed to SMIX.
+- ~~LEV format and wave scripting~~: data-driven, see "Levels and spawning". Open: `sub`, `DS:0x16C2`, boss fights.
+- ~~SFX sample rate~~: 11025 Hz, signed (session 3).
 - The cheat mentioned in `MISSIONS.PAS` ("Hast du den Cheat schon entdeckt?").
 - `SAVE.DAT` and its tamper protection, plus `SETTINGS.DAT` fields.
