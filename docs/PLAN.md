@@ -44,7 +44,7 @@
 - [x] Unit/segment map of DP.EXE: System, Crt, Dos, AniVGA, SMIX + Detect + XMS, CD stack, mouse, joystick, file reader, game unit (session 2).
 - [~] Name individual RTL/AniVGA/SMIX routines. First batch done (see re-notes); next: match AniVGA 1.2 / SMIX sources routine by routine.
 - [~] Main loop + game states: main body, main menu, game menu, game loop, boss start, end-of-game mapped (session 2). Next: shop (`FUN_1d9e_84bc`), options (`FUN_1000_c4cd`), level start (`0x1B582`), game over / level end (`0x1B6D1`, `0x1A951`).
-- [ ] Measure tick timing in DOSBox-X (PIT ch0 isn't reprogrammed; count `DS:0x552E` per second).
+- [~] Tick timing (session 3): the loop is unthrottled (AniVGA `SetCycleTime(0)`, no vsync wait), scroll = 1 px/frame. Next: measure fps at `cycles=64000` from a DOSBox-X video of level 1 (**user** records ~20 s, then analyse the scroll speed).
 - [ ] Player: movement, weapons/pods, shields, energy, the tank-vs-ship mechanics (see prototype).
 - [~] Enemies: spawning is data-driven (LEV records → `SpawnFromLevel` → `SpawnEnemy`); type → sprite/energy/layer tables found (session 3). Next: `sub` (movement patterns), enemy update code, `DS:0x16C2`, bosses (Golem…).
 - [ ] Shop: items, prices (`INFO.PAS` texts), refunds ("Rückzahlung", "Investiert").
