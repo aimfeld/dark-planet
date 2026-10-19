@@ -58,9 +58,18 @@
 - [x] Extract all gameplay tables to JSON for the engine (session 5): `tools/game_tables.py` (jets, engines, shields, items/prices, standard weapons and pod volleys, shot types, enemy types/guns/shot kinds, explosion anims and kinds, sprite anims and cycles, bonus drops, levels and boss spawns, sound names, shadow brightness). `--check` compares it with the spec values: 0 mismatches. New code findings (Explode, AnimTick, SpawnShot, SetShadowTab, HitDetect, StartBossFight) in re-notes "Engine tables (session 5)".
 - [ ] Not yet covered: the text viewer/menus in detail, mission briefing layout, exact HUD fonts, the ending sequence timing.
 
-### Phase 3: Engine + classic mode
-- [ ] Project scaffold (Vite + TS + PixiJS), fixed-tick loop, input, audio.
-- [ ] Classic renderer; reimplement level by level, comparing side by side with DOSBox-X.
+### Phase 3: Engine + classic mode 🔄
+- [x] Project scaffold (session 5): `game/` with Vite + TypeScript + PixiJS + Vitest. Fixed 40 Hz loop in `src/main.ts`, separate from rendering (catch-up capped at 8 ticks). Keyboard input (original keys plus X = fire, C = altitude, because browsers grab Ctrl/Alt combinations). Engine data from `tools/export_engine_data.py` into `game/public/data/` (local only, gitignored like `original_source/`; `npm run data`).
+- [x] Deterministic simulation `game/src/sim/` (session 5): ported from the DP.EXE routines, laid out like the original (an AniVGA-style sprite slot table plus the player/enemy/shot records). Own TP `Random`, `Round` and a sin/cos built from IEEE arithmetic only, so it runs identically on every JS engine. Test: two runs with the same seed and input give the same state.
+- [x] Classic renderer (session 5): 320×200 indexed framebuffer drawn like AniVGA `Animate` (slots 920→0, playfield clip x 8–311, HUD slots 0–8 unclipped, shadow mode through the `SetShadowTab(70)` table), EPIS1 palette, integer nearest-neighbour scaling with square pixels.
+- [x] First playable slice (session 5): level 1 scrolling with tiles; spawning from the level records; player movement, altitude and draw-order swap, shadows; Firestorm and the other standard weapons and simple pods; enemy subs used in level 1 (0–6, 9–0x11) with their guns and enemy shots (patterns 1–5, 8–16, 18, 20); hit test, shot/enemy-shot/ramming collisions, damage, death, respawn and invulnerability; explosions, sprite animations and cycles; HUD bars, money and lives. Level 1 runs to the boss trigger (scroll stops at y −5561). Side by side with the DOSBox-X capture `dp_002.avi` at scrollY −1349: tiles and spawned objects line up exactly.
+- [ ] **User:** play the slice (`cd game && npm run data && npm run dev`) next to DOSBox-X and report what feels different (speed, steering, enemy paths, shot speeds).
+- [ ] Decide: square pixels (now) or 4:3 aspect correction (320×200 shown as 320×240, as on a CRT).
+- [ ] Audio: SFX → OGG/WAV and Web Audio playback (the sim already emits sound events); CD music later.
+- [ ] Remaining level-1 content: bonus drops, pickups and inventory; the level 1 boss (escort pair, sub 0x14) and level end; game over and back to the menu.
+- [ ] Remaining weapons: Autogun targeting, Flamer, Windstorm, ball pods, bonus shots (shot patterns 2, 7, 9–13, 22, 23).
+- [ ] Enemy subs 7, 8, 0x12–0x2A and enemy-shot patterns 6, 7, 17, 19, 21, 22 (episode 2 and bosses), then levels 2–6.
+- [ ] Menus, hangar, shop, saves, options, mission briefings, two players (mouse/joystick/gamepad input).
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
@@ -76,3 +85,4 @@
 8. Original bugs are fixed in the remake, including any found later (user, session 4). List: `docs/gameplay-spec.md` §12.
 9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
+11. Engine data generated from `original_source/` (sprites, tiles, levels, tables) stays local (`game/public/data/`, gitignored), like the original files (session 5; not yet confirmed by the user).

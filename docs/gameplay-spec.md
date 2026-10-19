@@ -133,9 +133,15 @@ Life never regenerates (only Aid, respawn, next level). At every level start lif
   (counter div 20) above the jet, refreshed every 20 ticks; loops sound 16, sound 44 on, 43 off.
 
 ### 3.5 HUD (O, 0x107F8, 1d9e:1176)
-- Bar frames: sprite 490 at x 0 (P1) and x 311 (P2). Each bar is 33 lines, 3 px wide, colour 0x5D + (i−1) div 3;
-  line i is black when energy < i·max/33. Shield bar bottom at screen y 79 (drawn only with a shield), life bar
-  bottom at y 171.
+- Bar frames: sprite 490 at x 0 (P1) and x 311 (P2), always both. Each bar is 33 lines, 3 px wide (x 3–5 for P1,
+  314–316 for P2) and **2 px apart** (line i at screen y base − 2i, session 5), colour 0x5D + (i−1) div 3; line i is
+  black when energy < i·max/33. Shield bar base y 79 (lines 77…13, drawn only with a shield), life bar base y 171
+  (lines 169…105). The bars are drawn before the sprites, so the frame sprites cover them.
+- Draw order and clipping (O, AniVGA `Animate` @28be:2CEF/4722, session 5): sprite slots are drawn from 920 down to
+  0, so **lower slots are in front**. Slots 9 and up are clipped to the playfield x 8–311 (`SetAnimateWindow(10, 0,
+  311, 199)` rounds x 10 down to 8); slots 0–8 (HUD) use the full screen. HUD slots: 1/2 lives icon 491, 3/4 lives
+  number, 5/6 money, 7/8 bar frames, 9–14 bonus slots. Money and lives are text sprites in the FIRE font
+  ("$" + money).
 - P1: money text at (20, 10); lives icon 491 at x 30, number at x 45; bonus slots at x 25 + 30·i (+ per-item
   offset), screen y 171, selection frame sprite 492. P2: money (240, 10), icon x 260, number x 275, slots
   x 210 + 30·i. Two players: labels "I"/"II" (577/578) follow the jets.
@@ -681,12 +687,14 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 9 | Level 4 tank drifts 2 px left per loop (I: unintended) | closed loop with no net drift (*design*) |
 | 10 | Mouse control: the "move up" limit compares x instead of y | compare y (screen y ≥ 10) |
 | 11 | Joining P2 sets P1 active again even if P1 was out (I) | joining only adds P2 |
+| 12 | Collisions keep testing an enemy after it was destroyed in the same tick; for types with a wreck a second shot hits the wreck and pays the reward (and explodes) again (I, from 0x18978) | stop testing an enemy once it is destroyed |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.
 (The CPU-option capture is no longer needed: the remake has no CPU option, decision user, session 4.)
-1. **Draw order** (high/low jet vs air/ground enemies, ground objects vs air enemies): a few screenshots in
-   level 1 flying low and high under/over a flyer.
+1. ~~**Draw order**~~: answered from the code (session 5, §3.5): lower slot = in front, so the high jet (128) is in
+   front of air enemies (381+), the low jet (523+) behind them and in front of ground objects (813+), wrecks last
+   (873+). A screenshot flying low under a flyer would still confirm it.
 2. **Shot speeds on screen**: level 1 type-3 flyers fire kind 2 (speed 6) down → expect 7 px/tick on screen;
    the standard shot (speed 6) should rise 5 px/tick.
 3. **Respawn and invulnerability**: one death: jet from below at x ≈ 150, 3 px/tick, arc with countdown 5…1 for

@@ -13,7 +13,7 @@ reverse-engineering `DP.EXE`, with the help of an earlier prototype whose
 source survived.
 
 ## Status
-Investigation and tooling phase. See [docs/PLAN.md](docs/PLAN.md) for the roadmap and progress.
+Gameplay reverse-engineered (`docs/gameplay-spec.md`); engine and classic mode in progress (`game/`). See [docs/PLAN.md](docs/PLAN.md) for the roadmap and progress.
 
 ## Repository layout
 The original game files (`original_source/`) are **not included** in this
@@ -29,6 +29,7 @@ repository. The tools expect them at that path in a local checkout.
 | `original_source/dplanet.conf` | DOSBox-X config (works on Steam Deck, no music) |
 | `original_source/dplanet-cd.conf` | DOSBox-X config that mounts the rebuilt CD, for music |
 | `tools/` | Asset extraction and reverse-engineering helpers |
+| `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
 | `docs/` | Plan, reverse-engineering notes, file formats |
 
 ## Playing the original in DOSBox-X (with soundtrack)
@@ -54,6 +55,17 @@ uv run --with numpy --with pillow python tools/render_levels.py original_source 
 python3 tools/enemy_table.py original_source --json $out/enemies.json                   # enemy, enemy-shot and sprite-cycle tables
 python3 tools/game_tables.py original_source $out/game_tables.json --check            # every gameplay table for the engine
 ```
+
+## Running the remake (work in progress)
+```sh
+cd game
+npm install
+npm run data   # once: exports sprites, tiles, levels and tables from original_source/ into game/public/data/
+npm run dev    # http://localhost:5173
+npm test       # simulation tests (the data-dependent ones need npm run data)
+```
+Keys: arrows move, Ctrl or X fires, Alt or C switches altitude, P pauses, Esc restarts. The current slice is level 1
+up to the boss (see `docs/PLAN.md` Phase 3).
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions

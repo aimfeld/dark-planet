@@ -328,6 +328,42 @@ Static analysis for the table export (`tools/game_tables.py`) and the engine. Ev
   `tools/game_tables.py` `BOSS_SPAWNS`; y passed to SpawnEnemy is the bottom edge, e.g. level 1 escort at
   (117, scrollY + 117)); `Delay(1200)`; fade in. Level 4 starts sound 51 looping (`PlaySound(1, 0x33)`).
 - **Observed:** level CD tracks: bytes at DS:0x1032… = 5, 6, 7, 5, 6, 7, 7 (element for level n at 0x1031 + n).
+- **Observed (draw order):** AniVGA `Animate` @28be:2CEF restores the background, then loops SI from 0x730 (slot 920)
+  down to 0 (@28be:4722–4AC0), so lower slots are drawn last, in front. When SI reaches `DS:0xFCDA` (= 2·8, set by
+  28be:2BDE(8) at level start) the clip window switches to the full screen: slots 0–8 are the HUD.
+  `SetAnimateWindow(x1, y1, x2, y2)` @28be:2BFF rounds x1 down to a multiple of 4 and the width to a multiple of 4:
+  (10, 0, 311, 199) → x 8–311.
+- **Observed (player slots):** LevelReset @1d9e:01B7 sets P1 pods 130 (+mount), label 129, jet 128, arc 125, digit
+  126, jet shadow 138, pod shadows 139 (+mount), first shot 149, ×5 icon 127; P2 +125. AltitudeSwap moves 24 slots
+  (P1 125–148) by +398 to the low range 523–546 and shifts the slot list, including the first-shot slot (new shots go
+  to 547+; existing shots keep theirs).
+- **Observed (HUD):** LevelStartSprites @0x107F8 and ScrollStep @0x15F68: slot 5/6 money text sprite 837/838 at
+  (20/240, 10), slot 1/2 icon 491 at x 30/260, y scrollY + 25, slot 3/4 lives text 813/814 at x 45/275, y scrollY + 27,
+  slots 7/8 frame 490 at (scrollX + 311 / scrollX, scrollY), slots 9–14 bonus inventory. Text sprites are made by
+  1d9e:2E58 (AniVGA 28be:1FC5) in the current font (FIRE in the capture); money = "$" + Str(money) (literal @1d9e:0D0C).
+  DrawEnergyBars @1d9e:1176: `Line(scrollX + a + 1, Y, scrollX + a + 3, Y)` with a = 2 (P1) / 313 (P2) and
+  Y = base − 2c for c = 1…33 (the y variable decreases twice per line), so lines are 2 px apart.
+- **Observed (Real arithmetic):** RTL 30ea:12B0 = Trunc, 30ea:12B8 = Round (CH = 0/1 into 30ea:1218); far calls
+  0x3000:21xx are aliases of 30ea:12xx (e.g. 0x3000:2158 = 30ea:12B8). 1d9e:09EE / 0A6A = cx + Round(r·cos a°) /
+  cy − Round(r·sin a°) (constants 2.0, π, 360.0 decoded from the Real48 operands).
+- **Observed:** EnemyUpdate sub 3: x = Round(x0 + 40·sin(8t°)) (constants 2π, 360, 8, 40 @0x16D17–0x16D4B).
+  Arc @0x16A11 = `Arc(sprite, enemy, cx, cy, r, step, a0, a1, next)`: angle := a0 if unset (−1000.0), angle +=
+  40·step/r, position by 09EE/0A6A, next phase when angle ≥ a1 (step > 0) or ≤ a1 (step < 0).
+- **Observed:** MoveTowards @0x14F2C(speed, ty, tx, sy, sx, &y, &x): ty/tx nudged by 1 when equal to the start; the
+  axis with the larger distance steps by ±speed, the other = start + Round(Δother·|major − start| / |Δmajor|).
+- **Observed:** EnemyFire @0x15069 plays the sound of **gun 1's** shot kind for every gun (only if fewer than 4 voices
+  play); enemy-shot slots 72–120; aimed patterns 5/6 target (player x + width div 2, player y (+ height div 2 when
+  not scrolling)).
+- **Observed (collisions):** shot-hit explosions by shot type: 1, 2, 7, 9, 11, 15, 18, 20, 23 → kind 1 at the shot;
+  4, 8, 19 → kind 4; 6, 13, 17, 21 → kind 3; 3 → kind 7 at (shot x, enemy y); 5 → kind 1 at enemy + (5, 5);
+  14 → kind 18 at (shot x − 16, enemy y + height − 30); 16 → kind 23 at (shot x − 18, shot y − 5). Ramming the Golem
+  parts explodes kind 1 at jet + (−15 + Random(60), −15 + Random(60)) (@0x19058). Enemy energy < 1 = destroyed.
+- **Inferred (bug, spec §12 #12):** the shots-vs-enemies loop doesn't re-check `active` inside the shot loop; after a
+  kill with a wreck, `+0` points at the wreck slot, so a second shot in the same tick hits the wreck and calls
+  EnemyDestroyed again.
+- **Observed:** ShieldRecharge @0x10F30 (frame mod recharge = 0 → +1, cap), LifeLost @0x10FA3 (explosion kind 9 at
+  jet − (80, 80) + Random(30) each), RespawnFlyIn @0x10742, Invulnerability tick @0x10637 (every 20 ticks: arc 544,
+  digit text sprite 815/816 = counter div 20; arc at jet + (cx − 21, T − 8), digit at jet + (cx − 5, T − 25)).
 - Data-table element sizes (all checked against the spec values by `tools/game_tables.py --check`): prices are
   longints (base + 4·i); jet frame base, shield recharge and ball-pod reload are words (the session-4 ledger did not
   give sizes).

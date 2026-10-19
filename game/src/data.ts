@@ -1,0 +1,183 @@
+// Game data exported from the original files by tools/export_engine_data.py (game/public/data/).
+
+export interface Volley {
+  dx: number;
+  dy: number;
+  pattern: number;
+  type: number;
+}
+
+export interface Jet {
+  id: number;
+  name: string;
+  price: number;
+  max_life: number;
+  ram_damage: number;
+  frame_base: number;
+  extents: { l: number; r: number; t: number; b: number };
+  mounts: boolean[];
+  standard_weapon: { sprite: number; sound: number; reload: number; volley: Volley[] };
+}
+
+export interface Pod {
+  id: number;
+  name: string;
+  price: number;
+  sound: number;
+  reload: number;
+  volley: Volley[];
+  sprite?: number;
+  fire_anim?: number | null;
+  contact_damage?: number;
+  orbit_factor?: number;
+}
+
+export interface Gun {
+  gun: number;
+  kind: number;
+  flugart: number; // flight pattern of the enemy shot
+  dx: number;
+  dy: number;
+  inter: number;
+  salvo_pause: number;
+  salvo: number;
+}
+
+export interface EnemyType {
+  type: number;
+  sprite: number;
+  layer: number;
+  energy: number;
+  reward: number;
+  ram_damage: number;
+  wreck: number;
+  shadow: [number, number];
+  gun_class: number;
+  fire_delay: number | null;
+  scripted_only: boolean | null;
+  guns: Gun[];
+  boss: boolean;
+  explosion_kind: { kind: number; dx: number; dy: number; rnd: number } | null;
+  kill_sound: number | null;
+}
+
+export interface ExplosionPart {
+  anim: number;
+  delay: number;
+  dx: number;
+  dy: number;
+  rx?: number;
+  ry?: number;
+  screen?: boolean;
+  delay_rand?: number;
+  delay_step?: number;
+}
+
+export interface Tables {
+  jets: Jet[];
+  engines: { id: number; max_speed: number }[];
+  shields: { id: number; max: number; recharge_every: number }[];
+  small_pods: Pod[];
+  large_pods: Pod[];
+  ball_pods: Pod[];
+  mount_offsets: { mount: number; x_from: 'cx' | 'l' | 'r'; dx: number; dy: number }[];
+  no_engine_max_speed: number;
+  shot_types: { type: number; sprite: number; speed: number; damage: number }[];
+  enemy_types: EnemyType[];
+  enemy_shot_kinds: { kind: number; sprite: number; damage: number; sound: number; speed: number }[];
+  explosion_anims: { anim: number; first: number; last: number; rate: number; sound: number }[];
+  explosion_kinds: Record<string, ExplosionPart[]>;
+  quake_ticks: Record<string, number>;
+  sprite_anims: { anim: number; first: number; last: number; ping_pong: boolean; rest: number; rate: number; reverse: boolean }[];
+  sprite_cycles: Record<'global' | 'episode1' | 'episode2', { first: number; last: number; rate: number }[]>;
+  levels: { level: number; episode: number; boss_trigger_y: number; boss_core: number }[];
+  sounds: string[];
+}
+
+export interface SpawnRecord {
+  y: number;
+  x: number;
+  type: number;
+  sub: number;
+  flag: number;
+}
+
+export interface Level {
+  tiles: number[][]; // 200 rows x 10 columns, row 0 = level start (bottom)
+  records: SpawnRecord[];
+}
+
+/** One AniVGA sprite: palette indices (0 = transparent) and the boundary tables HitDetect uses. */
+export class Sprite {
+  readonly left: Int16Array; // per row: first opaque x, or 16000 when the row is empty
+  readonly right: Int16Array; // per row: last opaque x, or -16000
+  readonly top: Int16Array; // per column: first opaque y, or 16000
+  readonly bottom: Int16Array; // per column: last opaque y, or -16000
+
+  constructor(readonly w: number, readonly h: number, readonly px: Uint8Array) {
+    this.left = new Int16Array(h).fill(16000);
+    this.right = new Int16Array(h).fill(-16000);
+    this.top = new Int16Array(w).fill(16000);
+    this.bottom = new Int16Array(w).fill(-16000);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (px[y * w + x] === 0) continue;
+        if (this.left[y] === 16000) this.left[y] = x;
+        this.right[y] = x;
+        if (this.top[x] === 16000) this.top[x] = y;
+        this.bottom[x] = y;
+      }
+    }
+  }
+}
+
+export interface Font {
+  width: number;
+  height: number;
+  widths: number[];
+  glyphs: Uint8Array; // 256 x height x width
+}
+
+export interface GameData {
+  tables: Tables;
+  sprites: Map<number, Sprite>;
+  tiles: Uint8Array[]; // per episode: 32 x 32 tiles, 1024 bytes each
+  levels: Level[];
+  fonts: Record<string, Font>;
+  palette: { rgb: number[][]; shadow: number[] };
+}
+
+export interface RawData {
+  json: (name: string) => Promise<unknown>;
+  binary: (name: string) => Promise<ArrayBuffer>;
+}
+
+export async function loadGameData(raw: RawData): Promise<GameData> {
+  const [tables, spriteIndex, spriteBin, tiles1, tiles2, levels, fontIndex, fontBin, palette] = await Promise.all([
+    raw.json('tables.json'),
+    raw.json('sprites.json'),
+    raw.binary('sprites.bin'),
+    raw.binary('tiles1.bin'),
+    raw.binary('tiles2.bin'),
+    raw.json('levels.json'),
+    raw.json('fonts.json'),
+    raw.binary('fonts.bin'),
+    raw.json('palette.json'),
+  ]);
+  const sprites = new Map<number, Sprite>();
+  for (const [n, [offset, w, h]] of Object.entries(spriteIndex as Record<string, [number, number, number]>)) {
+    sprites.set(Number(n), new Sprite(w, h, new Uint8Array(spriteBin, offset, w * h)));
+  }
+  const fonts: Record<string, Font> = {};
+  for (const [name, f] of Object.entries(fontIndex as Record<string, { width: number; height: number; offset: number; widths: number[] }>)) {
+    fonts[name] = { width: f.width, height: f.height, widths: f.widths, glyphs: new Uint8Array(fontBin, f.offset, 256 * f.width * f.height) };
+  }
+  return {
+    tables: tables as Tables,
+    sprites,
+    tiles: [new Uint8Array(tiles1), new Uint8Array(tiles2)],
+    levels: levels as Level[],
+    fonts,
+    palette: palette as GameData['palette'],
+  };
+}
