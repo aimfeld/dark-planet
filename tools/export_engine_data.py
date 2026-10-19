@@ -10,6 +10,8 @@ Files (all indexed colour; the engine applies the palette itself):
   fonts.json     per font: cell size, byte offset, advance widths
   levels.json    LEVEL1-6: tile grid (row 0 = level start) and the 600 spawn records
   tables.json    tools/game_tables.py output
+  sounds.bin     the SFX as SMIX stores them: signed 8-bit mono PCM at 11025 Hz, concatenated
+  sounds.json    {rate, sounds: [{name, offset, length}]} in the game's load order, so index = PlaySound number
 
 Usage: uv run --with numpy --with pillow python tools/export_engine_data.py original_source game/public/data
 """
@@ -23,6 +25,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import enemy_table  # noqa: E402
 import game_tables  # noqa: E402
 from anivga import read_font, read_sprite_lib  # noqa: E402
+from extract_assets import SFX_RATE, read_smix  # noqa: E402
 from extract_sprites import SPRITE_LIBS  # noqa: E402
 from render_levels import read_level  # noqa: E402
 
@@ -90,8 +93,24 @@ def main(src, out):
         json.dump(levels, f)
 
     enemy_table.load(src)
+    tables = game_tables.tables()
     with open(os.path.join(out, 'tables.json'), 'w') as f:
-        json.dump(game_tables.tables(), f)
+        json.dump(tables, f)
+
+    # PlaySound(n) indexes the SMIX load list (names in DP.EXE, game_tables.SOUNDS); look each name up
+    pcm = {}
+    for snd in ('AREA.SND', 'AREA2.SND'):
+        for _, name, data in read_smix(os.path.join(game, snd)):
+            pcm.setdefault(name.upper(), data)
+    sounds, blobs, offset = [], [], 0
+    for name in tables['sounds']:
+        data = pcm[name.upper()]
+        sounds.append({'name': name, 'offset': offset, 'length': len(data)})
+        blobs.append(data)
+        offset += len(data)
+    open(os.path.join(out, 'sounds.bin'), 'wb').write(b''.join(blobs))
+    with open(os.path.join(out, 'sounds.json'), 'w') as f:
+        json.dump({'rate': SFX_RATE, 'sounds': sounds}, f)
 
 
 if __name__ == '__main__':
