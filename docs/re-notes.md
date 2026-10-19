@@ -282,6 +282,56 @@ argument 1 = loop (I: those sounds are stopped explicitly later).
 - The game loop has a per-frame CPU delay (see "Program structure").
 - Shadows are the same sprite in AniVGA shadow mode; ASCHEN1/2 hold wreck sprites.
 
+## Engine tables (session 5)
+Static analysis for the table export (`tools/game_tables.py`) and the engine. Evidence IDs (session 5):
+`ev_750797113e…` (Explode 1d9e:157A), `ev_9394a67947…` (AddExplosion 1d9e:1483), `ev_2517ba0974…` (KillEnemy
+0x11A08), `ev_5386e8ce49…` (SetShadowTab 28be:0106), `ev_9c53ea1247…` (HitDetect 28be:29B9), `ev_716eb55c2b…`
+(FirePods 0x1961C). Other routines were read from REA CLI decompiles (`tools/rea.sh decompile`).
+- **Observed:** sprite position tables: SpriteX = `DS:0xC2F0 + 2·slot` (the code writes it as `-0x3D10`), SpriteY =
+  `DS:0xCA22 + 2·slot` (`-0x35DE`), SpriteN = `DS:0x3146 + 2·slot`, display mode byte = `DS:0xB820 + slot`
+  (3 = shadow). Confirmed by the player bound check @0x1A7CD (`L + SpriteX ≤ 12`).
+- **Observed:** `AddExplosion(anim, delay, x, y)` @1d9e:1483 (nested in Explode): first free of 40 records
+  (14 B at DS:0x834C: +0 sprite slot = i + 31 if the parent's altitude byte is 1, else i + 451; +2 x; +4 y;
+  +6 current frame := first[anim]; +8 delay; +A active; +C altitude; +D anim). `Explode(x, y, kind, altitude)`
+  @1d9e:157A builds kinds 1–25 from AddExplosion calls with fixed or Random() offsets; the list is transcribed
+  in `tools/game_tables.py` (`EXPLOSION_KINDS`). Kinds 12 and 15 scatter over the screen (x = Random(320/300) − 40,
+  y = scrollY + Random(220/200) − 40); kind 15 first calls Quake(40).
+- **Observed:** `ExplosionTick` @1d9e:1004: every tick `delay −= 1`; on ticks where `frame mod rate[anim] = 0` and
+  delay < 1: show the current frame at (x, y), play sound[anim] on the first frame if fewer than 7 voices play,
+  remove the record when the frame is past last[anim], then frame += 1.
+- **Observed:** `KillEnemy` @0x11A08 calls `Explode(SpriteX + dx, SpriteY + dy, kind)` per type (table in
+  `tools/enemy_table.py` `EXPLOSION`); type 0x17 uses (−70 + Random(30), −50 + Random(30)).
+- **Observed:** `StartAnim(anim, slot)` @1d9e:4071 / `AnimTick` @1d9e:33FA / `AnimEnd` @1d9e:33A1: 40 records
+  (5 B at DS:0x85D5). A new anim on a slot cancels the old one. Frames first[a] (DS:0x1458) … last[a] (0x14AE),
+  one step on ticks where `frame mod rate[a]` (word 0x1586) = 0; at the end, if ping-pong[a] (byte 0x1505) the
+  anim runs back to first, then AnimEnd sets the sprite to rest[a] (0x1530). Anims 0x1F and 0x2B start at last
+  and run backwards. The anim stops early if the sprite left the range or was cleared.
+- **Observed:** `SpawnShot(type, pattern, dx, dy, jetSlot, mount, …)` @0x111A4: the shot sprite starts at
+  (SpriteX[jet] + dx, SpriteY[jet] + dy); FirePods passes dx/dy relative to the nose (cx, T), the large-pod mount
+  point (`1d9e:0B2C`: mount 0 at cx + (−7, −22), 3/5 at L + (−17/−35), 4/6 at R + (4/22), y T + 14/16) or the ball
+  pod (+5, +5). The fire sound (ItemInfo field 8) plays per shot when fewer than 5 voices play, except for the
+  Autogun (cat 1 id 4), whose branch picks the target instead (spec §12 bug 4). Missile shots (cat 1 id 1) start
+  anim 5. The mount is unloaded only if a shot slot was free.
+- **Observed:** `SetShadowTab(brightness)` AniVGA @28be:0106, called with **70** at startup (@0x1B295) and at level
+  start (@0x10CCC). For each colour c of the current 6-bit palette (DS:0xD25E): target = (r·b div 100,
+  g·b div 100, b·b div 100); pick the first colour j with every channel ≤ the target and minimal squared RGB
+  distance; if none, the first colour with minimal squared distance. Shadow-mode sprites (mode byte 3) replace each
+  background pixel under an opaque sprite pixel by `shadow[background]`.
+- **Observed:** `HitDetect(slotA, slotB)` AniVGA @28be:29B9 (called through 1d9e:3BEC): false if the slots are equal
+  or a sprite is empty. Otherwise, over the overlap of the two bounding boxes: a hit needs **some overlapping row**
+  where the opaque spans [x + left[row], x + right[row]] of both sprites intersect, **and some overlapping column**
+  where [y + top[col], y + bottom[col]] intersect (empty columns, top = 16000, are skipped). The row and the column
+  need not be the same, so it is not pixel-exact: an L-shaped sprite can "hit" through its empty corner. Self-
+  modifying code (immediates patched through CS).
+- **Observed:** `StartBossFight` @0x1627E: scrolling off; fade; both players' SpriteY := scrollY + 160; clears enemies,
+  shots, enemy shots, explosions, bonus objects; per level PlaySound / SpawnEnemy calls (transcribed in
+  `tools/game_tables.py` `BOSS_SPAWNS`; y passed to SpawnEnemy is the bottom edge, e.g. level 1 escort at
+  (117, scrollY + 117)); `Delay(1200)`; fade in. Level 4 starts sound 51 looping (`PlaySound(1, 0x33)`).
+- **Observed:** level CD tracks: bytes at DS:0x1032… = 5, 6, 7, 5, 6, 7, 7 (element for level n at 0x1031 + n).
+- Data-table element sizes (all checked against the spec values by `tools/game_tables.py --check`): prices are
+  longints (base + 4·i); jet frame base, shield recharge and ball-pod reload are words (the session-4 ledger did not
+  give sizes).
+
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.
@@ -317,4 +367,4 @@ argument 1 = loop (I: those sounds are stopped explicitly later).
 - ~~SFX sample rate~~: 11025 Hz, signed (session 3).
 - ~~The cheat~~: typing G-E-D-A-N-K-E in the hangar sets both players' money to 666666 (session 4).
 - ~~`SAVE.DAT` / `SETTINGS.DAT`~~: decoded in session 4 (`docs/file-formats.md`).
-- Still open (need DOSBox-X): see `docs/gameplay-spec.md` §13 (draw order, on-screen shot speeds, CPU-delay model, shop bugs, boss details, hit-test precision).
+- Still open (need DOSBox-X): see `docs/gameplay-spec.md` §13 (draw order, on-screen shot speeds, shop bugs, boss details). Hit-test precision is answered from the code (session 5, "Engine tables").

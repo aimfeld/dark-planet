@@ -22,8 +22,10 @@ Nothing in this file has been checked in DOSBox-X yet; §12 lists the checks.
   every "every N ticks" rule below) and a sprite-cycle counter (DS:0x5530).
 - Sprite numbers are the `sprites.json` numbers (DP.EXE load order). Sound numbers are 0-based SMIX indices:
   0–34 `AREA.SND`, 35–58 `AREA2.SND` (list in §11).
-- Hit tests: AniVGA `HitDetect`, bounding boxes refined by each sprite's per-row/per-column opaque extents (I:
-  not pixel-exact). The decoded sprites have these extents.
+- Hit tests (O, AniVGA `HitDetect` 28be:29B9, session 5): within the overlap of the two bounding boxes there must
+  be some row where both sprites' opaque spans (left…right of that row) intersect **and** some column where both
+  opaque spans (top…bottom) intersect. Not pixel-exact (the row and column may differ). The decoded sprites carry
+  these extents.
 
 ## 1. Timing and the tick
 - The original runs one game-loop iteration per frame with no frame limiter, but `0x1AA36` adds a busy
@@ -502,7 +504,8 @@ Removed when off screen (y > scrollY + 200 or < scrollY, x > 320 or < 1).
 ### 7.6 Kills, wrecks, explosions (O, 0x12A1E, 0x11A08, 1d9e:157A/1004)
 - Kill: money to the killer (§3.6), explosion of the type's kind, bonus roll (§5.1). If the type has a wreck
   sprite, the wreck stays and scrolls away with the ground (boss wrecks stay put).
-- Explosion kinds spawn 1–30 animations with delays and random offsets; kind 12 and 15 cover the screen; kind 15
+- Explosion kinds spawn 1–30 animations with delays and random offsets (all 25 kinds in `tools/game_tables.py`
+  `EXPLOSION_KINDS`; an animation waits `delay` ticks, then shows each frame for `rate` ticks); kind 12 and 15 cover the screen; kind 15
   (boss cores) also shakes the screen for 40 ticks (scrollX += Random(10) while drawing; sound 14).
   40 explosion slots, level coordinates.
 
@@ -524,6 +527,9 @@ Removed when off screen (y > scrollY + 200 or < scrollY, x > 320 or < 1).
 ### 7.7 Shadows (O, 1d9e:1C8A)
 Air enemies (layer 1) cast a shadow at (+12, +12); some ground types use the offsets in the table. The shadow is
 the same sprite drawn in AniVGA shadow mode (darkened background). (ASCHEN1/2 are wreck sprites, not shadows.)
+Shadow mode replaces every background pixel under an opaque sprite pixel by `shadow[pixel]`, a table built by
+AniVGA `SetShadowTab(70)` from the palette (darkest-not-brighter match to 70 % of each colour; re-notes "Engine
+tables").
 
 ## 8. Bosses
 ### 8.1 Common flow (O, 0x1627E)
@@ -689,5 +695,5 @@ Priority order; each needs one short capture (`original_source/capture/`) or a d
    remake fixes both, §12).
 5. **Boss checks**: ~~level 4 core invulnerable until the parts are gone~~ (confirmed by the user, session 4);
    tank engine sound loops; level 3 debris direction; Golem curse removes all pods except the standard weapon.
-6. **Hit test precision**: a near miss on a large sprite (boss): transparent corners should not collide.
+6. ~~**Hit test precision**~~: answered from the code (session 5): row and column extent test, not pixel-exact (§0).
 7. Debugger (optional): `bpm ds:16c2` never triggers; bonus drop rate ≈ 14 % over a level.

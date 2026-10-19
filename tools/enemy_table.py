@@ -21,10 +21,15 @@ All tables are Turbo Pascal arrays in DS (linear 0x328D0); element i sits at bas
 """
 import json, os, struct, sys
 
-SRC = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('--') else 'original_source'
-GAME = os.path.join(SRC, 'Game')
-EXE = open(os.path.join(GAME, 'DP.EXE'), 'rb').read()
-DS = EXE[0x328D0 - 0x10000 + 8608:]
+DS_FILE_OFFSET = 0x328D0 - 0x10000 + 8608  # DS = linear 0x328D0; MZ header 8608 bytes
+GAME = DS = None
+
+
+def load(src):
+    """Read DP.EXE below <src>/Game; the table readers below need this first."""
+    global GAME, DS
+    GAME = os.path.join(src, 'Game')
+    DS = open(os.path.join(GAME, 'DP.EXE'), 'rb').read()[DS_FILE_OFFSET:]
 
 
 def b(o): return DS[o]
@@ -43,24 +48,34 @@ def lib(n):
 
 
 BOSS = {0x05, 0x20, 0x23, 0x3C, 0x43, 0x48}
-# explosion kind (1d9e:157a) and offset per type, from KillEnemy @0x11A08
-EXPL = {}
-for t in (0x13, 0x0E): EXPL[t] = '1'
-for t in (1, 2, 3, 0x11, 0x12, 0x29, 0x2A, 0x2C, 0x2F, 0x33, 0x35, 0x3B, 0x41): EXPL[t] = '2 (x-10)'
-for t in (4, 0xC, 0x1E, 0x1F): EXPL[t] = '8 (-40,-40)'
-for t in (6, 8, 0xB, 0x21, 0x22, 0x26, 0x2B, 0x2D, 0x3A): EXPL[t] = '10 (-40,-40)'
-for t in (7, 0xD, 0x1B, 0x15): EXPL[t] = '11 (-40,-25)'
-EXPL[10] = '13 (-40,-25)'
-for t in (9, 0x14, 0x27): EXPL[t] = '16 (-10,-12)'
-for t in BOSS: EXPL[t] = '15 (-30,-20) +shake'
-for t in (0xF, 0x25, 0x28, 0x2E, 0x32, 0x34, 0x36, 0x3F, 0x42): EXPL[t] = '17 (-16,-16)'
-for t in (0x10, 0x30, 0x37, 0x39, 0x40): EXPL[t] = '19'
-EXPL[0x17] = '9 (rnd)'
-for t in (0x16, 0x1A, 0x1D): EXPL[t] = 'none, snd 0x20'
-EXPL[0x18] = 'none, snd 0x21'
-EXPL[0x1C] = '21'
-EXPL[0x24] = '22'
-for t in (0x31, 0x38, 0x3D, 0x3E, 0x44, 0x45, 0x46, 0x47): EXPL[t] = '24 (-40,-30)'
+# KillEnemy @0x11A08: Explode(kind, x + dx, y + dy) per type, (x, y) = the enemy sprite's top-left.
+# rnd: dx/dy get + Random(rnd) (only type 0x17). Types without an entry make no explosion.
+EXPLOSION = {}  # type -> (kind, dx, dy, rnd)
+for t in (0x13, 0x0E): EXPLOSION[t] = (1, 0, 0, 0)
+for t in (1, 2, 3, 0x11, 0x12, 0x29, 0x2A, 0x2C, 0x2F, 0x33, 0x35, 0x3B, 0x41): EXPLOSION[t] = (2, -10, 0, 0)
+for t in (4, 0xC, 0x1E, 0x1F): EXPLOSION[t] = (8, -40, -40, 0)
+for t in (6, 8, 0xB, 0x21, 0x22, 0x26, 0x2B, 0x2D, 0x3A): EXPLOSION[t] = (10, -40, -40, 0)
+for t in (7, 0xD, 0x1B, 0x15): EXPLOSION[t] = (11, -40, -25, 0)
+EXPLOSION[10] = (13, -40, -25, 0)
+for t in (9, 0x14, 0x27): EXPLOSION[t] = (16, -10, -12, 0)
+for t in BOSS: EXPLOSION[t] = (15, -30, -20, 0)
+for t in (0xF, 0x25, 0x28, 0x2E, 0x32, 0x34, 0x36, 0x3F, 0x42): EXPLOSION[t] = (17, -16, -16, 0)
+for t in (0x10, 0x30, 0x37, 0x39, 0x40): EXPLOSION[t] = (19, 0, 0, 0)
+EXPLOSION[0x17] = (9, -70, -50, 30)
+EXPLOSION[0x1C] = (21, 0, 0, 0)
+EXPLOSION[0x24] = (22, 0, 0, 0)
+for t in (0x31, 0x38, 0x3D, 0x3E, 0x44, 0x45, 0x46, 0x47): EXPLOSION[t] = (24, -40, -30, 0)
+KILL_SOUND = {0x16: 0x20, 0x1A: 0x20, 0x1D: 0x20, 0x18: 0x21}  # no explosion, a sound instead
+
+
+def explosion_text(t):
+    if t in KILL_SOUND: return 'none, snd 0x%X' % KILL_SOUND[t]
+    if t not in EXPLOSION: return 'none'
+    k, dx, dy, rnd = EXPLOSION[t]
+    if rnd: return '%d (rnd)' % k
+    text = str(k) if (dx, dy) == (0, 0) else '%d (x%d)' % (k, dx) if dy == 0 else '%d (%d,%d)' % (k, dx, dy)
+    return text + (' +shake' if k == 15 else '')
+
 
 SPAWN_FX = {8: 'anim 0x12, snd 0x14', 0xF: 'anim 7', 0x14: 'anim 0xE', 0x17: 'snd 0x1E', 0x2C: 'snd 0x2E',
             0x36: 'anim 0x1A', 0x42: 'snd 0x2F, anim 0x23', 0x4A: 'anim 0x29'}
@@ -103,7 +118,7 @@ def sprite_cycles():
     return out
 
 
-def main():
+def enemy_types():
     use = level_usage()
     rows = []
     for t in range(1, 0x4B):
@@ -113,10 +128,18 @@ def main():
                  energy_2p=e + int(round(e / 100 * 50)), reward=w(0x1BB6 + 2 * t), ram_damage=w(0x1B22 + 2 * t),
                  wreck=w(0x1A8E + 2 * t), shadow=(w(0x1C4A + 2 * t), w(0x1CDE + 2 * t)), gun_class=gc,
                  fire_delay=b(0x1DBD + gc) if gc else None, scripted_only=bool(b(0x1DDF + gc)) if gc else None,
-                 guns=guns(gc) if gc else [], boss=t in BOSS, explosion=EXPL.get(t, 'none'),
+                 guns=guns(gc) if gc else [], boss=t in BOSS, explosion=explosion_text(t),
+                 explosion_kind=dict(zip(('kind', 'dx', 'dy', 'rnd'), EXPLOSION[t])) if t in EXPLOSION else None,
+                 kill_sound=KILL_SOUND.get(t),
                  spawn_fx=SPAWN_FX.get(t, ''),
                  levels={n: sorted(s) for n, s in sorted(use.get(t, {}).items())})
         rows.append(r)
+    return rows
+
+
+def main():
+    load(sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('--') else 'original_source')
+    rows = enemy_types()
     kinds = [shot_kind(k) for k in range(1, 30)]
     if '--json' in sys.argv:
         json.dump(dict(types=rows, shot_kinds=kinds, sprite_cycles=sprite_cycles()), open(sys.argv[sys.argv.index('--json') + 1], 'w'), indent=1)
@@ -145,4 +168,5 @@ def main():
         print('| %s | %s |' % (name, ', '.join('%d..%d/%d' % (c['first'], c['last'], c['rate']) for c in cyc)))
 
 
-main()
+if __name__ == '__main__':
+    main()

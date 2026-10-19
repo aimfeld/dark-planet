@@ -52,6 +52,7 @@ uv run --with numpy --with pillow python tools/extract_sprites.py original_sourc
 uv run --with numpy --with pillow python tools/extract_fonts.py original_source $out    # fonts
 uv run --with numpy --with pillow python tools/render_levels.py original_source $out    # full levels, spawn maps, levels.json
 python3 tools/enemy_table.py original_source --json $out/enemies.json                   # enemy, enemy-shot and sprite-cycle tables
+python3 tools/game_tables.py original_source $out/game_tables.json --check            # every gameplay table for the engine
 ```
 
 ## Docs
