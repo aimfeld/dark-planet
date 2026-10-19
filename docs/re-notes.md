@@ -246,7 +246,7 @@ Globals: 15E0 scrolling, 15E4 level-end autopilot, 15E6 level 1–6, 15E7 episod
 | 0x122C3 | BossScript(action) | per level, fixed enemy slots |
 | 0x1A951 | LevelEndAutopilot | fly out, level+1 / game completed |
 | 0x1B6D1 | AfterLevel | |
-| 0x1B600 | MemoryGuard | frees objects if MemAvail < 140000 (not gameplay) |
+| 0x1B600 | MemoryGuard | every frame: if MemAvail < 140000 bytes, clears explosions, all shots, dead enemy sprites, enemy shots. The user remembers writing this "reaper"; not replicated (decision, user, session 4) |
 | 0x1AA36 | CPU delay | Delay(6/9/12/16) |
 | 0x1CF34 | Cheat | G-E-D-A-N-K-E in the hangar → both money 666666 |
 | 1d9e:84BC | Shop | helpers 3C5A ItemInfo, 6216 offers, 75BE buy, 5165/5558 sell, 6A7E exchange |

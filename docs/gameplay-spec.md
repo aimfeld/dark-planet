@@ -43,6 +43,8 @@ Nothing in this file has been checked in DOSBox-X yet; §12 lists the checks.
   9. Collisions per player (shots ↔ enemies, enemy shots → player, ramming, ball pods) unless the level-end
      autopilot runs.
   10. Pause (P), level-end autopilot, game-over countdown, Esc.
+- Not replicated (decision, user, session 4): the original's low-memory "reaper" `MemoryGuard` @0x1B600, which
+  cleared all explosions, shots and enemy shots whenever free DOS memory fell below 140000 bytes in busy scenes.
 
 ## 2. Controls
 Control type per player (Options; P1 and P2 can never pick the same): **1 keyboard, 2 mouse, 3 joystick**.

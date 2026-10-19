@@ -74,3 +74,4 @@
 7. Remaining Phase 1 conversions (FLI → WebM, SFX and music → OGG) wait until the engine scaffold needs them (user, session 4).
 8. Original bugs are fixed in the remake, including any found later (user, session 4). List: `docs/gameplay-spec.md` §12.
 9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
+10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
