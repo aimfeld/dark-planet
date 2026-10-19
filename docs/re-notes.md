@@ -105,7 +105,8 @@ System RTL entry points seen so far (offsets in seg 0x30EA): `0000` init, `0530`
   - **Observed:** AniVGA's frame limiter is `SetCycleTime(ms)` @0x296AD (`28be:0ACD`): interval = ms × 1000 µs via BIOS INT 15h AH=83h (event wait, flag `DS:0xFCB9`), enabled only if ms ≠ 0 and the BIOS model byte F000:FFFE = 0xFC. The page flip @0x2D70C waits for that flag and re-arms it. AniVGA init (@0x2F5B1) and the game's startup (@0x1B012, after the memory check in `FUN_1000_af0f`) both call `SetCycleTime(0)`, and nothing else does. So the limiter is **off**.
   - **Observed:** the flip waits only for a display-enable edge (`DS:0xFCC0` status port bit 0, @0x2D711), not for vertical retrace. The only bit-3 (vertical retrace) wait is in the palette setter @0x28E21. In the game loop, `Delay(500)` runs only while paused (`DS:0x4440`, @0x1BFE0). There are no BIOS-tick waits in the game loop.
   - **Observed:** `ScrollStep` @0x15F68 runs once per loop iteration (call at 0x1BF30). If `DS:0x15E0` (scrolling on) is set, it decrements scroll Y `DS:0x25B6` by **1 px** and moves both players' `SpriteY` with it. So frames/s = scroll px/s, and a level (6200 px) lasts 6200 / fps seconds of scrolling.
-  - **Inferred:** in DOSBox-X the speed is set by `cycles` (64000 in `dplanet.conf`, which the user says feels right). In 1998 it depended on the player's PC. The remake needs a fixed tick rate that matches the reference feel. **To measure:** a DOSBox-X video of level 1 (scroll speed in px/s), or the frame counter `DS:0x552E` in the debugger.
+  - **Inferred:** in DOSBox-X the speed is set by `cycles` (64000 in `dplanet.conf`, which the user says feels right). In 1998 it depended on the player's PC. The remake needs a fixed tick rate that matches the reference feel.
+  - **Observed (session 3, DOSBox-X capture `original_source/capture/dp_002.avi`, cycles=64000, level 1, `tools/measure_scroll.py`):** the background moves 0 or 1 px per 70.086 Hz VGA refresh, **40.9 px/s on average ≈ 41 game frames/s**. 10-second windows range from 37 to 46 px/s (CPU-bound, so busier scenes run slower). Scrolling ran for 5542 px in 135.4 s and then stopped at the boss arena. That matches level 1's boss record (`y = −5561`) to within the few frames lost at the edges, which confirms 1 px per frame over a whole level. **Remake: a fixed 40 Hz tick** (decision pending with the user).
 
 ### Asset loading (session 3)
 Evidence IDs: `ev_dc9ad07c…` (LoadLib instructions), `ev_35c25285…` (LoadTile pseudocode),
@@ -161,7 +162,7 @@ Evidence IDs: `ev_dc9ad07c…` (LoadLib instructions), `ev_35c25285…` (LoadTil
 - DOSBox-X has a built-in debugger (enabled via `debuggerrun = debugger`). Use it for memory diffing (score, lives, entity tables) and for measuring the game's tick rate (timer reprogramming / 0x3DA vsync waits).
 
 ## Open questions (gameplay RE)
-- Game tick rate: CPU-bound, 1 px scroll per frame (see "Program structure"). Still to measure: fps at `cycles=64000` in DOSBox-X.
+- ~~Game tick rate~~: CPU-bound, 1 px scroll per frame, ≈ 41 fps at `cycles=64000` (see "Program structure").
 - Entity tables: enemies, shots, bonuses, shop items/prices (`INFO.PAS` holds the shop texts).
 - ~~LEV format and wave scripting~~: data-driven, see "Levels and spawning". Open: `sub`, `DS:0x16C2`, boss fights.
 - ~~SFX sample rate~~: 11025 Hz, signed (session 3).
