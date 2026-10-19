@@ -38,7 +38,7 @@ python3 tools/build_cd_image.py original_source/Image/DPImage.iso original_sourc
 # play
 cd original_source/Game && dosbox-x -conf ../dplanet-cd.conf
 ```
-The image has 8 audio tracks (2–9). The intro plays track 4, and the ending plays track 9. See `docs/re-notes.md`.
+The image has 8 audio tracks (2–9). Menu, story, intro, levels, boss and ending each have their own track, and the game loops them. See `docs/re-notes.md`.
 
 ## Extracting assets
 ```sh

@@ -36,7 +36,7 @@ if InitCD then PlayTrack(ParamCount);
 
 Callers:
 - `DPMAX.BAT`: `startaud.exe 1 2 3 4` → track 4 during intro.
-- `DP.EXE` **never plays CD audio itself** and never runs `startaud` directly (**Observed:** no `startaud` reference other than the one below; no MSCDEX `mov ax,15xxh`). It **writes a batch file** instead. See "End-of-game batch file" below. `DPMAX.BAT` runs that batch file after `dp.exe` exits.
+- `DP.EXE` runs `startaud` only indirectly, at the very end, through `endvideo.bat` (see below). **Correction (later in session 2):** DP.EXE *does* play CD audio itself during the game. It links the same CD unit as STARTAUD (segments 0x2628/0x2643/0x268D/0x26C3), which goes through `Dos.Intr($2F)`, so a byte search for `mov ax,15xxh` misses it. See "CD music in DP.EXE".
 
 ### End-of-game batch file (session 2, 2026-10-19)
 - **Observed** (`ev_a89b0181…`, assembly of 0x1AC74): procedure `WriteEndVideoBat` @0x1AC74 (seg 0x1000, near). It's the procedure right after the literals `endvideo.bat` (0x1AC36), `startaud 1 2 3 4 5 6 7 8 9` (0x1AC43), `aaplay ending.txt` (0x1AC5E) and `kev` (0x1AC70). It calls TP7 `Assign`(3000:13E9) / `Rewrite`(3000:146C) / `Write(str)`(3000:1773) + `WriteLn`(3000:16E0) ×3 / `Close`(3000:14C1), each followed by `IOCheck`(3000:1394). Result:
@@ -49,11 +49,59 @@ Callers:
   The string is written unchanged, so the ending **always plays CD track 9**. There is no per-level track selection.
 - **Observed:** the only caller is the main-menu loop `FUN_1000_d095` (call at 0x1D371, `ev_ef784bb8…`). After menu item 1 (start game) returns, it calls `WriteEndVideoBat` only if the byte `DS:0x6C53` ≠ 0. **Inferred:** `DS:0x6C53` = "game completed" flag.
 - Batch flow (**Observed** in the `.BAT` files): `DPMAX.BAT` = `startaud.exe 1 2 3 4` / `aaplay intro.txt` / `attrib -R` / `dp.exe cd` / `endvideo.bat` / `kev.bat`. A batch file invoked without `CALL` never returns, so if `endvideo.bat` exists it plays track 9 + `ENDING.TXT` (TEST30+TEST29.FLI, 13.4 s) and then runs `kev.bat` (`del endvideo.bat`, `cls`). If it doesn't exist, `DPMAX.BAT` falls through to `kev.bat`.
-- **Inferred:** in-game music is simply the CD continuing after the intro. `startaud 4` plays from track 4 to the end of the disc (lead-out), so tracks 4→5→6→7→8→9 play once (≈ 16 min) and then stop. The game never restarts or changes them.
+- ~~In-game music is the CD continuing after the intro~~ (wrong, see "CD music in DP.EXE").
 
-### Main menu loop `FUN_1000_d095` (partial)
-- **Observed** (`ev_dfdabd5a…`, pseudocode): a mouse hit-test over 5 rectangles. Mouse x/y are at `DS:0x5516/0x5518`, and the rectangle table at `DS:0x98E + 8·i` holds (x1, y1, x2, y2). The labels are drawn from `DS:0x917 + 0x15·i`. A click (`FUN_272c_011b` ≠ 0) dispatches: 1 → start game (…`FUN_1000_b787`…, then the end-of-game check above), 2 → `FUN_1d9e_84bc`, 3 → toggle `DS:0x25A0` (with a confirmation loop), 4 → `FUN_1000_c4cd`, 5 → quit (`DS:0x3E05` := 1). Hover effects animate `DS:0x316E/0x3170/0x3172` every 5th frame (`DS:0x552E` = frame counter).
-- **Unknown:** which menu labels belong to items 2–4 (read the strings at `DS:0x917`, which are initialised data).
+### CD music in DP.EXE (session 2)
+- **Observed:** `CDPlay(track)` @0x1DC48 (`FUN_1d9e_0268`, `ev_cdd69d97…`): `if CDAvailable (DS:0x3E20) and CDSoundOption (DS:0x3E1E) then PlayTrack(track)`, and it always stores `DS:0x3E03 := track`. `PlayTrack` = `FUN_2628_00db` @0x2635B and `InitCD` = `FUN_2628_0021` @0x262A1 have the same unit offsets and structure as STARTAUD's `FUN_1004_0021/00db` (`ev_f4ad1fed…`). `InitCD` is called once from `FUN_1000_af0f` (startup).
+- **Observed:** `CDRepeat` @0x1DC75 (`FUN_1d9e_0295`, `ev_6b1bb919…`): if CD audio is on, it queries the audio status (`FUN_268d_0254` → `DS:0x3DF2`), and when `DS:0x3DF3` ≠ 0 (inferred: playback finished) it calls `CDPlay(DS:0x3E03)` again. So **every track loops**. Polled by the main-menu loop (every frame), the game loop (every 40 frames, `DS:0x552E mod 40`), the pause loop, and the text viewer `FUN_1000_c7f2`.
+- **Observed:** `CDPlay` call sites and their arguments (byte scan for `call 0D9E:0268` / near `call 0268`):
+
+  | Call site | Track | Context |
+  |---|---|---|
+  | 0x1D628 in `DrawMainMenu` 0x1D60E | 2 | main menu (`hmbild.pic/pal`) |
+  | 0x1D386 in game menu 0x1D095 | 2 | back in the menu after a game |
+  | 0x1C62F in `Options` 0x1C4CD | 2 | when CDSound is switched on (`DS:0x3E1E := 1`) |
+  | 0x1D90D in main body | 3 | main-menu item 3 "Story" (`story.txt` over `raster.pic`) |
+  | 0x1B5B3 in `StartLevel` 0x1B582 | `LevelTrack[level]` | byte table at DS:0x1032 indexed by `DS:0x15E6` (level 1–7): **5, 6, 7, 5, 6, 7, 7** |
+  | 0x1629B in `StartBossFight` 0x1627E | 8 | boss music; the procedure then spawns level-specific boss parts (`FUN_1000_163a`, per `DS:0x15E6` = 1…6) |
+  | 0x1DCA7 in `CDRepeat` | current | loop |
+  | (STARTAUD via `DPMAX.BAT`) | 4 | intro video |
+  | (STARTAUD via `endvideo.bat`) | 9 | ending video |
+
+  Tracks 2 and 3 *are* used (menu and story). Every track on the disc has a role.
+
+### Program structure (session 2)
+**Unit/segment map** (Ghidra segment = linear/16, which is file segment + 0x1000; sizes in bytes). Unit init order observed in the main body: System → Crt → AniVGA → SMIX → CD core (units without an init section are skipped). That matches TP7's "higher segment = initialised earlier".
+
+| Seg | Size | Procs | Unit | Evidence |
+|---|---|---|---|---|
+| 0x1000 | 0xD9E0 | 77 | main program (`DP.PAS`) | MZ entry CS:IP = 0000:D769 → linear 0x1D769 |
+| 0x1D9E | 0x88A0 | 101 | game unit (support code) | keyboard ISR (`in 60h`, EOI `out 20h`), `CDPlay`, `PlaySound`, … |
+| 0x2628 | 0x1B0 | 3 | CD high level: `InitCD`, `PlayTrack` | "Konnte MSCDEX nicht finden!", same offsets as STARTAUD |
+| 0x2643 | 0x4A0 | 3 | CD core (has init 0x048A) | 78 % of 12-byte chunks also occur in STARTAUD.EXE |
+| 0x268D | 0x360 | 13 | MSCDEX device requests | calls 0x26C3; 56 % shared with STARTAUD |
+| 0x26C3 | 0x5C0 | 14 | MSCDEX low level | `Dos.Intr($2F, regs)` ×6 |
+| 0x271F | 0xD0 | 2 | joystick | `Dos.Intr($15)` (BIOS joystick) |
+| 0x272C | 0x160 | 6 | mouse (prototype's `MOUSE2`) | `Dos.Intr($33)` ×6; `FUN_272c_011b` = button state (used as "clicked") |
+| 0x2742 | 0x270 | 3 | SMIX `Detect` | string "BLASTER" at 0x275AF |
+| 0x2769 | 0x14D0 | 43 | SMIX | 34 port in/out (SB DSP); `XMSInstalled` (int 2Fh AX=4300h) at 2769:14C0; `StartSound` = 2769:09DC (inferred; called by `PlaySound`), `SoundPlaying` = 0AB9 / `StopSound` = 0A75 (inferred from usage), 076B ×59 = probably `LoadSound` |
+| 0x28B6 | 0x80 | 5 | XMS | int 2Fh AX=4310h (XMS driver entry) |
+| 0x28BE | 0x6E20 | 57 | AniVGA 1.2 | ports 3C4h/3CEh (Mode X planes), 3C8h, 3D4h; "AniVGA V1.2" and "PICF" in DS; init 6E17 |
+| 0x2FA0 | 0xC70 | 14 | buffered file reader | `0BF3` = byte-wise BlockRead into a huge pointer; called by main + AniVGA |
+| 0x3067 | 0x1F0 | 9 | TP `Dos` (smart-linked) | FindFirst/FindNext (4Eh/4Fh), Get/SetIntVec (35h/25h), `MsDos` = 0179, `Intr` = 0184 (patches an `int` opcode) |
+| 0x3086 | 0x640 | 21 | TP `Crt` | int 16h (KeyPressed/ReadKey), Ctrl-Break vector, PIT ch2 (`Sound`); `Delay` = 3086:02C2 (inferred from usage `Delay(15)`, `Delay(1200)`) |
+| 0x30EA | 0x1A30 | 111 | TP `System` RTL | "Runtime error … Portions Copyright (c) 1983,92 Borland" |
+| 0x328D | 0x30F0 | – | DS (initialised data, typed constants); BSS continues at 0x359C0 | menu strings, `LevelTrack` table |
+
+System RTL entry points seen so far (offsets in seg 0x30EA): `0000` init, `0530` stack check (prologue of most procedures), `04F4` IOCheck, `04ED` IOResult (inferred), `08D3` Write(string), `0840` WriteLn, `13E9` Assign, `146C` Rewrite, `14C1` Close, `1773` Write(text, string), `16E0` WriteLn(text), `0116` Halt/exit path (inferred).
+
+**Main program body** @0x1D769 (`ev_f9428fd7…`): unit inits → ClrScr (inferred) → `Write('Loading...')` → `FUN_1000_af0f` (startup: InitCD, XMS, sounds, sprites, settings, judging by the nearby literals "XMS initialisieren...", "Sounds laden...", "Sprites laden...", "Gamesettings laden...") → `FUN_271f_007e` (joystick) → `1d9e:0000` (game-unit setup) → `DrawMainMenu` 0x1D60E → main-menu loop until quit, then shutdown `FUN_1d9e_3a15`.
+- **Main menu loop** (in the body): selection `DS:0x30EE` ∈ 1..6 moved by up/down flags `DS:0x6C2A/0x6C2B` (wraps), confirmed by `DS:0x6C2C`/`0x6C2F`, quit by `DS:0x6C30` (Esc, inferred). Items: **1 new game** (`DS:0x25A0` := 0, level `DS:0x15E6` := 1, → game menu 0x1D095), **2 load game** (`FUN_1d9e_05d9`, → game menu on success), **3 Story** (CD track 3, `story.txt`), **4 Anleitung** (`anleit.ung`), **5 About** (`about.txt`), **6 quit**. 3–5 use the text viewer `FUN_1000_c7f2(file, …)`. `Delay(15)` per iteration.
+- **Game menu** @0x1D095 (`ev_dfdabd5a…`): mouse hit-test over 5 rectangles (table `DS:0x98E`, labels `DS:0x917 + 0x15·i`): **1 "Shoot em all"** → `StartLevel` 0x1B582 (CD track per level) → `FUN_1000_07f8` → **game loop** 0x1B787 → if `DS:0x6C53` (game completed) then `WriteEndVideoBat`; **2 "Shop"** → `FUN_1d9e_84bc`; **3 "Multiplayer"** → toggle player 2 (`DS:0x25A0`, "Verstärkung? Enter=Ja", "Zurückschalten nicht möglich!"); **4 "Optionen"** → `FUN_1000_c4cd` (control setup Tastatur/Joystick per player, "CDSound:", "SoundEffekte:"); **5 "Zurück zu Hauptmenu"**. Episode = `DS:0x15E7` = (level−1) div 3 + 1.
+- **Game loop** @0x1B787 (`ev_243f3ace…`), one iteration per frame: `CDRepeat` every 40 frames; IOResult check; per active player (`DS:0x15E1` / `0x15E2`) input by control type `DS:0x259E/0x259F` (1/2/3 → `FUN_1000_a1dd`/`a34b`/`a58f`; input flags at `DS:0x6C3B…0x6C45` for P1 and `0x6C46…0x6C50` for P2), movement `a73e`; timers; collisions/energy (`0fa3`, `0d24`, `0742`, `0f30`); weapons (`961c`, `3c37`, `3534`, `330c`); enemies/scripting (`6c0e`, `93cd`, `5671`, `6653`); `FUN_28be_2cef` (AniVGA `Animate`, inferred: sprite draw + page flip); pause (`DS:0x4440`); exits when level done `DS:0x6C52`, game over countdown `DS:0x6C66` (sound 0x2A at 110), or abort `DS:0x6C51` (Esc). Then `FUN_1000_b6d1`.
+- `PlaySound(?, n)` @1d9e:4173: if `DS:0x3E1D` (sound available) and `DS:0x3E1F` (SoundEffekte option) then SMIX `StartSound`.
+- `DS:0x25B4/0x25B6`: background scroll X/Y (inferred; used by AniVGA tile code at 28be:5443 with 40-column rows and by boss spawning as "scroll Y + offset").
+- **Frame timing: Unknown.** PIT channel 0 is never reprogrammed (the only PIT `out` is Crt's channel-2 `Sound`), and AniVGA reads the BIOS tick counter at 28be:5449. The pacing (vertical retrace in `Animate` vs. tick-based) needs DOSBox-X measurement.
 
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
@@ -75,7 +123,8 @@ Callers:
 - **Observed:** the old boundary at 1283.9 s (69 ms zero gap) is **inside** track 7. The audio after it repeats 1194–1216 sample-exactly (nc = 1.000). The old 530 s "loudness jump" candidate is inside the intro track.
 - **Observed:** the audio is 1442.14 s. The concatenated WAVs are byte-identical to the PCM in `DPImage.iso`, and `DATA.ISO` is byte-identical to its first 36755 sectors.
 - **Observed (DOSBox-X 2024.03.01, headless):** `imgmount` of `fixed/dplanet.cue` reports `GetAudioTracks stTrack=1 end=9`, and `startaud.exe 1 2 3 4 5 6 7 8 9` logs `CDROM: Playing track # 9`.
-- Track 8's exact start (1317.01 vs. 1328.1, where a louder section begins) is **inferred** from tempo. It doesn't affect the game, which only requests tracks 4 and 9.
+- **Roles** (from DP.EXE, see "CD music in DP.EXE"): 2 = menus, 3 = story screen, 4 = intro video, 5/6/7 = levels 1+4 / 2+5 / 3+6(+7), 8 = boss fights, 9 = ending video. DP.EXE loops tracks via `CDRepeat`.
+- Track 8's exact start (1317.01 vs. 1328.1, where a louder section begins) is **inferred** from tempo. An earlier start only adds about 11 s to the boss music.
 
 ## DOSBox-X reference setup
 - `original_source/dplanet.conf`: the user's working config (Steam Deck). SB16 at 220/IRQ7/DMA1/HDMA5, cycles=64000, svga_s3, runs `dpmin.bat` (`dp.exe cd`, no CD audio). `dp.exe cd` appears to bypass the CD check ("Dark Planet sollte durch den Autorun der Original-CD gestartet werden").
@@ -83,7 +132,7 @@ Callers:
 - DOSBox-X has a built-in debugger (enabled via `debuggerrun = debugger`). Use it for memory diffing (score, lives, entity tables) and for measuring the game's tick rate (timer reprogramming / 0x3DA vsync waits).
 
 ## Open questions (gameplay RE)
-- Game tick rate / frame timing (vsync-locked 70 Hz? timer-based?).
+- Game tick rate / frame timing (vsync-locked 70 Hz? timer-based?). PIT ch0 is not reprogrammed. Measure in DOSBox-X: count game-loop iterations (`DS:0x552E`) per second.
 - Entity tables: enemies, shots, bonuses, shop items/prices (`INFO.PAS` holds the shop texts).
 - LEV format as used by DP.EXE, and how enemy waves are scripted (in code, or in data?).
 - SFX sample rate passed to SMIX.

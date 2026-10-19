@@ -33,4 +33,6 @@ Update them at the end of each piece of work, not only at session end.
 ## Key facts (details in docs/re-notes.md)
 - Soundtrack: raw PCM in `Image/DPImage.iso` from byte 75274240 to EOF, split into 8 audio tracks (2–9) by `tools/build_cd_image.py` (verified, see re-notes).
 - `STARTAUD.EXE` plays CD track number = **number of command-line arguments**.
-- DP.EXE never touches CD audio. On game completion, `WriteEndVideoBat` @0x1AC74 writes `endvideo.bat` (`startaud …9` = ending track 9), and `DPMAX.BAT` runs it.
+- CD tracks: 2 menu, 3 story, 4 intro (DPMAX.BAT → STARTAUD), 5/6/7 levels (table DS:0x1032), 8 boss, 9 ending (`endvideo.bat` written by DP.EXE @0x1AC74). DP.EXE plays them through `CDPlay` @0x1DC48 and loops them with `CDRepeat` @0x1DC75.
+- DP.EXE structure: main body (MZ entry) @0x1D769, game menu @0x1D095, game loop @0x1B787. Unit/segment map in re-notes "Program structure".
+- Objdump works for quick whole-segment scans: `objdump -D -b binary -mi8086` on a segment sliced out of the file.

@@ -29,7 +29,7 @@
 - [x] **User:** WAVs play fine (session 2). TRACK01 is the data track.
 - [x] How DP.EXE calls `startaud`: it writes `endvideo.bat` with a fixed `startaud 1 2 3 4 5 6 7 8 9` when the game is completed, so the ending is **always track 9** (session 2).
 - [x] Fix `TRACK_STARTS` (8 audio tracks, found by sample-exact repeat fingerprinting), rebuild the image, verify in DOSBox-X (`Playing track # 9`).
-- [ ] **User:** play through `dplanet-cd.conf` and confirm the intro music (track 4) fits the intro video. Optionally confirm by ear that track 8 starts at 21:57 (1317 s) and not at 22:08.
+- [ ] **User:** play through `dplanet-cd.conf` and check the music: menu = track 2, levels 1–3 = tracks 5–7, boss = track 8, and tracks loop. Optionally confirm by ear that track 8 starts at 21:57 (1317 s) and not at 22:08.
 - [ ] Investigate the garbled SFX in DOSBox-X (try sbtype sb16/sbpro2, cycles auto/max, goldplay; check the SMIX sample rate).
 - [ ] Decode AniVGA `.LIB`/`.COD` sprites and `.FNT` fonts → PNG atlases.
 - [ ] Decode `.LEV` level maps + `TI1/TI2.LIB` tiles → render full level images.
@@ -37,8 +37,10 @@
 - [ ] Optional: package the original with js-dos as an instant browser-playable "museum" version.
 
 ### Phase 2: Reverse-engineer gameplay from DP.EXE
-- [ ] Identify the TP7 RTL, AniVGA and SMIX routines in DP.EXE and name them (static, REA/Ghidra).
-- [ ] Map the main loop, game states (menu, briefing, shop, level, boss, game over) and tick timing.
+- [x] Unit/segment map of DP.EXE: System, Crt, Dos, AniVGA, SMIX + Detect + XMS, CD stack, mouse, joystick, file reader, game unit (session 2).
+- [~] Name individual RTL/AniVGA/SMIX routines. First batch done (see re-notes); next: match AniVGA 1.2 / SMIX sources routine by routine.
+- [~] Main loop + game states: main body, main menu, game menu, game loop, boss start, end-of-game mapped (session 2). Next: shop (`FUN_1d9e_84bc`), options (`FUN_1000_c4cd`), level start (`0x1B582`), game over / level end (`0x1B6D1`, `0x1A951`).
+- [ ] Measure tick timing in DOSBox-X (PIT ch0 isn't reprogrammed; count `DS:0x552E` per second).
 - [ ] Player: movement, weapons/pods, shields, energy, the tank-vs-ship mechanics (see prototype).
 - [ ] Enemies: types, energy, movement patterns, wave/spawn scripting, bosses (Golem…).
 - [ ] Shop: items, prices (`INFO.PAS` texts), refunds ("Rückzahlung", "Investiert").
@@ -58,4 +60,4 @@
 2. Language: German only, or add English? Some humour may need care in translation.
 3. Is local two-player a must for the remake?
 4. Confirm the tech stack (TS + PixiJS) and the browser-first approach.
-5. ~~Soundtrack split~~: resolved in session 2. Track 4 = intro, 9 = ending; in-game music is the CD continuing 4→9 once. Tracks 2–3 aren't used by the game. For the remake: which songs go with which level/boss?
+5. ~~Soundtrack split~~: resolved in session 2. Track roles come straight from DP.EXE: 2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending.
