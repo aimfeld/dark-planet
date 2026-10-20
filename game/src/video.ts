@@ -11,6 +11,8 @@ export interface VideoPlayer {
 
 export class Video implements VideoPlayer {
   readonly element = document.createElement('video');
+  /** The video playing (intro, ending), '' when none. */
+  name = '';
   private failed = false;
 
   constructor(private readonly base: string) {
@@ -22,6 +24,7 @@ export class Video implements VideoPlayer {
 
   play(name: string): void {
     this.failed = false;
+    this.name = name;
     this.element.src = `${this.base}${name}.webm`;
     this.element.currentTime = 0;
     this.element.play().catch(() => (this.failed = true));
@@ -32,6 +35,7 @@ export class Video implements VideoPlayer {
   }
 
   stop(): void {
+    this.name = '';
     this.element.pause();
     this.element.removeAttribute('src');
     this.element.load();

@@ -80,9 +80,9 @@ describe.skipIf(!hasData)('control types (spec §2, §3.1)', () => {
 });
 
 describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
-  const setup = (mac = false) => {
+  const setup = () => {
     const target = new EventTarget();
-    const keys = new Keyboard(target as unknown as Window, mac);
+    const keys = new Keyboard(target as unknown as Window);
     const key = (type: string, code: string) => target.dispatchEvent(Object.assign(new Event(type), { code }));
     return { keys, key };
   };
@@ -96,7 +96,7 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
     expect(keys.player().fire).toBe(false); // the arrow player doesn't see them
   });
 
-  it('shared keyboard: the arrow player keeps only the keys right of the space bar', () => {
+  it('shared keyboard: the arrow player keeps only , . - left of right Shift', () => {
     const { keys, key } = setup();
     for (const c of ['ControlLeft', 'KeyC', 'Space']) key('keydown', c);
     keys.sample();
@@ -105,15 +105,12 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
     for (const c of ['ControlLeft', 'KeyC', 'Space']) key('keyup', c);
     for (const c of ['ControlRight', 'AltRight', 'ShiftRight']) key('keydown', c);
     keys.sample();
-    expect(keys.player(false, true)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
-  });
-
-  it('shared keyboard on a Mac: right Option fires, the key left of right Shift switches altitude', () => {
-    const { keys, key } = setup(true);
-    for (const c of ['AltRight', 'Slash', 'ShiftRight']) key('keydown', c);
+    expect(keys.player(false, true)).toMatchObject({ fire: false, altitude: false, select: false });
+    for (const c of ['ControlRight', 'AltRight', 'ShiftRight']) key('keyup', c);
+    for (const c of ['Comma', 'Period', 'Slash']) key('keydown', c);
     keys.sample();
     expect(keys.player(false, true)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
-    expect(keys.player(false, false)).toMatchObject({ fire: false, altitude: true, select: true }); // Alt = altitude
+    expect(keys.player(true)).toMatchObject({ fire: false, altitude: false, select: false }); // not the WASD player's
   });
 
   it('playerInputs: WASD in the game makes the arrow set right-handed', () => {
@@ -128,21 +125,19 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
 });
 
 describe('key legend', () => {
-  it('one line per player (P2 only in multiplayer), X/C only on a Mac, the right-hand keys while WASD plays', () => {
-    expect(keyLegend([1, 4], [true, false], false)).toEqual([
-      'Player1 — Pfeile: fliegen · Ctrl/X: ballern · Alt/C: hoch/tief · Space: Bonus selektieren · Ctrl+Space: Bonus abfeuern',
+  it('one line per player (P2 only in multiplayer), X/C/V instead of Ctrl/Alt/Space, , . - while WASD plays', () => {
+    expect(keyLegend([1, 4], [true, false])).toEqual([
+      'Player1 — Pfeile: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern',
       'P: Pause · Esc: Spiel abbrechen · F: Vollbild',
     ]);
-    const mac = keyLegend([1, 2], [true, false], true);
-    expect(mac[0]).toContain('X+Space: Bonus abfeuern');
-    expect(mac.join()).not.toContain('Ctrl');
-    expect(keyLegend([1, 4], [true, true], true)[0]).toContain('Option rechts: ballern · -: hoch/tief');
-    const wasd = keyLegend([1, 4], [true, true], false);
-    expect(wasd[0]).toContain('Player1 — Pfeile: fliegen · Ctrl rechts: ballern');
+    const wasd = keyLegend([1, 4], [true, true]);
+    expect(wasd[0]).toBe('Player1 — Pfeile: fliegen · Komma: ballern · Punkt: hoch/tief · Minus: Bonus selektieren · Komma+Minus: Bonus abfeuern');
     expect(wasd[1]).toBe('Player2 — WASD: fliegen · Shift links: ballern · Q: hoch/tief · E: Bonus selektieren · Shift+E: Bonus abfeuern');
-    const pad = keyLegend([2, 3], [true, true], false);
+    expect(wasd.join()).not.toMatch(/Ctrl|Alt/);
+    const pad = keyLegend([2, 3], [true, true]);
     expect(pad[0]).toContain('Player1 — Maus: fliegen · links: ballern');
     expect(pad[1]).toContain('Player2 — Joystick: fliegen · A/RT: ballern');
     expect(pad).toHaveLength(3);
+    expect(keyLegend([1, 4], [true, false], 'intro')).toEqual(['Beliebige Taste oder Klick: Intro überspringen']);
   });
 });

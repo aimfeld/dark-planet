@@ -66,19 +66,19 @@ npm test       # simulation tests
 ```
 After a key or click the intro plays (any key skips it). Main menu: arrows and Enter. The hangar works with the
 mouse ("Shoot em all" starts the next level, "Multiplayer" adds player 2, "Optionen" sets each player's controls:
-Tastatur, Maus, Joystick = gamepad, WASD or Touch). Keyboard in a level: arrows move, Ctrl or X fires, Alt or C switches
-altitude, Space selects a bonus, Ctrl+Space (or X+Space) uses it. WASD (a second player on the same keyboard; player 2's default):
-W/A/S/D move, left Shift fires, Q switches altitude, E selects, Shift+E uses; meanwhile the arrow player uses right
-Ctrl (fire), right Alt (altitude) and right Shift (select; right Ctrl + right Shift uses); on a Mac right Option
-fires and the key left of right Shift (-) switches altitude. Mouse: the jet follows the pointer, left fires,
+Tastatur, Maus, Joystick = gamepad, WASD or Touch). Keyboard in a level: arrows move, X fires, C switches
+altitude, V selects a bonus, X+V uses it (the original's Ctrl, Alt and Space work too, but in a window the desktop
+takes some of their combinations). WASD (a second player on the same keyboard; player 2's default):
+W/A/S/D move, left Shift fires, Q switches altitude, E selects, Shift+E uses; meanwhile the arrow player uses
+the three keys left of right Shift: , fires, . switches altitude, - selects, , + - uses. Mouse: the jet follows the pointer, left fires,
 right switches altitude, middle selects a bonus, left+middle uses it. Gamepad: stick or d-pad, A fires, B switches
 altitude, X/LB selects, Y/RB uses. Touch (the default on phones and tablets): a stick appears under the left thumb,
 the buttons on the right fire (double tap: autofire), switch altitude, select and use a bonus; ❚❚ pauses, ✕ in the
 pause ends the level; in the menus tap the items, a long press is the right mouse button. P pauses, Esc aborts to the menu. F toggles fullscreen (in Chrome with Keyboard
 Lock, so desktop shortcuts don't take Ctrl/Alt combinations). Each player's controls (player 2 in multiplayer) are listed
-below the picture. macOS still takes Ctrl+arrows (Spaces, Mission Control): on a Mac fire with X and switch altitude with C
-(the legend lists only these there), or turn off "Mission Control", "Application windows" and
-"Move left/right a space" in System Settings → Keyboard → Keyboard Shortcuts → Mission Control. The whole game plays through, including the shop,
+below the picture. macOS takes Ctrl+arrows (Spaces, Mission Control) even then; to fire with Ctrl on a Mac, turn off
+"Mission Control", "Application windows" and "Move left/right a space" in System Settings → Keyboard → Keyboard
+Shortcuts → Mission Control. The whole game plays through, including the shop,
 saves, two players and the ending (see `docs/PLAN.md` Phase 3 for what is left to check).
 
 The game's assets are generated from `original_source/` and committed, so the game runs from a plain checkout:

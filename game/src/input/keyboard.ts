@@ -1,6 +1,7 @@
-// Keyboard -> per-tick player input. The original keys (spec §2) plus alternates, because browsers and
-// desktops grab some Ctrl/Alt combinations. The keyboard player is whichever player chose control type 1;
-// the remake adds type 4, a second key set around WASD, so two players can share one keyboard.
+// Keyboard -> per-tick player input. The original keys (spec §2) plus X/C/V, which the legend lists instead of
+// Ctrl/Alt/Space: in a window the desktop takes Alt+Space (window menu), Ctrl+Space (input method) and Ctrl+Alt+arrows
+// (workspaces), and macOS Ctrl+arrows. The original keys still work, best in fullscreen with Keyboard Lock.
+// The keyboard player is whichever player chose control type 1; the remake adds type 4, a second key set around WASD, so two players can share one keyboard.
 
 import { NO_INPUT, type PlayerInput } from '../sim/state';
 
@@ -19,15 +20,16 @@ const ARROWS: KeySet = {
   right: ['ArrowRight'],
   up: ['ArrowUp'],
   down: ['ArrowDown'],
-  fire: ['ControlLeft', 'ControlRight', 'KeyX'],
-  altitude: ['AltLeft', 'AltRight', 'KeyC'],
-  bonus: ['Space', 'ShiftRight'],
+  fire: ['KeyX', 'ControlLeft', 'ControlRight'],
+  altitude: ['KeyC', 'AltLeft', 'AltRight'],
+  bonus: ['KeyV', 'Space', 'ShiftRight'],
 };
-/** The arrow player while another player uses WASD: only the keys right of the space bar. */
-const ARROWS_RIGHT: KeySet = { ...ARROWS, fire: ['ControlRight'], altitude: ['AltRight'], bonus: ['ShiftRight'] };
-/** The same on a Mac, which has no right Ctrl: right Option (left of the arrows) fires, the key left of right Shift
- * (- on German keyboards, / on US ones) switches the altitude. */
-const ARROWS_RIGHT_MAC: KeySet = { ...ARROWS_RIGHT, fire: ['AltRight'], altitude: ['Slash'] };
+/**
+ * The arrow player while another player uses WASD (user, session 13): the three keys left of right Shift, no
+ * modifiers (a Mac has no right Ctrl, right Alt is AltGr on German keyboards). Codes are key positions:
+ * , . - on German and Swiss keyboards, , . / on US ones.
+ */
+const ARROWS_RIGHT: KeySet = { ...ARROWS, fire: ['Comma'], altitude: ['Period'], bonus: ['Slash'] };
 /** Type 4 (remake). No Ctrl: the browser keeps Ctrl+W (close tab) even when the page handles the key. */
 const WASD: KeySet = {
   left: ['KeyA'],
@@ -40,7 +42,7 @@ const WASD: KeySet = {
 };
 // keypad - / + select and use the joystick player's bonus (DS:0x6C31 / 0x6C32)
 const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown', 'NumpadSubtract', 'NumpadAdd'];
-const CAPTURED = new Set([ARROWS, ARROWS_RIGHT_MAC, WASD, { OTHER }].flatMap((set) => Object.values(set).flat()));
+const CAPTURED = new Set([ARROWS, ARROWS_RIGHT, WASD, { OTHER }].flatMap((set) => Object.values(set).flat()));
 
 export class Keyboard {
   private readonly down = new Set<string>();
@@ -48,8 +50,7 @@ export class Keyboard {
   private readonly tapped = new Set<string>(); // pressed since the last sample
   private sampled = new Set<string>(); // what the current tick sees
 
-  /** `mac`: the shared arrow set without right Ctrl. */
-  constructor(target: Window, private readonly mac = false) {
+  constructor(target: Window) {
     target.addEventListener('keydown', (e) => {
       if (CAPTURED.has(e.code)) e.preventDefault();
       if (!e.repeat) this.pressed.add(e.code);
@@ -70,11 +71,11 @@ export class Keyboard {
   }
 
   /**
-   * A keyboard player's flags (@0x1A1DD): Space selects a bonus, Ctrl + Space uses it. `wasd` is the remake's
+   * A keyboard player's flags (@0x1A1DD): Space (V) selects a bonus, Ctrl + Space (X + V) uses it. `wasd` is the remake's
    * second set; `shared` limits the arrow player to the right-hand keys while the WASD player is in the game.
    */
   player(wasd = false, shared = false): PlayerInput {
-    const set = wasd ? WASD : shared ? (this.mac ? ARROWS_RIGHT_MAC : ARROWS_RIGHT) : ARROWS;
+    const set = wasd ? WASD : shared ? ARROWS_RIGHT : ARROWS;
     const held = (codes: string[]) => codes.some((c) => this.sampled.has(c));
     const fire = held(set.fire), bonus = held(set.bonus);
     return {

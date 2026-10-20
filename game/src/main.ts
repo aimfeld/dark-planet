@@ -5,7 +5,7 @@ import { Sfx } from './audio/sfx';
 import { loadGameData } from './data';
 import { DEFAULT_SETTINGS, Game } from './game';
 import { Keyboard } from './input/keyboard';
-import { isMac, toggleFullscreen } from './input/fullscreen';
+import { toggleFullscreen } from './input/fullscreen';
 import { Gamepad } from './input/gamepad';
 import { keyLegend } from './input/keyLegend';
 import { Mouse } from './input/mouse';
@@ -125,8 +125,7 @@ async function main(): Promise<void> {
   registerOffline(base);
 
   const view = await ClassicView.create(document.getElementById('app')!, data);
-  const mac = isMac();
-  const keys = new Keyboard(window, mac);
+  const keys = new Keyboard(window);
   const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
   const pad = new Gamepad();
   const touch = new TouchControls(document.body, TOUCH_DEVICE ? () => void fullscreen() : undefined);
@@ -186,7 +185,8 @@ async function main(): Promise<void> {
   const legend = document.getElementById('keys')!;
   const showKeys = () => {
     legend.hidden = TOUCH_DEVICE || touchUsed();
-    const text = keyLegend(settings.control, game!.world.players.map((p) => p.active), mac).join('\n');
+    const playing = game!.view === 'video' ? video.name : '';
+    const text = keyLegend(settings.control, game!.world.players.map((p) => p.active), playing).join('\n');
     if (legend.textContent !== text) legend.textContent = text;
     view.setBelow(legend.hidden ? 0 : legend.offsetHeight);
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;

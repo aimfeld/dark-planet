@@ -1,9 +1,9 @@
 // The controls, shown below the picture: one line per player (P2 only in multiplayer) in the manual's words
-// (ANLEIT.UNG), then the general keys. On a Mac no Ctrl: macOS takes Ctrl+arrows for Spaces and Mission
-// Control, and a MacBook has no right Ctrl.
+// (ANLEIT.UNG), then the general keys; during a video how to skip it. X/C/V instead of the original Ctrl/Alt/Space,
+// whose combinations the desktop partly takes in a window (see keyboard.ts).
 
 /** One player's controls by control type (Options); `shared`: the arrow player while a WASD player plays. */
-function controls(type: number, shared: boolean, mac: boolean): string {
+function controls(type: number, shared: boolean): string {
   switch (type) {
     case 2:
       return 'Maus: fliegen · links: ballern · rechts: hoch/tief · Mitte: Bonus selektieren · links+Mitte: Bonus abfeuern';
@@ -14,18 +14,20 @@ function controls(type: number, shared: boolean, mac: boolean): string {
     case 5:
       return 'Touch: Steuerknüppel links, Knöpfe rechts';
     default:
-      return shared && mac ? 'Pfeile: fliegen · Option rechts: ballern · -: hoch/tief · Shift rechts: Bonus selektieren · Option+Shift rechts: Bonus abfeuern'
-        : shared ? 'Pfeile: fliegen · Ctrl rechts: ballern · Alt rechts: hoch/tief · Shift rechts: Bonus selektieren · Ctrl+Shift rechts: Bonus abfeuern'
-        : mac ? 'Pfeile: fliegen · X: ballern · C: hoch/tief · Space: Bonus selektieren · X+Space: Bonus abfeuern'
-        : 'Pfeile: fliegen · Ctrl/X: ballern · Alt/C: hoch/tief · Space: Bonus selektieren · Ctrl+Space: Bonus abfeuern';
+      return shared ? 'Pfeile: fliegen · Komma: ballern · Punkt: hoch/tief · Minus: Bonus selektieren · Komma+Minus: Bonus abfeuern'
+        : 'Pfeile: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern';
   }
 }
 
-/** `control` and `active` as for playerInputs: the arrow player only has the right-hand keys while WASD plays. */
-export function keyLegend(control: readonly number[], active: readonly boolean[], mac: boolean): string[] {
+/**
+ * `control` and `active` as for playerInputs: the arrow player only has the right-hand keys while WASD plays.
+ * While a video plays (`video`: intro, ending) only how to skip it.
+ */
+export function keyLegend(control: readonly number[], active: readonly boolean[], video = ''): string[] {
+  if (video) return [`Beliebige Taste oder Klick: ${video === 'intro' ? 'Intro' : 'Video'} überspringen`];
   const shared = control.some((c, i) => c === 4 && active[i]);
   const lines = control
-    .map((c, i) => `Player${i + 1} — ${controls(c, shared, mac)}`)
+    .map((c, i) => `Player${i + 1} — ${controls(c, shared)}`)
     .filter((_, i) => i === 0 || active[i]);
   return [...lines, 'P: Pause · Esc: Spiel abbrechen · F: Vollbild'];
 }
