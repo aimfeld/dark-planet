@@ -30,7 +30,7 @@
 - [x] **User:** WAVs play fine (session 2). TRACK01 is the data track.
 - [x] How DP.EXE calls `startaud`: it writes `endvideo.bat` with a fixed `startaud 1 2 3 4 5 6 7 8 9` when the game is completed, so the ending is **always track 9** (session 2).
 - [x] Fix `TRACK_STARTS` (8 audio tracks, found by sample-exact repeat fingerprinting), rebuild the image, verify in DOSBox-X (`Playing track # 9`).
-- [ ] **User:** play through `dplanet-cd.conf` and check the music: menu = track 2, levels 1–3 = tracks 5–7, boss = track 8, and tracks loop. Optionally confirm by ear that track 8 starts at 21:57 (1317 s) and not at 22:08.
+- [x] **User:** play through `dplanet-cd.conf` and check the music: menu = track 2, levels 1–3 = tracks 5–7, boss = track 8, and tracks loop. Optionally confirm by ear that track 8 starts at 21:57 (1317 s) and not at 22:08. Confirmed by the user (session 17): the level and boss tracks are right.
 - [–] ~~Fix DOSBox-X audio~~: **decision (user, session 2): not needed.** The target is the TypeScript version. In DOSBox-X the CD music plays fine with `dplanet-cd.conf` (confirmed by the user; an earlier choppiness came from a runaway analysis script loading the host CPU). Only the SFX are garbled (a known DOSBox issue; the user decoded the SFX correctly in Python before). Game speed is fine with `dplanet.conf`. DOSBox-X stays a reference for gameplay and visuals, not for audio.
 - [x] SFX format verified in DP.EXE (session 3): signed 8-bit, 11025 Hz. `extract_assets.py` assumed unsigned 22050 Hz and is fixed.
 - [x] **User:** corrected SFX WAVs sound right (session 3).
@@ -42,7 +42,7 @@
 - [x] Generated assets under version control (session 7, decision 11 corrected): engine binaries as reproducible `*.bin.gz` (unpacked with `DecompressionStream`; the loader also accepts data a server already unpacked via `Content-Encoding: gzip`, as Vite's dev server does), JSON plain. SFX stay lossless 8-bit PCM inside `sounds.bin.gz` (700 KB) instead of OGG.
 - [ ] **User:** listen to a few `game/public/music/*.mp3` tracks; if -V5 mono sounds too lossy, raise `LAME_VBR_QUALITY` (-V4 adds about 15 %).
 - [x] FLI videos → WebM (session 10): `tools/export_videos.py` → `game/public/video/intro.webm` (12.6 MB) and `ending.webm` (1.1 MB), AAPLAY's playlists with loops and white flashes baked in (RE in re-notes "Intro and ending videos").
-- [ ] Optional: package the original with js-dos as an instant browser-playable "museum" version.
+- [x] ~~Optional: package the original with js-dos as an instant browser-playable "museum" version.~~ Not needed (user, session 17).
 
 ### Phase 2: Reverse-engineer gameplay from DP.EXE
 - [x] Unit/segment map of DP.EXE: System, Crt, Dos, AniVGA, SMIX + Detect + XMS, CD stack, mouse, joystick, file reader, game unit (session 2).
@@ -61,7 +61,7 @@
 - [ ] Update the spec from the DOSBox-X captures (§13).
 - [x] Extract all gameplay tables to JSON for the engine (session 5): `tools/game_tables.py` (jets, engines, shields, items/prices, standard weapons and pod volleys, shot types, enemy types/guns/shot kinds, explosion anims and kinds, sprite anims and cycles, bonus drops, levels and boss spawns, sound names, shadow brightness). `--check` compares it with the spec values: 0 mismatches. New code findings (Explode, AnimTick, SpawnShot, SetShadowTab, HitDetect, StartBossFight) in re-notes "Engine tables (session 5)".
 - [x] Menus, text viewer, mission briefings, ending text, options, shop screen and load/save flow (session 8, static RE by three parallel forks): re-notes "Main menu, hangar, options", "Text viewer…", "Shop screen and load/save". Fonts: FIRE (HUD), SUPER (text viewer), _BROADWA (hangar, options), DEFAULT (shop). Palettes: HMBILD/UMBILD own .PAL, OMBILD and RASTER use EPIS1.
-- [ ] DOSBox-X checks for the menus: real frame time of the text viewer (scroll speed of story/about/ending), whether 39+ character lines are clipped at x 319.
+- [x] DOSBox-X checks for the menus: real frame time of the text viewer (scroll speed of story/about/ending): the remake's scroll speed is fine (user, session 17). Not checked: whether 39+ character lines are clipped at x 319.
 
 ### Phase 3: Engine + classic mode 🔄
 - [x] Project scaffold (session 5): `game/` with Vite + TypeScript + PixiJS + Vitest. Fixed 40 Hz loop in `src/main.ts`, separate from rendering (catch-up capped at 8 ticks). Keyboard input (original keys plus X = fire, C = altitude, because browsers grab Ctrl/Alt combinations). Engine data from `tools/export_engine_data.py` into `game/public/data/` (local only, gitignored like `original_source/`; `npm run data`).
@@ -111,10 +111,10 @@
 - [x] User feedback (session 15): (1) SFX drowned the music: SFX gain 0.5, then 0.35, then 0.25, then 0.18 (−15 dB) after listening (gameplay-spec §14). (2) The fifth large-pod frame (Alien-Pro 2's outer right mount) was missing in the shop: a remake bug, not the original's; the frames belong in slots 26..30, the port used 27..31 and the header icon (slot 31) replaced the fifth (re-notes "Jet display"; `test/shop.test.ts`). (3) The level 4 turrets' red shots started at the left edge: a remake bug, the shot sprite took its x from the record field that holds the turret's facing (re-notes EnemyFire; `test/bosses.test.ts`). (4) The cheat riddle is in About, not Story; the original cuts it off at line 199, the remake shows it to line 207 (spec §12 #20).
 - [x] Installed app updates (user, session 15: the PWA kept the old, loud SFX). Browsers look for a new `sw.js` only when a page is opened, and an app on a phone is mostly resumed; the new version then took over in the background and only showed at the start after that. Now (`registerOffline` in `src/main.ts`): a start that runs from the cache asks the server first (up to 4 s) and, if there is a new version, shows "Lade Update…", waits for it (up to 20 s) and reloads; the app also asks when it comes back to the screen and every hour, and a new version reloads the page at the start prompt, during the intro or in the main menu (never in a level, the shop or the ending). `sw.js` is fetched past the HTTP cache (`updateViaCache: 'none'`). Checked in headless Chrome against two local builds: resumed (visibility) → reload to the new version; restart → "Lade Update…", one reload, new version; no update → one load; offline → starts from the cache.
 - [x] Start prompt only where needed (user, session 16): its only job is the user gesture that browsers may require for sound (a key would otherwise both start the intro's CD track and skip the intro). Now the intro starts at once, as with DPMAX.BAT, where the browser allows sound (`Music.refused()` in `src/audio/music.ts`: the play() of track 4 failed with `NotAllowedError`; still loading after 1 s counts as allowed), or with CD sound off; otherwise "Taste oder Klick zum Starten" as before. Checked in Chrome: a fresh tab shows the prompt, a click starts the intro with track 4; a reload after that interaction goes straight into the intro with music.
-- [ ] **User:** check where the prompt still shows: installed app on Android (Chrome allows sound for home-screen apps, so expected: no prompt), iOS (expected: prompt), desktop Chrome on a first visit (prompt) and later visits (depends on Chrome's media engagement).
+- [x] **User:** check where the prompt still shows: installed app on Android (Chrome allows sound for home-screen apps, so expected: no prompt), iOS (expected: prompt), desktop Chrome on a first visit (prompt) and later visits (depends on Chrome's media engagement). User (session 17): it always shows on their devices, and that's fine.
 - [x] Screen stays on during the videos (user, session 16): on a phone the screen dimmed or turned off during the intro, since nobody touches it and the hidden, muted `<video>` doesn't keep the screen awake. `Video` now holds a Screen Wake Lock while a video plays (`src/video.ts`), requests it again when the page becomes visible mid-video (the browser drops it when the page is hidden), and releases it on stop (skip or end). Unsupported or refused: the screen may dim as before. Checked in desktop Chrome: lock held during the intro, released after skipping.
 - [x] **User:** the screen stays on during the intro on the user's phone (session 16).
-- [ ] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still.
+- [x] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still. Fine at 0.18 (user, session 17).
 - [x] **User:** decide whether the ending text should also show MISSIONS.PAS 123–124 ("übrigens: Hast du den Cheat schon entdeckt?"), which the original leaves out. No, left as in the original (decision 22).
 - [ ] Later: also publish on itch.io (HTML5 upload of a `dist/` zip); offline/install is unreliable in its iframe, so GitHub Pages stays the main home.
 - [x] Polish pass, part 1 (session 11, decision 18): compared level 1 frame by frame with the DOSBox-X capture
@@ -158,7 +158,7 @@
      break off? In the remake it does after about 7 s of hits; the existing capture never shows it, but there the
      player may not have hit it at all.
   2. Any of levels 2–6 (a save from the hangar is fine): the only reference for episode 2 so far are 1998 screenshots.
-  3. Menus: "Die Geschichte" for 30 s (scroll speed of the text viewer), and the shop's "Grosse Pods" list.
+  3. Menus: ~~"Die Geschichte" for 30 s (scroll speed of the text viewer)~~ (fine, user, session 17), and the shop's "Grosse Pods" list.
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard
