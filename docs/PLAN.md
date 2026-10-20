@@ -115,6 +115,13 @@
 - [x] **User:** the screen stays on during the intro on the user's phone (session 16).
 - [ ] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still. Decide whether the ending text should also show MISSIONS.PAS 123–124 ("übrigens: Hast du den Cheat schon entdeckt?"), which the original leaves out.
 - [ ] Later: also publish on itch.io (HTML5 upload of a `dist/` zip); offline/install is unreliable in its iframe, so GitHub Pages stays the main home.
+- [x] Polish pass, part 1 (session 11, decision 18): compared level 1 frame by frame with the DOSBox-X capture
+  `dp_002.avi` (each frame located on the level map by background matching) and played levels 1–6 through in Chrome
+  with a scripted bot. Fixes: the level tiles were drawn 8 px too low (AniVGA's PutTile snaps to its 16 px grid; now
+  houses, cars, people and the boss stop match the capture exactly), and the level 2 ground core no longer drifts off
+  the top of the screen (original bug, spec §12 #21). Everything else checked matched: spawn timing and positions,
+  enemy paths, HUD, game over, the two-player HUD with P1 out, all boss fights, the level transitions, music and the ending.
+- [ ] **User:** DOSBox-X recordings for the open checks (list in the session-11 notes below).
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
@@ -137,6 +144,15 @@
 15. No Ctrl/Alt/Space in the key legend on any platform (user, session 13): in a browser window the page can't stop the desktop from taking Alt+Space (window menu), Ctrl+Space (input method), Ctrl+Alt+arrows (Linux workspaces) or Ctrl+arrows (macOS), and on Windows AltGr also sends left Ctrl. The arrow player fires with X, switches altitude with C and selects a bonus with V (X+V uses it); the original Ctrl/Alt/Space still work unlisted (best in fullscreen with Keyboard Lock). With a WASD player in the game the arrow player uses , (fire), . (altitude) and - (select; , + - uses), the same on a Mac, and the WASD player X/C/V (left Shift would open Windows' Sticky Keys after five presses).
 16. Classic mode may make basic usability changes (user, session 14), e.g. hovering a main menu item selects it. Each deviation from the original is documented in `docs/gameplay-spec.md` §14.
 17. Hosting: GitHub Pages (user, session 14). GitLab-flow style: we develop on `main` and publish the `production` branch, which the GitHub Action deploys (`bin/deploy.sh`). The repo was renamed from `dark-planet-remastered` to `dark-planet` for the shorter URL. itch.io may be added later.
+18. Polish classic mode before starting the remaster: play it through and fix differences from the original (user, session 11).
+
+## Notes (session 11, polish pass)
+- Recordings that would settle open questions (DOSBox-X with `dplanet.conf`, video recording from the Capture menu):
+  1. Level 1 boss flying **high** and firing at the legs the whole time: does the escort (legs, 0x24, 180 energy)
+     break off? In the remake it does after about 7 s of hits; the existing capture never shows it, but there the
+     player may not have hit it at all.
+  2. Any of levels 2–6 (a save from the hangar is fine): the only reference for episode 2 so far are 1998 screenshots.
+  3. Menus: "Die Geschichte" for 30 s (scroll speed of the text viewer), and the shop's "Grosse Pods" list.
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard

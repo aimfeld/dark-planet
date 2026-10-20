@@ -82,6 +82,21 @@ describe.skipIf(!hasData)('episode 2 and the bosses (spec §7.3, §7.5, §8)', (
     expect(pos(w, 3)[0]).toBeLessThan(cx);
   });
 
+  it('level 2: the core on the ground returns to the same height every round (spec §12 #21)', async () => {
+    const w = await atBoss(2);
+    const core = w.enemies[3];
+    enemyDestroyed(w, w.players[0], 2, true, true);
+    const ys: number[] = [];
+    for (let t = 0; t < 3000; t++) {
+      invulnerable(w);
+      const before = core.phase;
+      step(w, [NO_INPUT]);
+      if (before === 3 && core.phase === 2) ys.push(w.spr.y[core.slot] - w.scrollY); // back at the left edge
+    }
+    expect(ys.length).toBeGreaterThan(5);
+    expect(new Set(ys).size).toBe(1);
+  });
+
   it('level 3: a destroyed body segment is refilled and the last one flies off toward a random target', async () => {
     const w = await atBoss(3);
     const p = w.players[0];
