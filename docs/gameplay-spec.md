@@ -817,7 +817,7 @@ remastered mode.
 | Start | starts at once | waits for a key or click ("Taste oder Klick zum Starten"), browsers only play sound after a gesture |
 | Intro / ending video | (FLI player, see re-notes) | any key or click skips the whole video |
 | Main menu | keyboard only | the pointer selects the item it moves onto (sound 12, like Up/Down; a resting pointer doesn't take the selection back from the keys), a click or tap opens it |
-| Main menu Exit / Esc | quits to DOS | black and silent until a key, then the main menu again; Esc needs a fresh press (one still held from the hangar doesn't quit) |
+| Main menu Exit / Esc | quits to DOS | closes the installed app (PWA); in a browser tab, or where closing is refused (iOS), black and silent until a key, then the main menu again; Esc needs a fresh press (one still held from the hangar doesn't quit) |
 | Bad SAVE.DAT checksum | message, then quits to DOS | message until a key, then the main menu |
 | Screens ended by a key | end while a key is still held | need a fresh press, so the confirm key doesn't skip them (§9.2) |
 | Text viewer, briefings, ending text | keyboard only | a click or tap ends them; the manual offers its keys as touch buttons |
@@ -827,4 +827,4 @@ remastered mode.
 | Level pause | P resumes | also Esc while paused ends the level; a hidden page pauses the level |
 | Controls | keyboard, mouse, joystick | §2: WASD set (type 4, decision 13), touch (type 5, decision 14), gamepad as joystick, X/C/V instead of Ctrl/Alt/Space in the legend (decision 15), P2 defaults to WASD, Pointer Lock for a mouse player |
 | Input | read when the code polls | sampled once per 40 Hz tick; a press released before the sample still counts once |
-| Screen | 320 x 200 | the key legend below the picture; F toggles fullscreen |
+| Screen | 320 x 200 | the key legend below the picture; F toggles fullscreen; touch devices get a fullscreen button, except in the installed app, which is fullscreen already |

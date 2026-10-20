@@ -46,8 +46,9 @@ function* waitAnyInput(ctx: Ctx): Proc {
 }
 
 /**
- * Exit (item 6 or Esc): FadeOut(0, 10, 0) and the program ends. A browser page can't exit, so the remake
- * stays black and silent until a key is pressed, then shows the menu again (design).
+ * Exit (item 6 or Esc): FadeOut(0, 10, 0) and the program ends. The remake sets ctx.quit, which closes the
+ * installed app (main.ts). A browser tab can't exit, so it stays black and silent until a key is pressed, then
+ * shows the menu again (design).
  */
 function* quit(ctx: Ctx): Proc {
   yield* fadeOut(ctx, false, 10);

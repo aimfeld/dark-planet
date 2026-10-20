@@ -22,6 +22,10 @@ const SETTINGS_KEY = 'darkplanet.settings'; // SETTINGS.DAT
 const SAVE_KEY = 'darkplanet.save'; // SAVE.DAT, base64
 /** A phone or tablet: the primary pointer is a finger. */
 const TOUCH_DEVICE = window.matchMedia('(pointer: coarse)').matches;
+const displayMode = (mode: string) => window.matchMedia(`(display-mode: ${mode})`).matches;
+/** Started as the installed app (PWA), not in a browser tab; iOS reports it as navigator.standalone. */
+const INSTALLED =
+  ['fullscreen', 'standalone', 'minimal-ui'].some(displayMode) || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
 function loadSettings(): Settings {
   const s = structuredClone(DEFAULT_SETTINGS);
@@ -128,7 +132,8 @@ async function main(): Promise<void> {
   const keys = new Keyboard(window);
   const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
   const pad = new Gamepad();
-  const touch = new TouchControls(document.body, TOUCH_DEVICE ? () => void fullscreen() : undefined);
+  // The installed app is fullscreen already (manifest); a second, element fullscreen would only add a way out to learn.
+  const touch = new TouchControls(document.body, TOUCH_DEVICE && !displayMode('fullscreen') ? () => void fullscreen() : undefined);
   const layout = layoutCache();
   // For a touch (pointerup or touchend, not pointerdown, counts as the gesture that allows sound) or a key.
   const unlock = () => {
@@ -195,6 +200,7 @@ async function main(): Promise<void> {
   let acc = 0;
   let last = performance.now();
   let mouseWasPlaying = false;
+  let quitting = false;
   const frame = (now: number) => {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
@@ -207,6 +213,12 @@ async function main(): Promise<void> {
       game.tick(input);
       pauseTap = false;
       acc -= TICK_MS;
+    }
+    if (game.quit !== quitting) {
+      quitting = game.quit;
+      // Exit in the main menu closes the installed app, as the original quit to DOS. A page may close its window
+      // when it is the window's only history entry; where the browser refuses (iOS), the game waits for a key.
+      if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
     touch.update(touchPlays, game.touchKeys, layout());
