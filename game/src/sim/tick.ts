@@ -14,6 +14,9 @@ import { firePods, mountPoint, moveShots, reloadPods } from './weapons';
 
 export { HUD };
 
+/** LevelStartSprites @0x107F8: pod sprites start at the jet plus these offsets (DS:0x18FE / 0x190E). */
+const POD_START = [[-7, -22], [0, 0], [0, 0], [-17, 14], [4, 14], [-35, 16], [22, 16], [0, 0]];
+
 /** New game (main menu item 1 @0x1D769 + InitPlayer @0x1B2E3): level 1, P1 only (P2 joins in the hangar). */
 export function newGame(w: World, twoPlayer = false): void {
   w.players = [newPlayer(0), newPlayer(1)];
@@ -83,8 +86,14 @@ export function startLevel(w: World, level: number): void {
     w.spr.n[jet] = t.jets[p.jet - 1].frame_base + 3;
     for (let m = 0; m < 8; m++) {
       const mt = p.mounts[m];
-      // TODO(slice): ball pods (cat 6) orbit the jet (MoveShots tail)
-      if (mt.occupied && mt.cat === 2) w.spr.n[p.slots.pods + m] = t.large_pods[mt.item - 1].sprite!;
+      if (!mt.occupied) continue;
+      // pod sprites at jet + raw offsets (DS:0x18FE / 0x190E; the ball at (0, 0)); the next ScrollStep
+      // and MoveShots put them at their mounts and on the orbit
+      if (mt.cat === 2) w.spr.n[p.slots.pods + m] = t.large_pods[mt.item - 1].sprite!;
+      else if (mt.cat === 6) w.spr.n[p.slots.pods + m] = t.ball_pods[mt.item - 1].sprite!;
+      else continue;
+      w.spr.x[p.slots.pods + m] = w.spr.x[jet] + POD_START[m][0];
+      w.spr.y[p.slots.pods + m] = w.spr.y[jet] + POD_START[m][1];
     }
     if (w.twoPlayer) w.spr.n[p.slots.label] = 577 + i;
     placeInventory(w, p);

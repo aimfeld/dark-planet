@@ -423,6 +423,25 @@ export function moveEnemyShots(w: World): void {
   }
 }
 
+/**
+ * Nearest(1, y, x) @0x11055: the active enemy (wrecks are inactive) that pays positive money with the
+ * smallest Manhattan distance from (x, y) to its sprite's top-left corner, below 1000; 0 = none.
+ */
+export function nearestEnemy(w: World, x: number, y: number): number {
+  let best = 0;
+  let bestD = 1000;
+  for (let i = 1; i <= 29; i++) {
+    const e = w.enemies[i];
+    if (!e.active || typeOf(w, e).reward <= 0) continue;
+    const d = Math.abs(x - w.spr.x[e.slot]) + Math.abs(y - w.spr.y[e.slot]);
+    if (d < bestD) {
+      best = i;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
 /** Nearest(2) @0x11055 (I: Manhattan distance between sprite positions; only used for homing here). */
 function nearestPlayer(w: World, slot: number): Player | undefined {
   let best: Player | undefined;

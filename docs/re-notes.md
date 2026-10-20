@@ -310,8 +310,8 @@ Static analysis for the table export (`tools/game_tables.py`) and the engine. Ev
   (SpriteX[jet] + dx, SpriteY[jet] + dy); FirePods passes dx/dy relative to the nose (cx, T), the large-pod mount
   point (`1d9e:0B2C`: mount 0 at cx + (−7, −22), 3/5 at L + (−17/−35), 4/6 at R + (4/22), y T + 14/16) or the ball
   pod (+5, +5). The fire sound (ItemInfo field 8) plays per shot when fewer than 5 voices play, except for the
-  Autogun (cat 1 id 4), whose branch picks the target instead (spec §12 bug 4). Missile shots (cat 1 id 1) start
-  anim 5. The mount is unloaded only if a shot slot was free.
+  Autogun (cat 1 id 4), whose branch picks the target instead (spec §12 bug 4). ~~Missile shots (cat 1 id 1) start
+  anim 5~~ (session 7 correction: the test is item 1 **cat 2**, the Flamer; anim 5 = flame frames 157–166). The mount is unloaded only if a shot slot was free.
 - **Observed:** `SetShadowTab(brightness)` AniVGA @28be:0106, called with **70** at startup (@0x1B295) and at level
   start (@0x10CCC). For each colour c of the current 6-bit palette (DS:0xD25E): target = (r·b div 100,
   g·b div 100, b·b div 100); pick the first colour j with every channel ≤ the target and minimal squared RGB
@@ -441,6 +441,39 @@ DropBonus 1d9e:0F5D; the others were not kept). Rules in `docs/gameplay-spec.md`
   5 if an active player's jet ≠ 4, 0x31 if = 4). StopSound 2769:0A75 sites: 16 @0x1062E, 0x33 @0x11F70, 0x1F
   @0x1846A, 5 @0x1AA18, all @0x1B773. SMIX StartSound 2769:09DC takes the first of 32 free voices and counts them
   in DS:0x87EA.
+
+## Remaining player weapons (session 7)
+Static analysis (REA CLI decompiles + instructions). Evidence IDs: `ev_fbd4a1c2…` (SpawnShot 0x111A4),
+`ev_59ca30e1…` (Nearest 0x11055), `ev_a9fcffc2…` (Collisions 0x18978), `ev_6f5f782b…` (LevelStartSprites 0x107F8);
+MoveShots 0x13C37 from the instruction listing. All **Observed** unless marked. Rules in `docs/gameplay-spec.md`
+§4.3, §4.5, §12 #15–16.
+- RTL Real calls in MoveShots: far 0x3000:214C = 30ea:12AC (Longint → Real), 2126 = 1286 (add), 2138 = 1298
+  (multiply), 213E = 129E (divide; left operand in DX:BX:AX, right in CX:SI:DI), 225E = 13BE (Cos), 2271 = 13D1
+  (Sin), 2158 = 12B8 (Round). New constants: (0x89, 0x2000) = 320, (0x86, 0x4800) = 50.
+- 1d9e:2754 / 2791 = sprite width (AniVGA header word +8 × 4) / height (+0xA) of a sprite number; 1d9e:088D / 08CA
+  = SpriteX + width shr 1 / SpriteY + height shr 1 (box centre).
+- `Nearest(mode, y, x)` @0x11055 mode 1: enemies 1..29 with +3 active and reward (DS:0x1BB6 + 2·type) > 0;
+  d = |y − SpriteY| + |x − SpriteX| (top-left), strictly smaller than the best so far, start 1000; 0 = none.
+- SpawnShot Autogun branch (mount item 4, cat 1): target := Nearest(1, centreY(jet), centreX(jet)); 0 → KillShot,
+  else +C/+E := target sprite centre. The flow continues (the mount is unloaded either way). The Flamer test
+  (item 1, cat 2) starts anim 5 on the shot.
+- MoveShots patterns 2/3: y −= speed, x ±1. Pattern 6: y −= 3, x = Round(sx + 50·sin(oldY·2π/320·2)). Patterns 7/8
+  (@0x1402E): 8 first copies the target enemy's SpriteX/Y (top-left) into +C/+E; major axis by |ty − sy| < |tx − sx|,
+  step toward the target from the **start** comparison (tx < sx), minor = start + Round(Real(Δ·|cur − start|) /
+  |Δmajor|) where the product is `MUL BX` + `CWD` (16 bits; spec §12 #15). Pattern 9: `1d9e:0B2C(jetSlot, jet,
+  mount)` → mount point in DS:0x753C/0x753E; x/y = jet + point + (−39, −64); KillShot at c > 18. Pattern 23:
+  +C := 1 if Random(10) < 5 else −1, x += 7·(+C), y −= Random(6) + 4, every tick.
+- MoveShots tail @0x14E22: if mount 7 occupied: a = k[item] (byte DS:0x182F + item) · ((frame mod 360) shl 1)·π/360
+  (π, not 2π: k degrees per tick); ball slot (pods + 7) = (cx + jetX − 6 + Round(40·cos a), B shr 1 + jetY − 6 −
+  Round(40·sin a)).
+- Collisions ball part @0x190F3 (after ramming), if mount 7 occupied: enemy shots 1..49 active ∧ HitDetect(ball,
+  shot) → KillEnemyShot, Explode(shotX, shotY, 3, byte[0x7C8D + 38·k]) (enemy record k's layer, spec §12 #16);
+  enemies 1..29 active, type ∉ 0x48..0x4A, layer = player's altitude or 2, HitDetect → only if the jet slot is P1's
+  (spec §12 #3): energy −= word DS:0x1826 + 2·item; frame mod 3 = 0 → Explode(ballX − 5, ballY − 5, 2, layer);
+  energy < 1 → EnemyDestroyed(player, i, 1, 1). No core-shield or Golem-age checks.
+- LevelStartSprites @0x107F8: pods with cat 2 **or 6** get ItemInfo(cat, 2, item) as sprite at jet + (int DS:0x18FE +
+  2i, int DS:0x190E + 2i) = (−7, −22), (0, 0), (0, 0), (−17, 14), (4, 14), (−35, 16), (22, 16), (0, 0): raw offsets
+  without the cx/L/R base (ScrollStep moves the large pods to their mounts before the first draw).
 
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.

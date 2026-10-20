@@ -5,6 +5,7 @@ import { BOSS_TYPES, bossHit, enemyDestroyed, killEnemyShot, typeOf } from './en
 import { damage } from './player';
 import { hitDetect, spriteH } from './sprites';
 import type { Player, World } from './state';
+import { mod } from './tp';
 import { killShot } from './weapons';
 
 /** Small explosion where a player shot hits, by shot type: [kind, where]. */
@@ -82,5 +83,27 @@ export function collisions(w: World, p: Player): void {
     if (e.type === 0x31) e.energy = 0;
     if (e.energy < 1) enemyDestroyed(w, p, c, false, true);
   }
-  // TODO(slice): ball pods (destroy enemy shots, contact damage)
+  // ball pod: destroys the enemy shots it touches and damages enemies on contact every tick
+  const bm = p.mounts[7];
+  if (!bm.occupied) return;
+  const ball = p.slots.pods + 7;
+  for (let k = 1; k <= 49; k++) {
+    const s = w.enemyShots[k];
+    if (!s.active || !hitDetect(w, ball, s.slot)) continue;
+    killEnemyShot(w, k);
+    // Original bug (spec §12 #16): the altitude came from enemy record k (the shot's number), out of range for
+    // k > 29; the remake uses the player's altitude.
+    explode(w, w.spr.x[s.slot], w.spr.y[s.slot], 3, p.high);
+  }
+  const contact = w.data.tables.ball_pods[bm.item - 1].contact_damage!;
+  for (let c = 1; c <= 29; c++) {
+    const e = w.enemies[c];
+    if (!e.active || (e.type >= 0x48 && e.type <= 0x4a)) continue;
+    if (!(e.layer === (p.high ? 1 : 0) || e.layer === 2) || !hitDetect(w, ball, e.slot)) continue;
+    // Original bug (spec §12 #3): only P1's ball pod did damage; the remake damages with both.
+    // (As in the original, the level 4/5 core shield doesn't stop the ball pod, like ramming.)
+    e.energy -= contact;
+    if (mod(w.frame, 3) === 0) explode(w, w.spr.x[ball] - 5, w.spr.y[ball] - 5, 2, e.layer === 1);
+    if (e.energy < 1) enemyDestroyed(w, p, c, true, true);
+  }
 }

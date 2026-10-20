@@ -196,7 +196,7 @@ Positions are relative to the jet sprite (cx, T from §4.1); (mx, my) is the lar
 | 1 | Missiles | 10000 | 2 | (cx−12,T+8)/(cx+8,T+8) | 5 / 4 | 1 | 16 | 28 |
 | 2 | Myonenwerfer | 8000 | 2 | (cx−10,T+10)/(cx+5,T+10) | 1 | 2 | 14 | 0 |
 | 3 | Duallaser | 30000 | 2 | beams left/right of centre | 0 | 3 | 10 | 1 |
-| 4 | Autogun | 35000 | 2 | (cx−6,T+16)/(cx+4,T+16) | 7 aimed at nearest enemy | 4 | 4 | none (O) |
+| 4 | Autogun | 35000 | 2 | (cx−6,T+16)/(cx+4,T+16) | 7 aimed at nearest enemy (below) | 4 | 4 | none (O) |
 | 5 | Protoner | 70000 | 2 | (cx−11,T+16)/(cx+4,T+16) | 1 | 15 | 8 | 0 |
 | 6 | Stargun | 100000 | 4 | (cx−3,T+16) | 15–18 (4 diagonals) | 19 | 8 | 0 |
 | 7 | Sidefire | 20000 | 2 | (cx−3,T+10) | 20 left / 19 right | 23 / 24 | 12 | 0 |
@@ -215,11 +215,22 @@ Positions are relative to the jet sprite (cx, T from §4.1); (mx, my) is the lar
 | 9 | Rocketlauncher | 60000 | 2 | (mx, my+2)/(mx+8, my+2) | 14 accelerating | 18 | 21 | 28 |
 | 10 | Xenon | 55000 | 1 | (mx+4, my) | 1 | 21 | 15 | none (I) |
 | 11 | G-Destructor | 100000 | 10 | (mx, my) | 23 random scatter | 25 | 50 | 39 |
-Firing large pods also plays a short animation on the pod sprite.
+Firing large pods also plays a short animation on the pod sprite. The Flamer's flame shot runs sprite anim 5
+(frames 157–166, 2 ticks each).
 
-**Ball pods (mount 7, jets 2–5)**: orbit radius 40 around the jet centre, angle = (frame mod 360)·2°·k
-(k = 10, 7, 10, 10 → 20°/tick = one turn per 18 ticks for k 10). They destroy enemy shots they touch and damage
-enemies on contact every tick.
+**Autogun target** (O, SpawnShot 0x111A4, Nearest(1) 0x11055, session 7): the enemy with the smallest Manhattan
+distance from the jet's sprite centre to the enemy sprite's top-left corner, among active enemies (not wrecks)
+that pay positive money, distance < 1000. The shot aims at that enemy's sprite centre (box centre, fixed at
+spawn). No target → the shot is dropped, but the mount still unloads.
+
+**Ball pods (mount 7, jets 2–5)** (O, MoveShots tail @0x14E22, Collisions @0x190F3, session 7): the ball's
+top-left is at (jet x + cx − 6 + Round(40·cos a), jet y + B div 2 − 6 − Round(40·sin a)) with
+a = k·(frame mod 360)° (k = 10, 7, 10, 10: 10°/tick, one turn per 36 ticks; session 7 correction of "2k°"),
+set at the end of MoveShots. At level start the ball sprite is placed on the jet's top-left. In Collisions, after
+ramming: every active enemy shot touching the ball is removed (explosion kind 3 at the shot); every active enemy
+of the player's altitude (or layer 2) touching it, except the Golem parts 0x48–0x4A, loses the contact damage
+every tick, with explosion kind 2 at the ball − (5, 5) on ticks where frame mod 3 = 0; energy < 1 →
+destroyed (pays money, can drop a bonus). The level 4/5 core shield does not stop the ball pod (as with ramming).
 | # | Name | Price | Contact damage /tick | Fires |
 |---|---|---|---|---|
 | 1 | Smiley 2 | 20000 | 15 | – |
@@ -261,8 +272,11 @@ enemies on contact every tick.
 | 0 | beam glued to the jet: x = px + cx − 10 (left beam) or px + cx + 5 (right), y = py − 175; removed when c > 2 |
 | 1 | y −= s |
 | 4 / 5 | missile right / left: c 1–12: x ±1, y −1; c 13–14: still; c ≥ 15: y −= c div 4 |
-| 7 | aimed: straight line from the start through the target point fixed at spawn (major axis s px, minor interpolated) |
-| 9 | flame glued to the pod mount (px + mx − 39, py + my − 64); removed when c > 18 |
+| 2 / 3 | y −= s; x += 1 / x −= 1 (no player weapon uses them) |
+| 6 | y −= 3; x = Round(sx + 50·sin(2.25·oldY°)) (unused) |
+| 7 | aimed: if \|ty − sy\| < \|tx − sx\|: x ±= s toward tx, y = sy + Round((ty − sy)·\|x − sx\| / \|tx − sx\|); else y ±= s toward ty, x = sx + Round((tx − sx)·\|y − sy\| / \|ty − sy\|). The shot flies on past the target |
+| 8 | as 7, but (tx, ty) := the target enemy's sprite top-left every tick (homing; unused) |
+| 9 | flame glued to its pod's mount (jet x + mx − 39, jet y + my − 64); removed when c > 18 |
 | 10 | y −= s; x = startX + round(c·sin(oldY·3°)) (wave widening with age) |
 | 11 | Blast spiral: angle += s (start Random(360)); r = 3c + 20; x = jet x + cx − 6 + round(r·cos angle°), y = jet y + B div 2 − 6 − round(r·sin angle°); removed when c > 60 |
 | 12 | Twin-Laser: y −= 3; angle += 15 (start 0 / 180 for the two beams); x = round(startX + 40·sin angle°) − 5 |
@@ -271,7 +285,7 @@ enemies on contact every tick.
 | 15 / 16 / 17 / 18 | (x+s, y−s) / (x−s, y−s) / (x+s, y+s) / (x−s, y+s) |
 | 19 / 20 / 21 | x += s / x −= s / y += s |
 | 22 | Star: angle += s (start 72°·i for shot i = 0…4); r = c + 15; x = jet x + cx − 53 + round(r·cos angle°), y = jet y + B div 2 − 42 − round(r·sin angle°); at c = 20 anim 0xD (sprites 206–221, 2 ticks each, rest 0), so the shot burns out at c ≈ 52 |
-| 23 | x ±= 7 (random side), y −= 4 + Random(6) |
+| 23 | every tick: x ±= 7 (side Random(10) < 5 → right, else left), y −= 4 + Random(6) |
 Removal: off-screen x (< 0 or > 319; not types 5, 6, 10, 11, 22); above the screen top by the sprite height or
 below screen y 199 (not beams and not types 5, 10, 22); pattern lifetimes above.
 
@@ -286,7 +300,7 @@ below screen y 199 (not beams and not types 5, 10, 22); pattern lifetimes above.
 
 ## 5. Bonuses
 ### 5.1 Drops (O, 0x11A08, 1d9e:0F5D / 0DC1 / 0BE2, session 6)
-- When an enemy that pays positive money is destroyed by a **shot or an atom bomb** while the level scrolls:
+- When an enemy that pays positive money is destroyed by a **shot, a ball pod or an atom bomb** while the level scrolls:
   Random(100) + 1 < 15 → drop (14 %). No drops from ramming, Death, or during boss fights. (Session 6 correction:
   EnemyDestroyed is called with drop = 1 by the bomb timer, so bomb kills can drop.)
 - Item by roll = Random(100) + 1: 1–54 → 1 (+1000), 55–59 → 2 Atombombe, 60–64 → 3 invulnerability,
@@ -721,6 +735,8 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 12 | Collisions keep testing an enemy after it was destroyed in the same tick; for types with a wreck a second shot hits the wreck and pays the reward (and explodes) again (I, from 0x18978) | stop testing an enemy once it is destroyed |
 | 13 | A picked-up inventory bonus waits one tick in a single "pending" variable (DS:0x5537/0x5539), so a second inventory pickup in the same tick overwrites it and the first is lost (O, 0x1330C, 1d9e:27CA) | the item goes into its slot at once |
 | 14 | Bonus shots pass mount −1/−2 (or the Star's shot number 0–4) to SpawnShot, which reads that mount record for the fire sound and unloads it: out-of-range memory for −1/−2 (for P2 that is P1's ball-pod record), and the Star unloads mounts 0–4 and plays their sounds (O, 0x111A4) | bonus shots play only the bonus's own sound and leave the mounts alone |
+| 15 | Aimed shots (patterns 7/8) multiply the interpolation in 16 bits (`MUL` + `CWD`), so at wide angles the product wraps and the shot jumps sideways; a target exactly at the start divides 0 by 0 (runtime error 200) (O, 0x14185) | multiply exactly; x stays at the start in the 0/0 case |
+| 16 | A ball pod destroying an enemy shot takes the explosion's altitude from enemy record k, where k is the enemy shot's number (out of range for k > 29) (O, 0x19100) | use the player's altitude |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.
