@@ -25,11 +25,11 @@ fi
 git push origin main main:production
 echo "Pushed main to production: https://github.com/aimfeld/dark-planet/actions/workflows/deploy.yml"
 
-# Follow the deploy run when the GitHub CLI is available (the run takes a few seconds to appear).
+# Follow the deploy run when the GitHub CLI is available (the run, and a new workflow, take a few seconds to appear).
 command -v gh >/dev/null || exit 0
 sha=$(git rev-parse main)
 for _ in 1 2 3 4 5 6 7 8 9 10; do
-  run=$(gh run list --workflow deploy.yml --branch production --commit "$sha" --limit 1 --json databaseId --jq '.[0].databaseId')
+  run=$(gh run list --workflow deploy.yml --branch production --commit "$sha" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
   [ -n "$run" ] && exec gh run watch "$run" --exit-status
   sleep 3
 done
