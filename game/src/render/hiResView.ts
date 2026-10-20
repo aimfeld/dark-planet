@@ -10,7 +10,7 @@ import { cp437 } from '../screens/screen';
 import { FADE_STEPS, MODE_SHADOW, SLOTS, type World } from '../sim/state';
 import { H, W } from './framebuffer';
 
-export const REMASTER_METHODS = ['hq4x', 'xbr4', 'esrgan', 'esrgan-anime', 'animevideo'] as const;
+export const REMASTER_METHODS = ['hq4x'] as const; // chosen by the user (session 17) over xbr4 and Real-ESRGAN
 export type RemasterMethod = (typeof REMASTER_METHODS)[number];
 
 const S = 4; // upscale factor of the assets
@@ -46,6 +46,7 @@ export class HiResView {
   private readonly chunkSprites: Sprite[] = [];
   private readonly shadowAlpha: number;
   private readonly fallback = new Map<string, Frame>(); // nearest-scaled indexed sprites and texts
+  private readonly frames = new Map<number, Frame>(); // upscaled sprites by number
   private index: Index | null = null;
   private pages = new Map<string, Promise<Texture>>();
   private loadedPages = new Map<string, Texture>();
@@ -104,8 +105,6 @@ export class HiResView {
     }
     return null;
   }
-
-  private readonly frames = new Map<number, Frame | null>();
 
   /** The upscaled frame of sprite n, or null while its page loads; the indexed fallback if it has none. */
   private frame(n: number): Frame | null {

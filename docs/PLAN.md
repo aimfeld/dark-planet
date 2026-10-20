@@ -118,6 +118,22 @@
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
+- [x] Experiment on branch `remaster-experiment` (session 17): `tools/remaster_upscale.py` upscales every sprite
+  (except SHOP.LIB) and all six levels 4x into `game/public/remaster/<method>/` (local, not committed yet): each level
+  as one picture (real tile neighbours, no seams) in 25 WebP chunks of 1280 x 1024; sprites trimmed onto 4096 x 4096
+  atlas pages per group (common, episode 1, episode 2), colour and outline upscaled separately (transparent pixels
+  take the nearest opaque colour first, the upscaled outline becomes a narrow soft alpha edge). `src/render/hiResView.ts`
+  draws a World with them in PixiJS (background chunks streamed by scroll position, slots like `Framebuffer.render`,
+  shadows as a black tint at the shadow table's mean darkening, fade and flash as an overlay; text sprites and
+  sprites without an upscaled version nearest-scaled). **G** during a level toggles classic / remastered (remembered);
+  menus, shop and videos stay classic.
+  Methods compared: nearest, hq4x and xbr4 (ffmpeg filters), Real-ESRGAN x4plus (ncnn-vulkan in `~/opt/realesrgan`;
+  smears the dirt textures and shifts colours). **hq4x chosen by the user.** hq4x assets: 25 MB (3 MB per level).
+- [ ] Remastered menus: upscale the PIC backgrounds, menu/shop sprites and fonts the same way.
+- [ ] Smooth motion: at 4x the 40 Hz steps (1 px scroll = 4 px) are more visible; interpolate between ticks.
+- [ ] Remastered audio: the CD tracks are mono and band-limited to about 10 kHz (aliasing above, so the music was
+  mixed at a low rate before the CD); the game streams them at 68 kb/s. A/B clips: higher bitrate, pseudo-stereo,
+  AudioSR (neural bandwidth extension); SFX (8-bit 11 kHz): denoised + resampled, AudioSR.
 
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
@@ -137,6 +153,7 @@
 15. No Ctrl/Alt/Space in the key legend on any platform (user, session 13): in a browser window the page can't stop the desktop from taking Alt+Space (window menu), Ctrl+Space (input method), Ctrl+Alt+arrows (Linux workspaces) or Ctrl+arrows (macOS), and on Windows AltGr also sends left Ctrl. The arrow player fires with X, switches altitude with C and selects a bonus with V (X+V uses it); the original Ctrl/Alt/Space still work unlisted (best in fullscreen with Keyboard Lock). With a WASD player in the game the arrow player uses , (fire), . (altitude) and - (select; , + - uses), the same on a Mac, and the WASD player X/C/V (left Shift would open Windows' Sticky Keys after five presses).
 16. Classic mode may make basic usability changes (user, session 14), e.g. hovering a main menu item selects it. Each deviation from the original is documented in `docs/gameplay-spec.md` §14.
 17. Hosting: GitHub Pages (user, session 14). GitLab-flow style: we develop on `main` and publish the `production` branch, which the GitHub Action deploys (`bin/deploy.sh`). The repo was renamed from `dark-planet-remastered` to `dark-planet` for the shorter URL. itch.io may be added later.
+18. Remastered graphics: hq4x (user, session 17), over xbr4 and Real-ESRGAN.
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard

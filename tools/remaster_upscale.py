@@ -44,7 +44,7 @@ GROUPS = [('common', lambda n: n < 493 or 544 <= n < 850),  # SHOP.LIB = 493..54
 ESRGAN = os.path.expanduser('~/opt/realesrgan/realesrgan-ncnn-vulkan')
 ESRGAN_MODELS = {'esrgan': 'realesrgan-x4plus', 'esrgan-anime': 'realesrgan-x4plus-anime',
                  'animevideo': 'realesr-animevideov3'}
-METHODS = ['nearest', 'hq4x', 'xbr4', *ESRGAN_MODELS]
+METHODS = ['hq4x']  # the user's choice (session 17); the others stay for comparisons
 
 
 def load(data):
