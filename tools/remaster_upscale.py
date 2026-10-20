@@ -1,11 +1,11 @@
 """Upscale the game's graphics 4x for the remastered renderer (game/src/render/hiResView.ts).
 
 Reads the engine data (game/public/data/, tools/export_engine_data.py) and writes, per method:
-  <out>/<method>/level<N>/<i>.webp      level N's background in chunks of 256 source rows (1024 px), chunk i
+  <out>/<method>/level<N>/<i>.avif      level N's background in chunks of 256 source rows (1024 px), chunk i
                                         covering level y -6200 + 256 i ...; 1280 px wide (the 10 tile columns)
-  <out>/<method>/<group>_<p>.webp       sprite atlas pages, 4096 x 4096 at most
-  <out>/<method>/picture_<PIC>_<PAL>.webp  the full-screen PIC backgrounds in the palette their screen uses
-  <out>/<method>/font_<NAME>.webp       glyph atlases: mono fonts white (the renderer tints them with the ink
+  <out>/<method>/<group>_<p>.avif       sprite atlas pages, 4096 x 4096 at most
+  <out>/<method>/picture_<PIC>_<PAL>.avif  the full-screen PIC backgrounds in the palette their screen uses
+  <out>/<method>/font_<NAME>.avif       glyph atlases: mono fonts white (the renderer tints them with the ink
                                         colour), multicolour fonts in EPIS1 colours
   <out>/<method>/index.json             {scale, chunk, groups: {group: pages},
                                          sprites: {palette: {n: [group, page, x, y, w, h, ox, oy]}},
@@ -21,12 +21,13 @@ The whole level is upscaled as one picture, so the tiles have their real neighbo
 glyphs are upscaled in colour and outline separately: transparent pixels take the nearest opaque colour first
 (so no black seeps into the edges), and the outline (the opaque mask, upscaled the same way) becomes the alpha.
 
-Methods: hq4x (the user's choice, session 17), and for comparisons nearest, xbr4 (ffmpeg's pixel-art filters),
-esrgan (Real-ESRGAN x4plus), esrgan-anime (x4plus-anime), animevideo (realesr-animevideov3 x4). Real-ESRGAN is
-the ncnn-vulkan build in ~/opt/realesrgan (github.com/xinntao/Real-ESRGAN, release v0.2.5.0); REALESRGAN_GPU
-picks the Vulkan device.
+Methods: hq4x (the user's choice, session 17), and for comparisons nearest and xbr4 (ffmpeg's pixel-art filters).
+Real-ESRGAN was compared too (session 17, it smears the dirt textures) and removed in session 18.
 
-Usage: uv run --with numpy --with pillow python tools/remaster_upscale.py game/public/data game/public/remaster \
+Format (session 18): AVIF, 4:4:4. Level 1 at quality 60 is 1.1 MB and closer to the lossless upscale (PSNR 42) than
+the WebP at quality 90 used before (3.0 MB, PSNR 38); WebP below 90 smooths away the dirt grain. Needs Pillow 11.3+.
+
+Usage: uv run --with numpy --with 'pillow>=11.3' python tools/remaster_upscale.py game/public/data game/public/remaster \
            [methods, comma-separated] [levels, comma-separated]
 """
 import gzip
@@ -54,9 +55,7 @@ GROUPS = [('common', 'EPIS1', lambda n: n < 493 or n in REST),
           ('hangar', 'UMBILD', lambda n: n in REST)]
 PICTURES = ['HMBILD', 'UMBILD', 'OMBILD', 'RASTER']  # tools/export_engine_data.py order
 PICTURE_PALETTES = {'HMBILD': 'HMBILD', 'UMBILD': 'UMBILD', 'OMBILD': 'EPIS1', 'RASTER': 'EPIS1'}  # screens/*.ts
-ESRGAN = os.path.expanduser('~/opt/realesrgan/realesrgan-ncnn-vulkan')
-ESRGAN_MODELS = {'esrgan': 'realesrgan-x4plus', 'esrgan-anime': 'realesrgan-x4plus-anime',
-                 'animevideo': 'realesr-animevideov3'}
+QUALITY = 60  # AVIF; the sprite and font atlases' alpha edges are saved with the same setting
 METHODS = ['hq4x']
 
 
@@ -94,25 +93,16 @@ def upscale(method, paths):
         for p in paths:
             im = Image.open(p)
             im.resize((im.width * SCALE, im.height * SCALE), Image.NEAREST).save(p)
-    elif method in ('hq4x', 'xbr4'):
+    else:
         vf = 'hqx=4' if method == 'hq4x' else 'xbr=4'
         for p in paths:
             tmp = p + '.out.png'
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', p, '-vf', vf + ',format=rgb24', tmp], check=True)
             os.replace(tmp, p)
-    else:
-        src, dst = tempfile.mkdtemp(), tempfile.mkdtemp()
-        for i, p in enumerate(paths):
-            shutil.copy(p, os.path.join(src, '%05d.png' % i))
-        cmd = [ESRGAN, '-i', src, '-o', dst, '-n', ESRGAN_MODELS[method], '-s', '4', '-f', 'png',
-               '-m', os.path.join(os.path.dirname(ESRGAN), 'models')]
-        if os.environ.get('REALESRGAN_GPU'):
-            cmd += ['-g', os.environ['REALESRGAN_GPU']]
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for i, p in enumerate(paths):
-            Image.open(os.path.join(dst, '%05d.png' % i)).convert('RGB').save(p)
-        shutil.rmtree(src)
-        shutil.rmtree(dst)
+
+
+def save(img, path):
+    img.save(path, 'avif', quality=QUALITY, speed=4, subsampling='4:4:4')
 
 
 def bleed(rgb, mask):
@@ -192,8 +182,7 @@ def do_levels(method, dst, levels, tiles, palette, numbers, work):
         ldir = os.path.join(dst, 'level%d' % n)
         os.makedirs(ldir, exist_ok=True)
         for i in range(32 * LEVEL_ROWS // CHUNK):
-            img.crop((0, i * CHUNK * SCALE, img.width, (i + 1) * CHUNK * SCALE)).save(
-                os.path.join(ldir, '%d.webp' % i), quality=90, method=4)
+            save(img.crop((0, i * CHUNK * SCALE, img.width, (i + 1) * CHUNK * SCALE)), os.path.join(ldir, '%d.avif' % i))
         print(method, 'level', n, flush=True)
 
 
@@ -211,7 +200,7 @@ def do_sprites(method, dst, sprites, palettes, work):
                     idx[y:y + h, x:x + w] = chosen[n][0]
             pages.append((idx, palettes[pal]))
         for p, rgba in enumerate(upscale_rgba(method, work, pages)):
-            Image.fromarray(rgba).save(os.path.join(dst, '%s_%d.webp' % (group, p)), quality=92, method=4)
+            save(Image.fromarray(rgba), os.path.join(dst, '%s_%d.avif' % (group, p)))
         entries = index.setdefault(pal, {})
         for n, (page, x, y, w, h, ox, oy) in placed.items():
             entries[n] = [group, page, x * SCALE, y * SCALE, w * SCALE, h * SCALE, ox, oy]
@@ -225,8 +214,8 @@ def do_pictures(method, dst, pictures, palettes, work):
         path = os.path.join(work, 'pic.png')
         Image.fromarray(palettes[pal][pictures[name]]).save(path)
         upscale(method, [path])
-        file = 'picture_%s_%s.webp' % (name, pal)
-        Image.open(path).save(os.path.join(dst, file), quality=92, method=4)
+        file = 'picture_%s_%s.avif' % (name, pal)
+        save(Image.open(path), os.path.join(dst, file))
         out['%s_%s' % (name, pal)] = file
     print(method, 'pictures', flush=True)
     return out
@@ -249,8 +238,8 @@ def do_fonts(method, dst, fonts, palettes, work):
         [rgba] = upscale_rgba(method, work, [(idx, palettes['EPIS1'] if f['multicolor'] else white)])
         if not f['multicolor']:
             rgba[..., :3] = 255  # the ink colour is the renderer's tint
-        file = 'font_%s.webp' % name
-        Image.fromarray(rgba).save(os.path.join(dst, file), quality=92, method=4)
+        file = 'font_%s.avif' % name
+        save(Image.fromarray(rgba), os.path.join(dst, file))
         out[name] = {'file': file, 'cell': [f['width'] * SCALE, f['height'] * SCALE], 'glyphs': pos}
     print(method, 'fonts', flush=True)
     return out

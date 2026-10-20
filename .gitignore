@@ -11,5 +11,3 @@ __pycache__/
 node_modules/
 dist/
 
-# Test renders
-game/public/remaster

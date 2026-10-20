@@ -318,6 +318,7 @@ async function main(): Promise<void> {
       else mouse.unlock();
     }
     const alpha = acc / TICK_MS; // how far this frame lies between the last tick and the next
+    if (game.view === 'screen' && game.screen.picture === 'UMBILD') view.hiRes.prefetch(game.world.level); // the hangar
     if (game.view === 'world') view.draw(game.world, alpha);
     else if (game.view === 'video') view.drawVideo(video.element);
     else view.drawScreen(game.screen, alpha);

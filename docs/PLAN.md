@@ -119,8 +119,8 @@
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
 - [x] Remastered graphics (branch `remaster-experiment`, session 17): `tools/remaster_upscale.py` upscales 4x into
-  `game/public/remaster/hq4x/` (28 MB; local, not committed yet): all six levels, each as one picture (real tile
-  neighbours, no seams) in 25 WebP chunks of 1280 x 1024; every sprite, trimmed onto 4096 x 4096 atlas pages per
+  `game/public/remaster/hq4x/` (16 MB AVIF since session 18, committed; 28 MB of WebP before): all six levels,
+  each as one picture (real tile neighbours, no seams) in 25 chunks of 1280 x 1024; every sprite, trimmed onto 4096 x 4096 atlas pages per
   group (common, shop, episode 1, episode 2 in EPIS1; REST.LIB again in the main menu's HMBILD and the hangar's
   UMBILD palette); the four PIC backgrounds in their screens' palettes; the four fonts as glyph atlases (mono fonts
   white, tinted with the ink colour). Sprites and glyphs: colour and outline upscaled separately (transparent
@@ -173,9 +173,18 @@
   is calm enough, and whether it runs smoothly on the phone.
 - [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
   is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
-- [ ] Before merging: commit the hq4x assets (or a smaller tile-based level format). Maybe prefetch in the
-  background (the next level during the hangar and briefing) so a level doesn't start with a moment of classic
-  graphics while its first chunks load.
+- [x] Assets committed (session 18), as AVIF (4:4:4, quality 60): 16 MB instead of 28 MB of WebP (quality 90).
+  Level 1 is 1.1 MB instead of 3.0 MB and closer to the lossless upscale (PSNR 42 against 38); WebP below quality
+  90 smooths away the dirt grain the user chose hq4x for. A browser without AVIF (Safari before 16.4) keeps the
+  classic graphics (`HiResView.use`, Pixi's `detectAvif`). Real-ESRGAN dropped from `tools/remaster_upscale.py`
+  (`~/opt/realesrgan` deleted). A tile-based level format was not pursued: hq4x output depends on the tile's
+  neighbours, so shared tiles would show seams.
+- [x] Prefetch (session 18): in the hangar `HiResView.prefetch` loads the next level's start (background chunks
+  24..22, the bottom of the level) and its sprite pages (common + the episode), so they load during the
+  briefing. Checked in headless Chrome: loaded before the level starts, its first frames are all remastered.
+- [ ] Maybe: now that Remastered is the default, cache the remastered files at install (best effort, like the
+  music and videos, +16 MB), so a fresh install plays remastered offline; today a file is cached on first use
+  and an unseen level shows classic offline.
 
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.

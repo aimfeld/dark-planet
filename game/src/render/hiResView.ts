@@ -8,7 +8,7 @@
 // Effects (fx.ts): glow, light and particles, and soft shadows (each run of shadow slots is drawn into
 // its own blurred container, so the drawing order stays the original's).
 
-import { Assets, BlurFilter, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Assets, BlurFilter, Container, detectAvif, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { GameData } from '../data';
 import { cp437, type PaletteName, type Screen } from '../screens/screen';
 import { FADE_STEPS, MODE_SHADOW, SLOTS, SpriteTable, type World } from '../sim/state';
@@ -70,6 +70,7 @@ export class HiResView {
   private readonly textures = new Map<string, Texture | 'loading'>(); // pages, pictures, fonts, chunks
   private index: Index | null = null;
   private method: RemasterMethod | null = null;
+  private avif: Promise<boolean> | null = null;
   // the tick before the last, for interpolation
   private readonly prevWorld = new SpriteTable();
   private prevScrollY = 0;
@@ -98,15 +99,32 @@ export class HiResView {
     return this.method;
   }
 
-  /** Switch the asset set (null = off). Textures load on demand; until then the draw calls return false. */
+  /**
+   * Switch the asset set (null = off). Textures load on demand; until then the draw calls return false. The files
+   * are AVIF (Safari 16.4+, Chrome 85+, Firefox 93+); a browser without it keeps the classic graphics.
+   */
   async use(method: RemasterMethod | null): Promise<void> {
     if (method === this.method) return;
     this.method = method;
     this.index = null;
     if (!method) return; // keep the textures: switching back is instant
+    if (!(await (this.avif ??= detectAvif.test()))) return;
     const res = await fetch(`${this.base()}index.json`);
     const index = (await res.json()) as Index;
     if (this.method === method) this.index = index;
+  }
+
+  /**
+   * Load what level `level` shows first (called in the hangar, so it loads during the briefing): the background
+   * chunks at its start (scroll y 0, the bottom of the level) and the sprite pages of the level's groups.
+   */
+  prefetch(level: number): void {
+    if (!this.index) return;
+    const start = Math.floor(-LEVEL_TOP / this.index.chunk);
+    for (let c = start; c > start - 3 && c >= 0; c--) this.texture(`level${level}/${c}.avif`, false);
+    for (const group of ['common', level <= 3 ? 'episode1' : 'episode2']) {
+      for (let p = 0; p < (this.index.groups[group] ?? 0); p++) this.texture(`${group}_${p}.avif`);
+    }
   }
 
   /** Before each simulation tick: keep what the last tick drew, so frames until the next one can interpolate. */
@@ -154,7 +172,7 @@ export class HiResView {
     const known = this.frames.get(key);
     if (known) return known;
     const entry = this.index!.sprites[palette]?.[n];
-    const page = entry && this.texture(`${entry[0]}_${entry[1]}.webp`);
+    const page = entry && this.texture(`${entry[0]}_${entry[1]}.avif`);
     if (!entry || !page) {
       return this.indexed(`s${key}`, palette, () => {
         const s = this.data.sprites.get(n);
@@ -407,7 +425,7 @@ export class HiResView {
       const c = first + k;
       const s = this.chunkSprites[k];
       const inLevel = c >= 0 && c < CHUNKS && c * chunk < top + H;
-      const tex = inLevel ? this.texture(`level${w.level}/${c}.webp`, false) : null;
+      const tex = inLevel ? this.texture(`level${w.level}/${c}.avif`, false) : null;
       if (inLevel && !tex) ready = false;
       s.visible = !!tex;
       if (!tex) continue;
@@ -415,7 +433,7 @@ export class HiResView {
       s.x = -w.drawnScrollX * S;
       s.y = Math.round((c * chunk - top) * S);
     }
-    if (first > 0) this.texture(`level${w.level}/${first - 1}.webp`, false); // the level scrolls up (y decreases)
+    if (first > 0) this.texture(`level${w.level}/${first - 1}.avif`, false); // the level scrolls up (y decreases)
     this.dropChunks(w.level, first);
     return ready;
   }
@@ -423,7 +441,7 @@ export class HiResView {
   /** Free the chunks of other levels and those that scrolled out below. */
   private dropChunks(level: number, first: number): void {
     for (const [file, t] of this.textures) {
-      const m = /^level(\d)\/(\d+)\.webp$/.exec(file);
+      const m = /^level(\d)\/(\d+)\.avif$/.exec(file);
       if (!m || t === 'loading') continue;
       if (Number(m[1]) !== level || Number(m[2]) > first + 3) {
         this.textures.delete(file);
