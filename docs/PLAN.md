@@ -40,7 +40,7 @@
 - [x] Decode `.LEV` (tile grid + 600 spawn records) + `TI1/TI2.LIB` → full level PNGs, spawn maps with enemy sprites, `levels.json` (`tools/render_levels.py`). Tileset per episode: TI1 for levels 1–3, TI2 for 4–6.
 - [x] Soundtrack → MP3 (session 7): `tools/export_music.py` → `game/public/music/track02–09.mp3`, mono (both channels are identical), LAME VBR -V5, 12 MB in total. MP3 rather than OGG/Opus because Safari still decodes Ogg/WebM Opus unreliably (especially in Web Audio). Not yet played by the game.
 - [x] Generated assets under version control (session 7, decision 11 corrected): engine binaries as reproducible `*.bin.gz` (unpacked with `DecompressionStream`; the loader also accepts data a server already unpacked via `Content-Encoding: gzip`, as Vite's dev server does), JSON plain. SFX stay lossless 8-bit PCM inside `sounds.bin.gz` (700 KB) instead of OGG.
-- [ ] **User:** listen to a few `game/public/music/*.mp3` tracks; if -V5 mono sounds too lossy, raise `LAME_VBR_QUALITY` (-V4 adds about 15 %).
+- [x] **User:** listen to a few `game/public/music/*.mp3` tracks; if -V5 mono sounds too lossy, raise `LAME_VBR_QUALITY` (-V4 adds about 15 %). Fine, no worse than the original soundtrack (user, session 17).
 - [x] FLI videos → WebM (session 10): `tools/export_videos.py` → `game/public/video/intro.webm` (12.6 MB) and `ending.webm` (1.1 MB), AAPLAY's playlists with loops and white flashes baked in (RE in re-notes "Intro and ending videos").
 - [x] ~~Optional: package the original with js-dos as an instant browser-playable "museum" version.~~ Not needed (user, session 17).
 
@@ -158,7 +158,7 @@
      break off? In the remake it does after about 7 s of hits; the existing capture never shows it, but there the
      player may not have hit it at all. **Settled (user, session 17): the remake's level 1 boss matches the original.**
   2. Any of levels 2–6 (a save from the hangar is fine): the only reference for episode 2 so far are 1998 screenshots.
-  3. Menus: ~~"Die Geschichte" for 30 s (scroll speed of the text viewer)~~ (fine, user, session 17), and the shop's "Grosse Pods" list.
+  3. Menus: ~~"Die Geschichte" for 30 s (scroll speed of the text viewer)~~ (fine, user, session 17), ~~and the shop's "Grosse Pods" list~~ (user, session 17: the original has no Rocketlauncher there, as the code reads; the remake keeps offering it, spec §12 #1).
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard

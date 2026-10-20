@@ -912,7 +912,8 @@ position −0x1C (20 = none), offers −0x5D + 3i (cat byte, id word), player re
   data, e.g. 786440), which is what makes 6216's "cheaper than the current candidate" selection sort work.
   Save price: 4000 (DS:0x17CA) + 10000·min(level − 2, 4) (28be:58E6 = min).
 - **Offers 6216**: 20 rounds; each picks the cheapest id with price > 0 and price > the previous pick
-  (strictly, so equal prices drop out); jets only id > jet; boni only DS:0x1789[id] ≠ 0 (2, 5–9) or id 4 or 11.
+  (strictly, so equal prices drop out; **Observed** by the user in the original, session 17: the Grosse Pods list has no
+  Rocketlauncher); jets only id > jet; boni only DS:0x1789[id] ≠ 0 (2, 5–9) or id 4 or 11.
   Ownership is not checked. Ends with the highlight frames of every position of the category (50A5).
   The original level-1 Save price (−6000) fails "price > 0", so Save isn't offered on level 1 at all.
 - **Positions**: 47B8 item at p, 4A37 occupied (mount.occupied, or engine/shield/jet > 0, or bonus ≠ 0), 49EA

@@ -769,7 +769,7 @@ The user decided that the remake fixes original bugs, including any found later.
 feel otherwise. "Fix" states the intended behaviour; values marked *design* are our choice, not from the original.
 | # | Bug (as the code reads) | Fix in the remake |
 |---|---|---|
-| 1 | Rocketlauncher (60000) is never offered: the shop's offer list drops an item priced the same as the previous one (E-Shocker) | list every item; equal prices ordered by item number |
+| 1 | Rocketlauncher (60000) is never offered: the shop's offer list drops an item priced the same as the previous one (E-Shocker); confirmed in the original by the user (session 17) | list every item; equal prices ordered by item number (kept, user, session 17) |
 | 2 | Distroyer ball pod has reload 0, so it fires once per level | give it a reload (*design*: 10 ticks, like the Firestorm gun) |
 | 3 | Only P1's ball pod damages enemies (both destroy enemy shots) | both players' ball pods deal contact damage |
 | 4 | Autogun never plays its fire sound | play its table sound (2 MINIPOD) |
@@ -801,7 +801,7 @@ Priority order; each needs one short capture (`original_source/capture/`) or a d
    the standard shot (speed 6) should rise 5 px/tick.
 3. **Respawn and invulnerability**: one death: jet from below at x ≈ 150, 3 px/tick, arc with countdown 5…1 for
    100 ticks; HUD lives 5 at start, game over after the 6th death.
-4. **Shop**: Grosse Pods list without Rocketlauncher; Save price shown on level 1 (documents the original; the
+4. **Shop**: ~~Grosse Pods list without Rocketlauncher~~ (confirmed by the user, session 17); Save price shown on level 1 (documents the original; the
    remake fixes both, §12).
 5. **Boss checks**: ~~level 4 core invulnerable until the parts are gone~~ (confirmed by the user, session 4);
    tank engine sound loops; level 3 debris direction; Golem curse removes all pods except the standard weapon.
