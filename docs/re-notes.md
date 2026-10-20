@@ -941,6 +941,31 @@ position −0x1C (20 = none), offers −0x5D + 3i (cat byte, id word), player re
   sprite and the pointer jumps are dropped; the PC-speaker beeps are not reproduced; a bad SAVE.DAT checksum
   shows the Shutdown(6) message until a key and returns to the main menu.
 
+## Intro and ending videos: AAPLAY.EXE (session 10)
+AAPLAY.EXE = Autodesk Animator Public Domain Player 1.0 (Yost Group, "Turbo-C - Copyright (c) 1988 Borland").
+Addresses below are offsets into the load image (file offset − 5120, the MZ header). `DPMAX.BAT` runs
+`startaud.exe 1 2 3 4` (CD track 4 keeps playing) and then `aaplay intro.txt`; `endvideo.bat` runs track 9 and
+`aaplay ending.txt`.
+- **Observed** playlists (CP437): `INTRO.TXT` = lojan `-T FADEout`, lojan2 `-L 60`, hors2561 `-T FADEin`, hors2563,
+  anf1u2 `-T FADEin`, anf2nu2, anf3u, anf51u, anf52u, anf7u `-T FADEout`, anf4u `-T FADEout`, pre265 `-T FADEin`,
+  test `-T FADEin`, test21…test27. `ENDING.TXT` = test30, test29. Keywords in the player: SPEED, LOOP, LINK,
+  FADEIN, FADEOUT, EXITTODOS, EXITTOPLAYER ("Expecting int parameter for loop/speed/pause").
+- **Observed** every FLI is 320×200, magic 0xAF11, speed 5 (1/70 s units → 14 fps). Durations (header frames ×
+  5/70): intro files 175.6 s without LOJAN2; LOJAN2.FLI is one frame (the "HORSE Productions" logo), so `-L 60`
+  holds it 60 × 5/70 = 4.3 s (I: one loop = the header's frame count). Ending 13.4 s.
+- **Observed** fades are **white flashes**, not fades to black. Play routine 0x3:0x8F5 (linear 0xA8F5): if the
+  fade-in token (0x1E) is set it calls 0xA9C0 = set all 768 DAC values to 63 (white), load and show the first frame,
+  then 10 steps (`di` = 10 → 1): `pal[i] −= (pal[i] − target[i]) div di`, Turbo C `delay(2)` (0xFFB2, BIOS-tick
+  calibrated), wait for the retrace (0x3CA2: wait end, wait start), SetPalette(0, 256) (0xAC8). After the frames, if
+  the fade-out token (0x1F) is set it calls 0xAB4 → 0xAAB4: 10 steps `pal[i] += (63 − pal[i]) div si`, same delay
+  and retrace. So each flash takes ≈ 10 retraces (0.14 s). (I: token 0x1E = FADEin, 0x1F = FADEout from their
+  order in the keyword list; the code paths agree: in before the frames, out after them.)
+- Unknown: AAPLAY's keys during a script (whether a key skips one file or the whole playlist), and the loading
+  pause between files. Remake (design): a key or click skips the whole video.
+- **Remake:** `tools/export_videos.py` bakes each playlist into one VP9 WebM (`game/public/video/intro.webm`
+  180.9 s, `ending.webm` 13.4 s): 70 fps timeline (one tick per retrace), duplicates dropped (VFR), every pixel
+  2×2 so 4:2:0 chroma doesn't smear, CRF 34, silent (the game plays track 4 / 9 itself).
+
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.

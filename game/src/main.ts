@@ -12,6 +12,7 @@ import { playerInputs } from './input/players';
 import { ClassicView } from './render/classicView';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
+import { Video } from './video';
 
 const TICK_MS = 1000 / 40; // decision (user, session 3): fixed 40 Hz, 1 tick = 1 original frame
 const MAX_TICKS_PER_FRAME = 8; // after a stall, catch up at most this much instead of spiralling
@@ -70,6 +71,7 @@ async function main(): Promise<void> {
     return undefined;
   });
   const music = new Music(base + 'music/');
+  const video = new Video(base + 'video/');
 
   const view = await ClassicView.create(document.getElementById('app')!, data);
   const keys = new Keyboard(window);
@@ -91,7 +93,21 @@ async function main(): Promise<void> {
       return playerInputs(game!.settings.control, keys, mouse, pad);
     },
   };
-  game = new Game(createWorld(data, Date.now() >>> 0), input, loadSettings(), sfx, music, saveSettings, saveSlot);
+  // Browsers only play sound after a user gesture, so the intro (with its CD track) waits for one.
+  status.textContent = '';
+  const prompt = document.getElementById('start')!;
+  prompt.hidden = false;
+  await new Promise<void>((resolve) => {
+    const start = () => {
+      window.removeEventListener('keydown', start);
+      window.removeEventListener('pointerdown', start);
+      resolve();
+    };
+    window.addEventListener('keydown', start);
+    window.addEventListener('pointerdown', start);
+  });
+  prompt.hidden = true;
+  game = new Game(createWorld(data, Date.now() >>> 0), input, loadSettings(), sfx, music, saveSettings, saveSlot, video);
   // A mouse player steers with the pointer captured (relative movement, as with the DOS driver); the
   // request needs a user gesture, so it is repeated on clicks during the level.
   const mousePlays = () =>
@@ -122,6 +138,7 @@ async function main(): Promise<void> {
       else mouse.unlock();
     }
     if (game.view === 'world') view.draw(game.world);
+    else if (game.view === 'video') view.drawVideo(video.element);
     else view.drawScreen(game.screen);
     requestAnimationFrame(frame);
   };

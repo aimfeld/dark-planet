@@ -6,6 +6,7 @@
   "scripts": {
     "data": "cd .. && uv run --with numpy --with pillow python tools/export_engine_data.py original_source game/public/data",
     "music": "cd .. && python3 tools/export_music.py original_source game/public/music",
+    "video": "cd .. && python3 tools/export_videos.py original_source game/public/video",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",

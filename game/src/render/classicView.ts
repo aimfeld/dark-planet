@@ -76,6 +76,16 @@ export class ClassicView {
     this.present(this.lut(sc.palette, sc.fade));
   }
 
+  /** A video frame (2 x 2 pixels per source pixel), sampled down to the 320 x 200 view. */
+  drawVideo(video: HTMLVideoElement): void {
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.fillStyle = '#000';
+    this.ctx.fillRect(0, 0, W, H);
+    if (video.readyState >= 2) this.ctx.drawImage(video, 0, 0, W, H);
+    this.texture.source.update();
+    this.app.render();
+  }
+
   private lut(name: PaletteName, fade: number): Uint32Array {
     return this.luts[name][Math.max(0, Math.min(FADE_STEPS, fade))];
   }

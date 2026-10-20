@@ -8,7 +8,7 @@ Status: ✅ decoded and verified · 🟡 understood, decoder not written · ❓ 
 | `.SND` | `AREA.SND`, `AREA2.SND` | SMIX sound resource, signed 8-bit 11025 Hz (see below) | ✅ |
 | `.PIC` | `OMBILD`, `UMBILD`, `HMBILD`, `RASTER` | `"PIC"` + 64000 bytes, Mode X planar | ✅ |
 | `.PAL` | `EPIS1`, `UMBILD`, `HMBILD` | 256 × RGB, 6-bit VGA (0–63) | ✅ |
-| `.FLI` | intro/ending/story videos | Autodesk Animator FLI, 320×200, 14 fps (`0xAF11`) | ✅ ffmpeg decodes |
+| `.FLI` | intro/ending videos | Autodesk Animator FLI, 320×200, speed 5/70 s = 14 fps (`0xAF11`); playlists `INTRO.TXT`/`ENDING.TXT` for AAPLAY (re-notes "Intro and ending videos") | ✅ ffmpeg decodes; `tools/export_videos.py` → WebM |
 | `.LEV` | `LEVEL1..6.LEV` (6200 bytes each) | 10×200 tile grid + 600 spawn records | ✅ `tools/render_levels.py` |
 | `.LIB` | `JETS`, `GEG*`, `SHOTS`, `EXPL`, … , `TI1`, `TI2` | AniVGA sprites, concatenated | ✅ `tools/extract_sprites.py` |
 | `.FNT` | `FIRE`, `SUPER`, `_BROADWA`, `DEFAULT` | AniVGA fonts | ✅ `tools/extract_fonts.py` |

@@ -7,6 +7,7 @@ import { options } from './options';
 import { shop } from './shop';
 import { cdPlay, fadeIn, fadeOut, frame, playSound, stopSound, waitMouseUp, type Ctx, type Proc } from './proc';
 import { textViewer } from './textViewer';
+import { playVideo } from './video';
 
 const POINTER = 612; // slot 1, an 8 x 11 arrow
 const LABEL_SPRITE = 817; // text sprite 0x331 in slot 3
@@ -170,7 +171,9 @@ function* shootEmAll(ctx: Ctx): Proc<'hangar' | 'menu'> {
   ctx.screen.clear();
   if (result === 'done' && w.gameCompleted) {
     yield* textViewer(ctx, { file: 'MISSIONS.PAS', centred: false, first: ENDING[0], last: ENDING[1], mode: 1, frameDelay: 130 });
-    // The original ends here and the batch file plays CD track 9 with the ending video (not converted yet).
+    // The original quits here and endvideo.bat plays CD track 9 with the ending video; the remake then
+    // returns to the main menu.
+    yield* playVideo(ctx, 'ending', 9);
     return 'menu';
   }
   if (ctx.settings.cdSound) cdPlay(ctx, 2);

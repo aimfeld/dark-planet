@@ -40,7 +40,7 @@
 - [x] Soundtrack → MP3 (session 7): `tools/export_music.py` → `game/public/music/track02–09.mp3`, mono (both channels are identical), LAME VBR -V5, 12 MB in total. MP3 rather than OGG/Opus because Safari still decodes Ogg/WebM Opus unreliably (especially in Web Audio). Not yet played by the game.
 - [x] Generated assets under version control (session 7, decision 11 corrected): engine binaries as reproducible `*.bin.gz` (unpacked with `DecompressionStream`; the loader also accepts data a server already unpacked via `Content-Encoding: gzip`, as Vite's dev server does), JSON plain. SFX stay lossless 8-bit PCM inside `sounds.bin.gz` (700 KB) instead of OGG.
 - [ ] **User:** listen to a few `game/public/music/*.mp3` tracks; if -V5 mono sounds too lossy, raise `LAME_VBR_QUALITY` (-V4 adds about 15 %).
-- [ ] Convert FLI videos → WebM (when the intro/ending/briefings are built; decision 7).
+- [x] FLI videos → WebM (session 10): `tools/export_videos.py` → `game/public/video/intro.webm` (12.6 MB) and `ending.webm` (1.1 MB), AAPLAY's playlists with loops and white flashes baked in (RE in re-notes "Intro and ending videos").
 - [ ] Optional: package the original with js-dos as an instant browser-playable "museum" version.
 
 ### Phase 2: Reverse-engineer gameplay from DP.EXE
@@ -86,7 +86,8 @@
 - [x] Two players and control types (session 10): the mouse (0x1A34B) and joystick (0x1A58F) handlers are ported (`playerInput` in `src/sim/player.ts`); each player reads the device chosen in the options (`src/input/players.ts`). Gamepad API as the joystick (`src/input/gamepad.ts`), pointer lock for a mouse player during levels with the real pointer as fallback. `test/input.test.ts`; checked in Chrome with P1 mouse + P2 keyboard, then P2 on a mocked gamepad (pointer lock itself can't be granted in the automated tab).
 - [ ] **User:** play with the mouse (Options → Steuerung Player1: Maus): does the pointer get captured on entering a level (or on the first click), does the steering feel right? And with a gamepad as Joystick if you have one.
 - [ ] Decide: allow two players on one keyboard (a second key set, e.g. WASD)? The original can't (both players never share a control type).
-- [ ] Ending video (FLI → WebM, decision 7) after the ending text; for now the remake returns to the main menu.
+- [x] Intro and ending videos (session 10): the game starts behind a "Taste oder Klick zum Starten" prompt (browsers need a gesture for sound), then plays the intro with CD track 4 (DPMAX.BAT), then the main menu; after the ending text the ending video plays with track 9, then the main menu. A key or click skips a video. `src/video.ts`, `src/screens/video.ts`, `test/video.test.ts`.
+- [ ] **User:** watch the intro and the ending (`npm run dev`; the ending: finish level 6, or call `game` in the console) and check the white flashes, the logo hold and the music; say whether the intro should play on every start.
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.

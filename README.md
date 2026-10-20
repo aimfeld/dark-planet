@@ -30,7 +30,7 @@ repository. The tools expect them at that path in a local checkout.
 | `original_source/dplanet-cd.conf` | DOSBox-X config that mounts the rebuilt CD, for music |
 | `tools/` | Asset extraction and reverse-engineering helpers |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
-| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`) |
+| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`) |
 | `docs/` | Plan, reverse-engineering notes, file formats |
 
 ## Playing the original in DOSBox-X (with soundtrack)
@@ -64,16 +64,19 @@ npm install
 npm run dev    # http://localhost:5173
 npm test       # simulation tests
 ```
-Main menu: arrows and Enter. The hangar works with the mouse ("Shoot em all" starts the next level). In a level:
-arrows move, Ctrl or X fires, Alt or C switches altitude, Space selects a bonus, Ctrl+Space (or X+Space) uses it,
-P pauses, Esc aborts to the menu. F toggles fullscreen (in Chrome with Keyboard Lock, so desktop shortcuts don't
-take Ctrl/Alt combinations). All six levels play to the end; the shop, saves and two-player controls are still
-missing (see `docs/PLAN.md` Phase 3).
+After a key or click the intro plays (any key skips it). Main menu: arrows and Enter. The hangar works with the
+mouse ("Shoot em all" starts the next level, "Multiplayer" adds player 2, "Optionen" sets each player's controls:
+Tastatur, Maus or Joystick = gamepad). Keyboard in a level: arrows move, Ctrl or X fires, Alt or C switches
+altitude, Space selects a bonus, Ctrl+Space (or X+Space) uses it. Mouse: the jet follows the pointer, left fires,
+right switches altitude, middle selects a bonus, left+middle uses it. Gamepad: stick or d-pad, A fires, B switches
+altitude, X/LB selects, Y/RB uses. P pauses, Esc aborts to the menu. F toggles fullscreen (in Chrome with Keyboard
+Lock, so desktop shortcuts don't take Ctrl/Alt combinations). The whole game plays through, including the shop,
+saves, two players and the ending (see `docs/PLAN.md` Phase 3 for what is left to check).
 
 The game's assets are generated from `original_source/` and committed, so the game runs from a plain checkout:
 `game/public/data/` (sprites, tiles, menu pictures, fonts, texts, levels, tables and SFX; binaries gzip-compressed) and
-`game/public/music/` (CD tracks 2–9 as mono MP3). To regenerate them (needs `original_source/`, `uv` and ffmpeg):
-`npm run data` and `npm run music`.
+`game/public/music/` (CD tracks 2–9 as mono MP3) and `game/public/video/` (intro and ending as WebM). To regenerate
+them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music` and `npm run video`.
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions

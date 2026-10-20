@@ -9,11 +9,15 @@
       html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
       #app { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
       #status { position: fixed; left: 8px; bottom: 6px; color: #888; font: 12px monospace; }
+      #start { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        color: #aaa; font: 16px monospace; cursor: pointer; }
+      #start[hidden] { display: none; }
     </style>
   </head>
   <body>
     <div id="app"></div>
     <div id="status"></div>
+    <div id="start" hidden>Dark Planet: Taste oder Klick zum Starten</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

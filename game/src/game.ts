@@ -8,6 +8,8 @@ import { mainMenu } from './screens/mainMenu';
 import { TICK_MS, type Ctx, type MenuInput, type Proc, type SaveSlot, type Settings } from './screens/proc';
 import { Screen } from './screens/screen';
 import type { World } from './sim/state';
+import type { VideoPlayer } from './video';
+import { playVideo } from './screens/video';
 
 /** SETTINGS.DAT defaults without a file: P1 keyboard, P2 mouse, CD sound and sound effects on. */
 export const DEFAULT_SETTINGS: Settings = { control: [1, 2], cdSound: true, soundEffects: true };
@@ -18,10 +20,16 @@ export function memorySlot(): SaveSlot {
   return { read: () => saved, write: (b) => (saved = b.slice()) };
 }
 
+/** DPMAX.BAT: the intro video with CD track 4, then DP.EXE's main menu. */
+function* boot(ctx: Ctx): Proc {
+  yield* playVideo(ctx, 'intro', 4);
+  yield* mainMenu(ctx);
+}
+
 export class Game implements Ctx {
   readonly data: GameData;
   readonly screen: Screen;
-  view: 'screen' | 'world' = 'screen';
+  view: 'screen' | 'world' | 'video' = 'screen';
   quit = false;
   input: MenuInput;
   private readonly proc: Proc;
@@ -35,12 +43,13 @@ export class Game implements Ctx {
     readonly music?: Music,
     private readonly persist: (s: Settings) => void = () => undefined,
     readonly saves: SaveSlot = memorySlot(),
+    readonly video?: VideoPlayer,
   ) {
     this.data = world.data;
     this.screen = new Screen(world.data);
     this.input = input;
     music?.setEnabled(settings.cdSound);
-    this.proc = mainMenu(this);
+    this.proc = boot(this);
   }
 
   saveSettings(): void {

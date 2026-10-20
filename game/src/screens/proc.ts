@@ -5,6 +5,7 @@
 
 import type { Music } from '../audio/music';
 import type { Sfx } from '../audio/sfx';
+import type { VideoPlayer } from '../video';
 import type { GameData } from '../data';
 import { FADE_STEPS, type PlayerInput, type World } from '../sim/state';
 import type { Screen } from './screen';
@@ -57,11 +58,12 @@ export interface Ctx {
   readonly input: MenuInput;
   readonly sfx?: Sfx;
   readonly music?: Music;
+  readonly video?: VideoPlayer;
   readonly settings: Settings;
   saveSettings(): void;
   readonly saves: SaveSlot;
-  /** What the renderer shows: the menu screen or the level. */
-  view: 'screen' | 'world';
+  /** What the renderer shows: the menu screen, the level or a video. */
+  view: 'screen' | 'world' | 'video';
   /** The browser can't quit: set by the main menu's Exit instead. */
   quit: boolean;
 }
