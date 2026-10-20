@@ -544,7 +544,9 @@ Static analysis (REA CLI decompiles + objdump of segment 0x1000). Evidence IDs: 
   active: spec §12 #18); every other type clears sprite, shadow, active, wreck and energy. EnemyDestroyed: type 0x21
   → energy := DS:0x1966[0x21] (no two-player bonus, spec §12 #19), BossScript(1), no KillEnemy.
 - EnemyFire: pattern 7 → +9/+B := start + Round(50·cos/sin(t·8·π/360)) (4t°, (0x86, 0x4800) = 50); pattern 22 → +5
-  := SpriteN − DS:0x19FA[type]; kind 0xFF uses gun 4's offset (class·8 + 0x1E84 / 0x1F8C) whatever gun fired.
+  := SpriteN − DS:0x19FA[type] (@0x15472); then (@0x154B1) SpriteX/Y of the shot := SpriteX/Y of the enemy + the
+  gun's dx/dy (DS:0x1E7C / 0x1F84), not from +5 (session 15: the remake placed the sprite at x = +5, so the level 4
+  turrets' shots started at x = facing 0..7, at the left edge; fixed); kind 0xFF uses gun 4's offset (class·8 + 0x1E84 / 0x1F8C) whatever gun fired.
 - MoveEnemyShots: 6 → +5/+7 := position, +9/+B := centre of the jet Nearest(2, shot centre) names, then MoveTowards;
   7 → MoveTowards with the fire-time target; 17 → +9 −= 2, x = 09EE(sx, 200, +9 + 90), y = 0A6A(sy + 200, 200, +9 +
   90); 19 → `if +9 = 1 then +B := 2`; y += +B; `if +9 mod 8 = 0 ∧ +B < 9 then +B += 1` (+9 is never advanced, so
@@ -658,9 +660,14 @@ Pascal signature (O, push order at the call sites; Ghidra lists the params rever
 |---|---|---|---|---|---|---|---|---|
 | Main menu 3 Story @0x1D932 (after CDPlay(3)) | story.txt @0x1D73F | raster.pic @0x1D749 | 0 | 1 | 261 | 1 | 0 | 150 |
 | Main menu 4 Anleitung @0x1D95D | anleit.ung @0x1D754 | raster.pic | 0 | 1 | 288 | 3 | 0 | 0 |
-| Main menu 5 About @0x1D989 | about.txt @0x1D75F | raster.pic | 1 | 1 | 199 | 1 | 0 | 80 |
+| Main menu 5 About @0x1D989 | about.txt @0x1D75F | raster.pic | 1 | 1 | 199 (see below) | 1 | 0 | 80 |
 | Game menu "Shoot em all" briefing @0x1D294 | missions.pas @0x1D034 | raster.pic @0x1D041 | 0 | [DS:0x910+4·lvl] | [DS:0x912+4·lvl] | 2 | 0 | 0 |
 | Ending after level 6 @0x1D36E | missions.pas | raster.pic | 0 | 98 | 119 | 1 | 0 | 130 |
+
+About's lastLine 199 cuts ABOUT.TXT off inside the cheat riddle (O, session 15): line 196 "Ein Rätsel ist des
+Rätsels Lösung:", 198–203 the riddle, 205–207 "Tippe des Rätsels Lösung ein, im Hangar soll es sein. …"; 199 is
+its second line. The remake shows up to line 207 (spec §12 #20). Similarly the ending (98–119) leaves out
+MISSIONS.PAS 123–124 "übrigens: Hast du den Cheat schon entdeckt?" (O; possibly deliberate, unchanged).
 
 Briefing line table (O, DS:0x914…): L1 1–14, L2 16–30, L3 32–47, L4 49–64, L5 66–79, L6 81–96
 (= MISSIONS.PAS blocks "MISSION n:" … last text line).
@@ -852,8 +859,11 @@ p: 0 large(mount 0) (103,13) | 1 engine (101,77) | 2 small (84,18) | 3 standard 
   Boni slots 48..50 at (X[11+k] + boniDx[id] − 1, 90).
 - Highlight frames (4FC7): 497 (16×24) for large-pod positions, 498 (24×21) engine/ball/shield, 499 (16×18)
   small/standard, 505 (36×32) jet, 500 (28×26) boni; at (X[p], Y[p]). Buy mode shows them on every position of the
-  category that the jet has (slots 27..31); sell/position mode shows one on the selected position (slot 31, which
-  also holds the header icon, so the icon disappears: quirk).
+  category that the jet has; sell/position mode shows one on the selected position. **Corrected (session 15):**
+  50A5 clears slots 26..30 and 4FC7 puts frame number c (counting only drawn frames, from 0) in slot 26 + c, so the
+  frames use slots 26..30 and never touch the header icon (slot 31, `DS:0x3184` in 4288). Session 9 read 27..31
+  and single frame = slot 31; the remake copied that, which hid the fifth large-pod frame (the biggest jet's
+  outer right mount) as soon as the header showed an icon, and the header icon in sell mode. Not an original bug.
 - Category positions (DS:0x9E8): 1 small [2]; 2 large [0,4,5,6,7]; 3 boni [11,12,13]; 4 engine [1]; 5 shield [9];
   6 ball [8]; 7 jet [10]. Click rect per position: x..x+w, y..y+h with w = 9,16,19,19,19,23,34 and
   h = 17,22,19,19,19,24,30 by category (DS:0x9DD/0x9E5).
@@ -920,7 +930,7 @@ position −0x1C (20 = none), offers −0x5D + 3i (cat byte, id word), player re
 - **Sell 5165 / 5558**: 5165 (every click in mode 2): nothing at the position → no; jet → SPEZIAL1, no;
   standard weapon → SPEZIAL12, no; boni → SPEZIAL11 then still yes; shows THEMA/ART (without clearing the box,
   so old lines can stay) and the header with the refund (price div 2, boni div 4), sound 22 ×2, one highlight
-  frame (slot 31). A click on VERKAUFEN then sells: money += refund, the mount / slot / engine / shield := 0,
+  frame (slot 26). A click on VERKAUFEN then sells: money += refund, the mount / slot / engine / shield := 0,
   4BE4 for mounts, boni shift left, SPEZIAL6 + "Rückzahlung: " + refund; afterwards the header and the frame are
   hidden (50A5 with hide = 1).
 - **Position change 811F**: takes the pod off its mount (Delay 200), pod sprite on the pointer, same window.

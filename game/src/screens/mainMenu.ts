@@ -13,6 +13,9 @@ import { textViewer } from './textViewer';
 const ITEMS = 6; // Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions (about), Exit
 const itemSprite = (i: number) => 613 + 11 * (i - 1); // 0x265
 const itemSlot = (i: number) => 13 + i;
+// The original shows ABOUT.TXT up to line 199 (@0x1D989) and cuts the cheat riddle off after its second line;
+// the remake shows it to its last line (spec §12 #20).
+const ABOUT_LAST = 207;
 
 function* drawMainMenu(ctx: Ctx, selected: number): Proc {
   const s = ctx.screen;
@@ -149,7 +152,7 @@ export function* mainMenu(ctx: Ctx): Proc {
           yield* drawMainMenu(ctx, selected);
           break;
         case 5:
-          yield* textViewer(ctx, { file: 'ABOUT.TXT', centred: true, first: 1, last: 199, mode: 1, frameDelay: 80 });
+          yield* textViewer(ctx, { file: 'ABOUT.TXT', centred: true, first: 1, last: ABOUT_LAST, mode: 1, frameDelay: 80 });
           yield* drawMainMenu(ctx, selected);
           break;
         case 6:

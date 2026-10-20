@@ -198,6 +198,8 @@ describe.skipIf(!hasData)('episode 2 and the bosses (spec §7.3, §7.5, §8)', (
     enemyFire(w, i, 1, 0);
     s = shot();
     const x0 = w.spr.x[s.slot], y1 = w.spr.y[s.slot];
+    const turret = w.enemies[i].slot; // the shot leaves the turret's gun (+15, +13), not x = facing (0x154B1)
+    expect([x0, y1]).toEqual([w.spr.x[turret] + 15, w.spr.y[turret] + 13]);
     moveEnemyShots(w);
     expect([w.spr.x[s.slot] - x0, w.spr.y[s.slot] - y1]).toEqual([4, 4]);
   });

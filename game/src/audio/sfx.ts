@@ -6,6 +6,9 @@ import { gunzip } from '../data';
 import type { SoundEvent } from '../sim/state';
 
 const SMIX_VOICES = 32;
+// The SFX are mixed about 10 dB hotter than the CD tracks (RMS); at full gain they drown the music. The
+// original's balance came from the sound card's mixer, not the game. *design*, gameplay-spec §14.
+const SFX_GAIN = 0.18;
 
 interface Voice {
   n: number;
@@ -19,6 +22,7 @@ export class Sfx {
 
   private constructor(private readonly ctx: AudioContext, private readonly buffers: AudioBuffer[]) {
     this.out = ctx.createGain();
+    this.out.gain.value = SFX_GAIN;
     this.out.connect(ctx.destination);
   }
 

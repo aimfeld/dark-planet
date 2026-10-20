@@ -281,19 +281,18 @@ function dealMessage(sh: Shop, bought: boolean, value: number): void {
   line(sh, 2, (bought ? 'Investiert:' : 'Rückzahlung: ') + value);
 }
 
-/** Highlight frames (1d9e:50A5 / 4FC7): every position of `cat` the jet has, or only `pos` (slot 31). */
+/** Highlight frames (1d9e:50A5 / 4FC7): every position of `cat` the jet has, or only `pos`, in slots 26 + count. */
 function highlight(sh: Shop, cat: number, pos: number, hide = false): void {
   const s = sh.ctx.screen;
   for (let k = 0; k <= 4; k++) s.n[26 + k] = 0;
-  const frameAt = (slot: number, q: number) => {
+  let count = 0;
+  const frameAt = (q: number) => {
     const n = q === 2 || q === 3 ? 499 : q === 0 || (q >= 4 && q <= 7) ? 497 : q === 1 || q === 8 || q === 9 ? 498 : q === 10 ? 505 : 500;
-    s.set(slot, hide ? 0 : n, POS_X[q], POS_Y[q]);
+    s.set(26 + count++, hide ? 0 : n, POS_X[q], POS_Y[q]);
   };
   if (pos === NONE) {
-    CAT_POS[cat].forEach((q, k) => {
-      if (exists(sh.ctx, pl(sh), q)) frameAt(27 + k, q);
-    });
-  } else frameAt(31, pos);
+    for (const q of CAT_POS[cat]) if (exists(sh.ctx, pl(sh), q)) frameAt(q);
+  } else frameAt(pos);
 }
 
 /** The current player's jet with everything on it (1d9e:5909). */

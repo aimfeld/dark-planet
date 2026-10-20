@@ -42,6 +42,21 @@ describe.skipIf(!hasData)('shop', () => {
     expect(price(ctx, 3, 11)).toBe(24000);
   });
 
+  it('large-pod frames on all five mounts of the Alien-Pro 2 stay beside the header icon (slots 26..30 vs 31)', async () => {
+    const { game, click } = await inShop();
+    const s = game.screen;
+    for (let i = 0; i < 5; i++) click(...CATEGORY_RIGHT, 20); // 2 -> 7 Jets
+    click(...box(4)); // Alien-Pro 2
+    click(...MODE.buy, 40);
+    expect(game.world.players[0].jet).toBe(5);
+    for (let i = 0; i < 7 && s.texts.get(840)?.text !== 'Grosse Pods'; i++) click(...CATEGORY_RIGHT, 20);
+    expect(s.texts.get(840)?.text).toBe('Grosse Pods');
+    click(...box(1)); // Plasmapod: its icon in the header
+    expect([26, 27, 28, 29, 30].map((k) => s.n[k])).toEqual([497, 497, 497, 497, 497]);
+    expect([26, 27, 28, 29, 30].map((k) => s.x[k])).toEqual([103, 73, 133, 53, 153]);
+    expect(s.n[31]).toBe(62);
+  });
+
   it('screen, buying a large pod onto a mount, a jet, selling the engine, Save and Load', async () => {
     const { game, press, click, dump } = await inShop();
     const s = game.screen;

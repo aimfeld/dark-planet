@@ -752,9 +752,11 @@ export function enemyFire(w: World, i: number, gunNo: number, target: number): v
       s.tx = s.sx + round(50 * cosDeg(4 * e.t));
       s.ty = s.sy - round(50 * sinDeg(4 * e.t));
     }
-    if (s.pattern === 22) s.sx = w.spr.n[e.slot] - t.sprite; // the turret's facing (Direction8)
     w.spr.x[s.slot] = s.sx;
     w.spr.y[s.slot] = s.sy;
+    // The turret's facing (Direction8) replaces the start x in the record, after the sprite is placed
+    // (0x15472; the sprite position comes from the enemy + gun offset, 0x154B1).
+    if (s.pattern === 22) s.sx = w.spr.n[e.slot] - t.sprite;
     if (s.kind === 12) startAnim(w, 0x14, s.slot);
     if (s.kind === 24) startAnim(w, 0x20, s.slot);
     if (!w.players.some((q) => q.active)) killEnemyShot(w, k);

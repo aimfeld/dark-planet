@@ -788,6 +788,7 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 17 | EnemyUpdate's snake facing hook runs on a record the despawn has just removed, so snake debris removed at the screen edge can leave its sprite behind (O, 0x16C0E) | face only pieces that still exist |
 | 18 | The dead Golem stays an active enemy (it only changes sprite and sub), so another hit, ramming or ball-pod contact in the same tick destroys it again and pays 30000 again (O, 0x11A08, 0x18978) | the dead Golem drifts off like a wreck and can't be hit |
 | 19 | A destroyed snake body segment is refilled with the one-player energy, without SpawnEnemy's ×1.5 for two players (O, 0x12A1E) | refill to the spawn energy |
+| 20 | About (main menu 5) shows ABOUT.TXT only to line 199 (@0x1D989), so the cheat riddle (lines 196–207) stops after its second line (O) | show it to line 207 |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.
@@ -827,4 +828,5 @@ remastered mode.
 | Level pause | P resumes | also Esc while paused ends the level; a hidden page pauses the level |
 | Controls | keyboard, mouse, joystick | §2: WASD set (type 4, decision 13), touch (type 5, decision 14), gamepad as joystick, X/C/V instead of Ctrl/Alt/Space in the legend (decision 15), P2 defaults to WASD, Pointer Lock for a mouse player |
 | Input | read when the code polls | sampled once per 40 Hz tick; a press released before the sample still counts once |
+| Sound volume | SFX and CD music at the sound card's mixer levels | SFX at gain 0.18 (−15 dB) against the CD tracks, whose RMS is about 10 dB below the SFX (user, session 15) |
 | Screen | 320 x 200 | the key legend below the picture; F toggles fullscreen; touch devices get a fullscreen button, except in the installed app, which is fullscreen already |
