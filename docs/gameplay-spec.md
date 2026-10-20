@@ -784,6 +784,7 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 17 | EnemyUpdate's snake facing hook runs on a record the despawn has just removed, so snake debris removed at the screen edge can leave its sprite behind (O, 0x16C0E) | face only pieces that still exist |
 | 18 | The dead Golem stays an active enemy (it only changes sprite and sub), so another hit, ramming or ball-pod contact in the same tick destroys it again and pays 30000 again (O, 0x11A08, 0x18978) | the dead Golem drifts off like a wreck and can't be hit |
 | 19 | A destroyed snake body segment is refilled with the one-player energy, without SpawnEnemy's ×1.5 for two players (O, 0x12A1E) | refill to the spawn energy |
+| 20 | Level 2 core on the ground (sub 8): phase 2 starts at c := 1, but c counts up before the checks, so its first leg is 29 ticks of (+2, +2) against 30 of (+2, −2). The core climbs 2 px per round (≈ 6 s) and after a few minutes hangs above the screen for good, where it can't be finished off (O, 0x16C0E `ev_ab6b75df…`; found in a long remake fight, session 11) | start phase 2 at c := 0, so each round returns to the same height |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.

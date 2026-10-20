@@ -420,6 +420,12 @@ function levelTwoCoreAir(w: World, e: Enemy): void {
 }
 
 /** Sub 8, level 2 core on the ground (BossScript(2, 1) switches to it): zig-zags, eggs, strafing runs. */
+/**
+ * Original bug (spec §12 #20): phase 2 started at c := 1 and c counts up before the checks, so the first leg ran 29
+ * ticks of (+2, +2) against 30 of (+2, -2) and the core crept 2 px up per round until it left the screen for good.
+ */
+const PHASE2_START = 0;
+
 function levelTwoCoreGround(w: World, e: Enemy, i: number): void {
   const s = e.slot;
   e.c += 1;
@@ -430,7 +436,7 @@ function levelTwoCoreGround(w: World, e: Enemy, i: number): void {
     moveTowards(w, s, 2, e.x0, e.y0, 4, w.scrollY + 4);
     if (w.spr.x[s] < 8 && w.spr.y[s] < w.scrollY + 8) {
       e.phase = 2;
-      e.c = 1;
+      e.c = PHASE2_START;
     }
   } else if (e.phase === 2) {
     if (c >= 1 && c <= 30) {
@@ -456,7 +462,7 @@ function levelTwoCoreGround(w: World, e: Enemy, i: number): void {
     if (mod(e.c, 20) === 0) fireAllGuns(w, i, 0);
     if (w.spr.x[s] < 8) {
       e.phase = 2;
-      e.c = 1;
+      e.c = PHASE2_START;
     }
   }
 }

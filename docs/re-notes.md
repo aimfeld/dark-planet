@@ -520,7 +520,7 @@ Static analysis (REA CLI decompiles + objdump of segment 0x1000). Evidence IDs: 
   (−2, +2), 31–60 (+4, 0), 61–90 (−2, −2), 121 → phase 1. Sub 8: c += 1; phase 0 waits for c = 40; phase 1
   MoveTowards(x0, y0 → 4, scrollY + 4, speed 2) until x < 8 ∧ y < scrollY + 8; phase 2 1–30 (+2, +2), 31–60 (+2, −2),
   61–100 SpawnEnemy(x + 15, y + 40, 0x0E, 3) when c mod 5 = 0, 101–130, 131–160 as before, 161 → phase 3, c := 10;
-  phase 3 x −= 3, FireAllGuns(0) when c mod 20 = 0, x < 8 → phase 2, c := 1. Sub 0x12 (snake): phase 1 y += 2 until
+  phase 3 x −= 3, FireAllGuns(0) when c mod 20 = 0, x < 8 → phase 2, c := 1. **Observed (session 11, `ev_ab6b75df…`):** the c += 1 runs before the phase tests, so phase 2's first leg (1–30) gets only 29 ticks after c := 1 and the core climbs 2 px per round: an original bug (spec §12 #20), fixed in the remake. Sub 0x12 (snake): phase 1 y += 2 until
   y > scrollY + 50, then the Arc/straight chain of spec §8.4 (Arc steps ±6 at r 30/40/60/100). Sub 0x13:
   MoveTowards(x0, y0 → energy, c, 9), removed (KillEnemy 0, 0) when y < scrollY. Sub 0x22 and 0x27 as spec §8.5/8.7
   (0x27 phase 4 clamps the position into the bounce box at c 25, velocity in x0/y0; StopSound(0x1F) twice at c 430).
