@@ -12,7 +12,7 @@ import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
-import { REMASTER_METHODS, type RemasterMethod } from './render/hiResView';
+import { REMASTER_METHOD } from './render/hiResView';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
@@ -187,7 +187,12 @@ async function main(): Promise<void> {
   const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
   const pad = new Gamepad();
   // The installed app is fullscreen already (manifest); a second, element fullscreen would only add a way out to learn.
-  const touch = new TouchControls(document.body, TOUCH_DEVICE && !displayMode('fullscreen') ? () => void fullscreen() : undefined);
+  let toggleRemaster = () => undefined as void; // set once the settings are loaded
+  const touch = new TouchControls(
+    document.body,
+    TOUCH_DEVICE && !displayMode('fullscreen') ? () => void fullscreen() : undefined,
+    TOUCH_DEVICE ? () => toggleRemaster() : undefined,
+  );
   const layout = layoutCache();
   // For a touch (pointerup or touchend, not pointerdown, counts as the gesture that allows sound) or a key.
   const unlock = () => {
@@ -255,7 +260,8 @@ async function main(): Promise<void> {
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
   };
 
-  // R switches between the classic and the remastered graphics, anywhere (menus, levels), remembered.
+  // R, the touch HD button and the Options line switch between the classic and the remastered graphics,
+  // anywhere (menus, levels); the choice is a setting. The frame loop applies it.
   const remasterLabel = document.getElementById('remaster')!;
   let labelTimer = 0;
   const showRemaster = (text: string) => {
@@ -264,23 +270,11 @@ async function main(): Promise<void> {
     clearTimeout(labelTimer);
     labelTimer = window.setTimeout(() => (remasterLabel.hidden = true), 2500);
   };
-  const remasterKey = 'dark-planet-remaster';
-  const storedMethod = (() => {
-    try {
-      return localStorage.getItem(remasterKey);
-    } catch {
-      return null;
-    }
-  })();
-  const useMethod = (m: RemasterMethod | null) => {
-    void view.hiRes.use(m);
-    try {
-      localStorage.setItem(remasterKey, m ?? '');
-    } catch {
-      // no storage: the choice lasts until the page reloads
-    }
+  toggleRemaster = () => {
+    settings.remastered = !settings.remastered;
+    saveSettings(settings);
+    showRemaster(settings.remastered ? 'Grafik: Remastered' : 'Grafik: Classic');
   };
-  if (REMASTER_METHODS.includes(storedMethod as RemasterMethod)) useMethod(storedMethod as RemasterMethod);
 
   let acc = 0;
   let last = performance.now();
@@ -290,12 +284,9 @@ async function main(): Promise<void> {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
-    if (keys.takePress('KeyR')) {
-      const order = [null, ...REMASTER_METHODS];
-      const next = order[(order.indexOf(view.hiRes.current) + 1) % order.length];
-      useMethod(next);
-      showRemaster(next ? 'Grafik: Remastered' : 'Grafik: Classic');
-    }
+    if (keys.takePress('KeyR')) toggleRemaster();
+    const graphics = settings.remastered ? REMASTER_METHOD : null;
+    if (view.hiRes.current !== graphics) void view.hiRes.use(graphics);
     while (acc >= TICK_MS) {
       keys.sample();
       mouse.sample();
@@ -317,7 +308,7 @@ async function main(): Promise<void> {
       if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
-    touch.update(touchPlays, game.touchKeys, layout());
+    touch.update(touchPlays, game.touchKeys, layout(), settings.remastered);
     view.setArea(touchUsed() ? layout().game : null);
     showKeys();
     if (mousePlays() !== mouseWasPlaying) {

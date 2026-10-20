@@ -12,8 +12,8 @@ import { cp437, type PaletteName, type Screen } from '../screens/screen';
 import { FADE_STEPS, MODE_SHADOW, SLOTS, SpriteTable, type World } from '../sim/state';
 import { H, W } from './framebuffer';
 
-export const REMASTER_METHODS = ['hq4x'] as const; // chosen by the user (session 17) over xbr4 and Real-ESRGAN
-export type RemasterMethod = (typeof REMASTER_METHODS)[number];
+export type RemasterMethod = 'hq4x';
+export const REMASTER_METHOD: RemasterMethod = 'hq4x'; // chosen by the user (session 17) over xbr4 and Real-ESRGAN
 
 const S = 4; // upscale factor of the assets
 const CLIP_X0 = 8;

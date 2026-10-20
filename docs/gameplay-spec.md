@@ -830,4 +830,4 @@ remastered mode.
 | Input | read when the code polls | sampled once per 40 Hz tick; a press released before the sample still counts once |
 | Sound volume | SFX and CD music at the sound card's mixer levels | SFX at gain 0.18 (−15 dB) against the CD tracks, whose RMS is about 10 dB below the SFX (user, session 15) |
 | Screen | 320 x 200 | the key legend below the picture; F toggles fullscreen; touch devices get a fullscreen button, except in the installed app, which is fullscreen already |
-| Graphics | 320 x 200 only | R switches to the remastered graphics (hq4x, interpolated motion) and back, anywhere; remembered; listed in the key legend (user, session 17) |
+| Graphics | 320 x 200 only | remastered graphics (hq4x, interpolated motion), a setting: R anywhere, Options line 5 "Grafik: Classic/Remastered" ("Menu verlassen" moves to line 6), the touch HD button top right; R is listed in the key legend (user, session 17) |

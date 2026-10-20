@@ -136,16 +136,24 @@
   loop's leftover time / 25 ms): x in level coordinates against the current scroll x (so the quake still shakes),
   y on the screen; a slot moving more than 32 px per tick snaps. Costs one tick (25 ms) of display latency.
   Classic mode is unchanged (whole ticks).
-- [x] **R** switches classic / remastered anywhere (menus, levels), remembered in localStorage, in the key legend (first G, changed to R by the user in session 17)
-  (gameplay-spec §14).
+- [x] Switching classic / remastered (session 17): `Settings.remastered`, saved with the other settings; **R**
+  anywhere (first G, changed to R by the user: G starts the hangar cheat), Options line 5 "Grafik: Classic /
+  Remastered", and on touch devices an **HD** button top right (left of the fullscreen button; in landscape both
+  share the narrow strip right of the picture, so they shrink to fit, 41 px on a phone). gameplay-spec §14.
+- [x] Download (session 17): the remastered graphics are never part of the initial download. In classic mode
+  nothing under `remaster/` is requested; in remastered mode `HiResView` loads per screen only what it draws
+  (a level's chunks around the scroll position, the atlas pages of the sprites on screen, the screen's picture
+  and font). The service worker keeps them out of the install cache (`vite.config.ts` REMASTER) and caches each
+  file on first use in `dp-remaster-<hash>`, so what a player has seen also works offline.
 - [x] Audio remaster tried and **rejected by the user** (decision 19): the CD tracks are mono and band-limited to
   about 10 kHz (aliasing above, so the music was mixed at a low rate before the CD); A/B clips with a higher bitrate,
   pseudo-stereo, AudioSR (neural bandwidth extension, `~/opt/audiosr`) and, for the 8-bit SFX, denoising +
   resampling. The original sounds best; AudioSR adds annoying treble hiss. No original song files exist.
 - [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
   is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
-- [ ] Before merging: commit the hq4x assets (or a smaller tile-based level format), service worker caching for
-  them, a remastered/classic choice in the options or main menu besides G (touch devices have no G key).
+- [ ] Before merging: commit the hq4x assets (or a smaller tile-based level format). Maybe prefetch in the
+  background (the next level during the hangar and briefing) so a level doesn't start with a moment of classic
+  graphics while its first chunks load.
 
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.

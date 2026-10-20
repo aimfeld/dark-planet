@@ -33,6 +33,20 @@ describe('touch layout', () => {
     expect(overlaps(l.game, l.right)).toBe(false);
   });
 
+  it('top right: fullscreen and the remaster switch clear of the picture and the buttons', () => {
+    for (const [vw, vh, inset] of [[852, 393, { l: 47, r: 47, t: 0, b: 21 }], [393, 852, NONE], [1180, 820, NONE]] as const) {
+      const l = touchLayout(vw, vh, inset);
+      for (const i of [0, 1]) {
+        const b = { x: l.corner.x + i * l.corner.dx, y: l.corner.y, w: l.corner.size, h: l.corner.size };
+        expect(overlaps(b, l.game) || overlaps(b, l.right)).toBe(false);
+        expect(b.x).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.w).toBeLessThanOrEqual(vw - inset.r);
+        expect(b.y + b.h).toBeLessThanOrEqual(vh);
+        expect(b.w).toBeGreaterThanOrEqual(36);
+      }
+    }
+  });
+
   it('stick: 8 directions past 35 % of the radius', () => {
     expect(stickDirections(10, -10, 50)).toEqual({ left: false, right: false, up: false, down: false });
     expect(stickDirections(40, -5, 50)).toEqual({ left: false, right: true, up: false, down: false });
@@ -72,7 +86,10 @@ describe.skipIf(!hasData)('touch in the menus', () => {
     expect(game.screen.picture).toBe('OMBILD');
     click(120, 88); // line 3: CDSound
     expect(game.settings.cdSound).toBe(false);
-    click(120, 128); // line 5: Menu verlassen
+    click(120, 128); // line 5: Grafik (the remake's remastered graphics)
+    expect(game.settings.remastered).toBe(true);
+    expect(game.screen.texts.get(822)?.text).toBe('Grafik: Remastered');
+    click(120, 148); // line 6: Menu verlassen
     run(40);
     expect(game.screen.picture).toBe('UMBILD');
   });
