@@ -815,7 +815,7 @@ as long as the game plays and feels the same. Each one is listed here. Not liste
 remastered mode.
 | Where | Original | Remake |
 |---|---|---|
-| Start | starts at once | waits for a key or click ("Taste oder Klick zum Starten"), browsers only play sound after a gesture |
+| Start | starts at once | starts at once where the browser allows sound (or CD sound is off); otherwise waits for a key or click ("Taste oder Klick zum Starten"), since browsers may only play sound after a gesture and the first key would also skip the intro |
 | Intro / ending video | (FLI player, see re-notes) | any key or click skips the whole video |
 | Main menu | keyboard only | the pointer selects the item it moves onto (sound 12, like Up/Down; a resting pointer doesn't take the selection back from the keys), a click or tap opens it |
 | Main menu Exit / Esc | quits to DOS | closes the installed app (PWA); in a browser tab, or where closing is refused (iOS), black and silent until a key, then the main menu again; Esc needs a fresh press (one still held from the hangar doesn't quit) |

@@ -24,9 +24,12 @@ export function memorySlot(): SaveSlot {
   return { read: () => saved, write: (b) => (saved = b.slice()) };
 }
 
+/** DPMAX.BAT's CD track (STARTAUD with 4 arguments). */
+export const INTRO_TRACK = 4;
+
 /** DPMAX.BAT: the intro video with CD track 4, then DP.EXE's main menu. */
 function* boot(ctx: Ctx): Proc {
-  yield* playVideo(ctx, 'intro', 4);
+  yield* playVideo(ctx, 'intro', INTRO_TRACK);
   yield* mainMenu(ctx);
 }
 

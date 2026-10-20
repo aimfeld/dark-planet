@@ -3,7 +3,7 @@
 import { Music } from './audio/music';
 import { Sfx } from './audio/sfx';
 import { loadGameData } from './data';
-import { DEFAULT_SETTINGS, Game } from './game';
+import { DEFAULT_SETTINGS, Game, INTRO_TRACK } from './game';
 import { Keyboard } from './input/keyboard';
 import { toggleFullscreen } from './input/fullscreen';
 import { Gamepad } from './input/gamepad';
@@ -207,23 +207,28 @@ async function main(): Promise<void> {
   };
   const settings = loadSettings();
   const touchUsed = () => settings.control.includes(5);
-  // Browsers only play sound after a user gesture, so the intro (with its CD track) waits for one.
   status.textContent = '';
-  const prompt = document.getElementById('start')!;
-  if (TOUCH_DEVICE) prompt.textContent = 'Dark Planet: Tippen zum Starten';
-  prompt.hidden = false;
   view.setArea(touchUsed() ? layout().game : null);
   touch.update(false, [], layout());
-  await new Promise<void>((resolve) => {
-    const start = () => {
-      window.removeEventListener('keydown', start);
-      window.removeEventListener('pointerup', start);
-      resolve();
-    };
-    window.addEventListener('keydown', start);
-    window.addEventListener('pointerup', start);
-  });
-  prompt.hidden = true;
+  // Browsers may refuse sound before a user gesture. Where they allow it, the intro starts at once, as with
+  // DPMAX.BAT; otherwise it waits for a key or tap, since the first key would both start its CD track and skip it.
+  music.setEnabled(settings.cdSound);
+  music.play(INTRO_TRACK);
+  if (await music.refused()) {
+    const prompt = document.getElementById('start')!;
+    if (TOUCH_DEVICE) prompt.textContent = 'Dark Planet: Tippen zum Starten';
+    prompt.hidden = false;
+    await new Promise<void>((resolve) => {
+      const start = () => {
+        window.removeEventListener('keydown', start);
+        window.removeEventListener('pointerup', start);
+        resolve();
+      };
+      window.addEventListener('keydown', start);
+      window.addEventListener('pointerup', start);
+    });
+    prompt.hidden = true;
+  }
   game = new Game(createWorld(data, Date.now() >>> 0), input, settings, sfx, music, saveSettings, saveSlot, video);
   document.addEventListener('visibilitychange', () => {
     sfx?.setHidden(document.hidden);
