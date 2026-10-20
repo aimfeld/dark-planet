@@ -118,22 +118,34 @@
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
-- [x] Experiment on branch `remaster-experiment` (session 17): `tools/remaster_upscale.py` upscales every sprite
-  (except SHOP.LIB) and all six levels 4x into `game/public/remaster/<method>/` (local, not committed yet): each level
-  as one picture (real tile neighbours, no seams) in 25 WebP chunks of 1280 x 1024; sprites trimmed onto 4096 x 4096
-  atlas pages per group (common, episode 1, episode 2), colour and outline upscaled separately (transparent pixels
-  take the nearest opaque colour first, the upscaled outline becomes a narrow soft alpha edge). `src/render/hiResView.ts`
-  draws a World with them in PixiJS (background chunks streamed by scroll position, slots like `Framebuffer.render`,
-  shadows as a black tint at the shadow table's mean darkening, fade and flash as an overlay; text sprites and
-  sprites without an upscaled version nearest-scaled). **G** during a level toggles classic / remastered (remembered);
-  menus, shop and videos stay classic.
+- [x] Remastered graphics (branch `remaster-experiment`, session 17): `tools/remaster_upscale.py` upscales 4x into
+  `game/public/remaster/hq4x/` (28 MB; local, not committed yet): all six levels, each as one picture (real tile
+  neighbours, no seams) in 25 WebP chunks of 1280 x 1024; every sprite, trimmed onto 4096 x 4096 atlas pages per
+  group (common, shop, episode 1, episode 2 in EPIS1; REST.LIB again in the main menu's HMBILD and the hangar's
+  UMBILD palette); the four PIC backgrounds in their screens' palettes; the four fonts as glyph atlases (mono fonts
+  white, tinted with the ink colour). Sprites and glyphs: colour and outline upscaled separately (transparent
+  pixels take the nearest opaque colour first, the upscaled outline becomes a narrow soft alpha edge).
+  `src/render/hiResView.ts` draws levels and menu screens with them in PixiJS: background chunks streamed by
+  scroll position, slots like `Framebuffer.render`/`renderScreen`, shadows as a black tint at the shadow table's
+  mean darkening, fades and the flash as an overlay; anything without an upscaled version nearest-scaled. Videos
+  stay as they are.
   Methods compared: nearest, hq4x and xbr4 (ffmpeg filters), Real-ESRGAN x4plus (ncnn-vulkan in `~/opt/realesrgan`;
-  smears the dirt textures and shifts colours). **hq4x chosen by the user.** hq4x assets: 25 MB (3 MB per level).
-- [ ] Remastered menus: upscale the PIC backgrounds, menu/shop sprites and fonts the same way.
-- [ ] Smooth motion: at 4x the 40 Hz steps (1 px scroll = 4 px) are more visible; interpolate between ticks.
-- [ ] Remastered audio: the CD tracks are mono and band-limited to about 10 kHz (aliasing above, so the music was
-  mixed at a low rate before the CD); the game streams them at 68 kb/s. A/B clips: higher bitrate, pseudo-stereo,
-  AudioSR (neural bandwidth extension); SFX (8-bit 11 kHz): denoised + resampled, AudioSR.
+  smears the dirt textures and shifts colours). **hq4x chosen by the user** (decision 18).
+- [x] Smooth motion (session 17, remastered graphics only): `HiResView.beforeTick` keeps the last tick's slots
+  before each simulation tick, and every display frame draws positions between the two ticks (`alpha` = the
+  loop's leftover time / 25 ms): x in level coordinates against the current scroll x (so the quake still shakes),
+  y on the screen; a slot moving more than 32 px per tick snaps. Costs one tick (25 ms) of display latency.
+  Classic mode is unchanged (whole ticks).
+- [x] **G** switches classic / remastered anywhere (menus, levels), remembered in localStorage, in the key legend
+  (gameplay-spec §14).
+- [x] Audio remaster tried and **rejected by the user** (decision 19): the CD tracks are mono and band-limited to
+  about 10 kHz (aliasing above, so the music was mixed at a low rate before the CD); A/B clips with a higher bitrate,
+  pseudo-stereo, AudioSR (neural bandwidth extension, `~/opt/audiosr`) and, for the 8-bit SFX, denoising +
+  resampling. The original sounds best; AudioSR adds annoying treble hiss. No original song files exist.
+- [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
+  is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
+- [ ] Before merging: commit the hq4x assets (or a smaller tile-based level format), service worker caching for
+  them, a remastered/classic choice in the options or main menu besides G (touch devices have no G key).
 
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
@@ -154,6 +166,7 @@
 16. Classic mode may make basic usability changes (user, session 14), e.g. hovering a main menu item selects it. Each deviation from the original is documented in `docs/gameplay-spec.md` §14.
 17. Hosting: GitHub Pages (user, session 14). GitLab-flow style: we develop on `main` and publish the `production` branch, which the GitHub Action deploys (`bin/deploy.sh`). The repo was renamed from `dark-planet-remastered` to `dark-planet` for the shorter URL. itch.io may be added later.
 18. Remastered graphics: hq4x (user, session 17), over xbr4 and Real-ESRGAN.
+19. Audio stays original (user, session 17): the remastered variants (higher bitrate, pseudo-stereo, AudioSR, cleaned SFX) add nothing or add hiss; the music was recorded in poor quality and no song files exist.
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard

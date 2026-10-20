@@ -243,7 +243,7 @@ async function main(): Promise<void> {
   view.element.addEventListener('pointerdown', () => {
     if (mousePlays()) mouse.lock();
   });
-  if (import.meta.env.DEV) Object.assign(window, { game }); // for debugging in the browser console
+  if (import.meta.env.DEV) Object.assign(window, { game, view }); // for debugging in the browser console
   // The game keys below the picture (not with touch controls, which fill the window).
   const legend = document.getElementById('keys')!;
   const showKeys = () => {
@@ -255,7 +255,7 @@ async function main(): Promise<void> {
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
   };
 
-  // Remaster experiment: G cycles the level graphics (classic, then each upscaling method), remembered.
+  // G switches between the classic and the remastered graphics, anywhere (menus, levels), remembered.
   const remasterLabel = document.getElementById('remaster')!;
   let labelTimer = 0;
   const showRemaster = (text: string) => {
@@ -290,17 +290,18 @@ async function main(): Promise<void> {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
-    if (keys.takePress('KeyG') && game.view === 'world') {
+    if (keys.takePress('KeyG')) {
       const order = [null, ...REMASTER_METHODS];
       const next = order[(order.indexOf(view.hiRes.current) + 1) % order.length];
       useMethod(next);
-      showRemaster(`Grafik: ${next ?? 'classic'}`);
+      showRemaster(next ? 'Grafik: Remastered' : 'Grafik: Classic');
     }
     while (acc >= TICK_MS) {
       keys.sample();
       mouse.sample();
       pad.sample();
       touch.sample();
+      view.hiRes.beforeTick(game.view, game.world, game.screen);
       game.tick(input);
       pauseTap = false;
       acc -= TICK_MS;
@@ -324,9 +325,10 @@ async function main(): Promise<void> {
       if (mouseWasPlaying) mouse.lock();
       else mouse.unlock();
     }
-    if (game.view === 'world') view.draw(game.world);
+    const alpha = acc / TICK_MS; // how far this frame lies between the last tick and the next
+    if (game.view === 'world') view.draw(game.world, alpha);
     else if (game.view === 'video') view.drawVideo(video.element);
-    else view.drawScreen(game.screen);
+    else view.drawScreen(game.screen, alpha);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

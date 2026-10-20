@@ -162,7 +162,7 @@ describe('key legend', () => {
   it('one line per player (P2 only in multiplayer), X/C/V instead of Ctrl/Alt/Space, , . - while WASD plays', () => {
     expect(keyLegend([1, 4], [true, false])).toEqual([
       'Player1 — Pfeile: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern',
-      'P: Pause · Esc: Spiel abbrechen · F: Vollbild',
+      'P: Pause · Esc: Spiel abbrechen · F: Vollbild · G: Grafik classic/remastered',
     ]);
     const wasd = keyLegend([1, 4], [true, true]);
     expect(wasd[0]).toBe('Player1 — Pfeile: fliegen · Komma: ballern · Punkt: hoch/tief · Minus: Bonus selektieren · Komma+Minus: Bonus abfeuern');

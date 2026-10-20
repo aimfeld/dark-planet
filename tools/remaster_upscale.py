@@ -1,23 +1,30 @@
-"""Upscale the game's sprites and level backgrounds 4x for the remastered renderer (experiment, branch
-remaster-experiment).
+"""Upscale the game's graphics 4x for the remastered renderer (game/src/render/hiResView.ts).
 
 Reads the engine data (game/public/data/, tools/export_engine_data.py) and writes, per method:
-  <out>/<method>/level<N>/<i>.webp   level N's background in chunks of 256 source rows (1024 px), chunk i
-                                     covering level y -6200 + 256 i ...; 1280 px wide (the 10 tile columns)
-  <out>/<method>/<group>_<p>.webp    sprite atlas pages, 4096 x 4096 at most
-  <out>/<method>/sprites.json        {group: pages, sprites: {n: [group, page, x, y, w, h, ox, oy]}}: the trimmed
-                                     sprite at (x, y, w, h) on its page (4x px), drawn at (ox, oy) source px
-                                     from the sprite's top-left corner
-Groups: "common" (jets, pods, shots, explosions, boni, HUD, REST.LIB) and one per episode (enemies and
-wrecks), so a level loads only what it can show. SHOP.LIB is left out (the menus stay classic).
+  <out>/<method>/level<N>/<i>.webp      level N's background in chunks of 256 source rows (1024 px), chunk i
+                                        covering level y -6200 + 256 i ...; 1280 px wide (the 10 tile columns)
+  <out>/<method>/<group>_<p>.webp       sprite atlas pages, 4096 x 4096 at most
+  <out>/<method>/picture_<PIC>_<PAL>.webp  the full-screen PIC backgrounds in the palette their screen uses
+  <out>/<method>/font_<NAME>.webp       glyph atlases: mono fonts white (the renderer tints them with the ink
+                                        colour), multicolour fonts in EPIS1 colours
+  <out>/<method>/index.json             {scale, chunk, groups: {group: pages},
+                                         sprites: {palette: {n: [group, page, x, y, w, h, ox, oy]}},
+                                         pictures: {"PIC_PAL": file}, fonts: {name: {file, cell, glyphs}}}
+Sprite entries: the trimmed sprite at (x, y, w, h) on its page (4x px), drawn at (ox, oy) source px from the
+sprite's top-left corner. Font glyphs: code -> [x, y] of the glyph cell's top-left corner (4x px).
 
-The whole level is upscaled as one picture, so the tiles have their real neighbours and no seams. Sprites
-are upscaled in colour and outline separately: transparent pixels take the nearest opaque colour first (so no
-black seeps into the edges), and the outline (the opaque mask, upscaled the same way) becomes the alpha.
+Groups: "common" (jets, pods, shots, explosions, boni, HUD, REST.LIB), "shop" (SHOP.LIB) and one per episode
+(enemies and wrecks), all in EPIS1; REST.LIB again in the main menu's (HMBILD) and the hangar's (UMBILD)
+palette. So a screen loads only what it can show.
 
-Methods: nearest (reference), hq4x and xbr4 (ffmpeg's pixel-art filters), esrgan (Real-ESRGAN x4plus),
-esrgan-anime (x4plus-anime), animevideo (realesr-animevideov3 x4). Real-ESRGAN is the ncnn-vulkan build in
-~/opt/realesrgan (github.com/xinntao/Real-ESRGAN, release v0.2.5.0); REALESRGAN_GPU picks the Vulkan device.
+The whole level is upscaled as one picture, so the tiles have their real neighbours and no seams. Sprites and
+glyphs are upscaled in colour and outline separately: transparent pixels take the nearest opaque colour first
+(so no black seeps into the edges), and the outline (the opaque mask, upscaled the same way) becomes the alpha.
+
+Methods: hq4x (the user's choice, session 17), and for comparisons nearest, xbr4 (ffmpeg's pixel-art filters),
+esrgan (Real-ESRGAN x4plus), esrgan-anime (x4plus-anime), animevideo (realesr-animevideov3 x4). Real-ESRGAN is
+the ncnn-vulkan build in ~/opt/realesrgan (github.com/xinntao/Real-ESRGAN, release v0.2.5.0); REALESRGAN_GPU
+picks the Vulkan device.
 
 Usage: uv run --with numpy --with pillow python tools/remaster_upscale.py game/public/data game/public/remaster \
            [methods, comma-separated] [levels, comma-separated]
@@ -37,32 +44,44 @@ SCALE = 4
 CHUNK = 256  # source rows per background chunk
 LEVEL_ROWS = 200  # tile rows of 32 px: level y -6200 .. 199
 PAGE = 1024  # atlas page size in source px (4096 upscaled)
-PAD = 4  # source px around each sprite on a page (keeps neighbours out of the filters)
-GROUPS = [('common', lambda n: n < 493 or 544 <= n < 850),  # SHOP.LIB = 493..543
-          ('episode1', lambda n: 850 <= n < 1024),
-          ('episode2', lambda n: n >= 1024)]
+PAD = 4  # source px around each sprite or glyph (keeps neighbours out of the filters)
+REST = range(544, 850)
+GROUPS = [('common', 'EPIS1', lambda n: n < 493 or n in REST),
+          ('shop', 'EPIS1', lambda n: 493 <= n < 544),
+          ('episode1', 'EPIS1', lambda n: 850 <= n < 1024),
+          ('episode2', 'EPIS1', lambda n: n >= 1024),
+          ('menu', 'HMBILD', lambda n: n in REST),
+          ('hangar', 'UMBILD', lambda n: n in REST)]
+PICTURES = ['HMBILD', 'UMBILD', 'OMBILD', 'RASTER']  # tools/export_engine_data.py order
+PICTURE_PALETTES = {'HMBILD': 'HMBILD', 'UMBILD': 'UMBILD', 'OMBILD': 'EPIS1', 'RASTER': 'EPIS1'}  # screens/*.ts
 ESRGAN = os.path.expanduser('~/opt/realesrgan/realesrgan-ncnn-vulkan')
 ESRGAN_MODELS = {'esrgan': 'realesrgan-x4plus', 'esrgan-anime': 'realesrgan-x4plus-anime',
                  'animevideo': 'realesr-animevideov3'}
-METHODS = ['hq4x']  # the user's choice (session 17); the others stay for comparisons
+METHODS = ['hq4x']
 
 
 def load(data):
-    palette = np.array(json.load(open(os.path.join(data, 'palette.json')))['rgb'], np.uint8)
+    pal = json.load(open(os.path.join(data, 'palette.json')))
+    palettes = {'EPIS1': np.array(pal['rgb'], np.uint8),
+                **{k: np.array(v, np.uint8) for k, v in pal['menus'].items()}}
     index = json.load(open(os.path.join(data, 'sprites.json')))
     pixels = np.frombuffer(gzip.open(os.path.join(data, 'sprites.bin.gz')).read(), np.uint8)
     sprites = {int(n): pixels[o:o + w * h].reshape(h, w) for n, (o, w, h) in index.items()}
     tiles = [np.frombuffer(gzip.open(os.path.join(data, 'tiles%d.bin.gz' % e)).read(), np.uint8).reshape(-1, 32, 32)
              for e in (1, 2)]
     levels = json.load(open(os.path.join(data, 'levels.json')))
-    return palette, sprites, tiles, levels
+    pics = np.frombuffer(gzip.open(os.path.join(data, 'pictures.bin.gz')).read(), np.uint8).reshape(-1, 200, 320)
+    fonts_index = json.load(open(os.path.join(data, 'fonts.json')))
+    font_bin = np.frombuffer(gzip.open(os.path.join(data, 'fonts.bin.gz')).read(), np.uint8)
+    fonts = {name: (f, font_bin[f['offset']:f['offset'] + 256 * f['width'] * f['height']]
+                    .reshape(256, f['height'], f['width'])) for name, f in fonts_index.items()}
+    return palettes, sprites, tiles, levels, dict(zip(PICTURES, pics)), fonts
 
 
 def level_image(level, tiles, palette):
     """The whole level as RGB, top row = level y -6200 (file row 0 is at the bottom, see Framebuffer.background)."""
-    rows = level['tiles']
     img = np.zeros((32 * LEVEL_ROWS, 320), np.uint8)
-    for r, cells in enumerate(rows):
+    for r, cells in enumerate(level['tiles']):
         y = 32 * (LEVEL_ROWS - 1 - r)
         for c, t in enumerate(cells):
             img[y:y + 32, 32 * c:32 * c + 32] = tiles[t - 1]
@@ -114,6 +133,31 @@ def bleed(rgb, mask):
     return rgb.astype(np.uint8)
 
 
+def smooth_alpha(mask):
+    """The upscaled outline as alpha: keep a narrow soft edge (antialiasing), not a blur."""
+    a = mask.astype(np.float32) / 255
+    a = np.clip((a - 0.5) / 0.3 + 0.5, 0, 1)
+    return (a * 255 + 0.5).astype(np.uint8)
+
+
+def upscale_rgba(method, work, images):
+    """Palette-index images (0 = transparent) with their palettes -> upscaled RGBA arrays."""
+    rgb_paths, mask_paths = [], []
+    for i, (idx, palette) in enumerate(images):
+        mask = idx != 0
+        rgb_paths.append(os.path.join(work, '%d_rgb.png' % i))
+        mask_paths.append(os.path.join(work, '%d_mask.png' % i))
+        Image.fromarray(bleed(palette[idx], mask)).save(rgb_paths[-1])
+        Image.fromarray(np.repeat((mask * 255).astype(np.uint8)[..., None], 3, 2)).save(mask_paths[-1])
+    upscale(method, rgb_paths + mask_paths)
+    out = []
+    for rp, mp in zip(rgb_paths, mask_paths):
+        mask = np.asarray(Image.open(mp).convert('L'))
+        alpha = mask if method == 'nearest' else smooth_alpha(mask)
+        out.append(np.dstack([np.asarray(Image.open(rp).convert('RGB')), alpha]))
+    return out
+
+
 def pack(sprites):
     """Shelf-pack trimmed sprites (number order keeps animations together) onto PAGE x PAGE pages."""
     pages, placed = [[]], {}
@@ -139,61 +183,92 @@ def trimmed(px):
     return px[ys.min():ys.max() + 1, xs.min():xs.max() + 1], int(xs.min()), int(ys.min())
 
 
-def smooth_alpha(mask):
-    """The upscaled outline as alpha: keep a narrow soft edge (antialiasing), not a blur."""
-    a = mask.astype(np.float32) / 255
-    a = np.clip((a - 0.5) / 0.3 + 0.5, 0, 1)
-    return (a * 255 + 0.5).astype(np.uint8)
+def do_levels(method, dst, levels, tiles, palette, numbers, work):
+    for n in numbers:
+        path = os.path.join(work, 'level.png')
+        Image.fromarray(level_image(levels[n - 1], tiles[0 if n <= 3 else 1], palette)).save(path)
+        upscale(method, [path])
+        img = Image.open(path)
+        ldir = os.path.join(dst, 'level%d' % n)
+        os.makedirs(ldir, exist_ok=True)
+        for i in range(32 * LEVEL_ROWS // CHUNK):
+            img.crop((0, i * CHUNK * SCALE, img.width, (i + 1) * CHUNK * SCALE)).save(
+                os.path.join(ldir, '%d.webp' % i), quality=90, method=4)
+        print(method, 'level', n, flush=True)
+
+
+def do_sprites(method, dst, sprites, palettes, work):
+    index, groups = {}, {}
+    for group, pal, member in GROUPS:
+        chosen = {n: t for n in sorted(sprites) if member(n) and (t := trimmed(sprites[n])) is not None}
+        placed, count = pack(chosen)
+        groups[group] = count
+        pages = []
+        for p in range(count):
+            idx = np.zeros((PAGE, PAGE), np.uint8)
+            for n, (page, x, y, w, h, ox, oy) in placed.items():
+                if page == p:
+                    idx[y:y + h, x:x + w] = chosen[n][0]
+            pages.append((idx, palettes[pal]))
+        for p, rgba in enumerate(upscale_rgba(method, work, pages)):
+            Image.fromarray(rgba).save(os.path.join(dst, '%s_%d.webp' % (group, p)), quality=92, method=4)
+        entries = index.setdefault(pal, {})
+        for n, (page, x, y, w, h, ox, oy) in placed.items():
+            entries[n] = [group, page, x * SCALE, y * SCALE, w * SCALE, h * SCALE, ox, oy]
+        print(method, group, len(placed), 'sprites,', count, 'pages', flush=True)
+    return index, groups
+
+
+def do_pictures(method, dst, pictures, palettes, work):
+    out = {}
+    for name, pal in PICTURE_PALETTES.items():
+        path = os.path.join(work, 'pic.png')
+        Image.fromarray(palettes[pal][pictures[name]]).save(path)
+        upscale(method, [path])
+        file = 'picture_%s_%s.webp' % (name, pal)
+        Image.open(path).save(os.path.join(dst, file), quality=92, method=4)
+        out['%s_%s' % (name, pal)] = file
+    print(method, 'pictures', flush=True)
+    return out
+
+
+def do_fonts(method, dst, fonts, palettes, work):
+    """Each font as a 16 x 16 grid of glyph cells with PAD around each."""
+    white = np.zeros((256, 3), np.uint8)
+    white[1] = 255
+    out = {}
+    for name, (f, glyphs) in fonts.items():
+        cw, ch = f['width'] + 2 * PAD, f['height'] + 2 * PAD
+        idx = np.zeros((16 * ch, 16 * cw), np.uint8)
+        pos = {}
+        for code in range(256):
+            x, y = (code % 16) * cw + PAD, (code // 16) * ch + PAD
+            g = glyphs[code]
+            idx[y:y + f['height'], x:x + f['width']] = g if f['multicolor'] else (g != 0)
+            pos[code] = [x * SCALE, y * SCALE]
+        [rgba] = upscale_rgba(method, work, [(idx, palettes['EPIS1'] if f['multicolor'] else white)])
+        if not f['multicolor']:
+            rgba[..., :3] = 255  # the ink colour is the renderer's tint
+        file = 'font_%s.webp' % name
+        Image.fromarray(rgba).save(os.path.join(dst, file), quality=92, method=4)
+        out[name] = {'file': file, 'cell': [f['width'] * SCALE, f['height'] * SCALE], 'glyphs': pos}
+    print(method, 'fonts', flush=True)
+    return out
 
 
 def main(data, out, methods, level_numbers):
-    palette, sprites, tiles, levels = load(data)
+    palettes, sprites, tiles, levels, pictures, fonts = load(data)
     work = tempfile.mkdtemp()
     for method in methods:
         dst = os.path.join(out, method)
         os.makedirs(dst, exist_ok=True)
-        # backgrounds
-        for n in level_numbers:
-            path = os.path.join(work, 'level.png')
-            Image.fromarray(level_image(levels[n - 1], tiles[0 if n <= 3 else 1], palette)).save(path)
-            upscale(method, [path])
-            img = Image.open(path)
-            ldir = os.path.join(dst, 'level%d' % n)
-            os.makedirs(ldir, exist_ok=True)
-            for i in range(32 * LEVEL_ROWS // CHUNK):
-                img.crop((0, i * CHUNK * SCALE, img.width, (i + 1) * CHUNK * SCALE)).save(
-                    os.path.join(ldir, '%d.webp' % i), quality=90, method=4)
-            print(method, 'level', n)
-        # sprites
-        index, groups = {}, {}
-        for group, member in GROUPS:
-            chosen = {n: t for n in sorted(sprites) if member(n) and (t := trimmed(sprites[n])) is not None}
-            placed, count = pack(chosen)
-            groups[group] = count
-            rgb_paths, mask_paths = [], []
-            for p in range(count):
-                idx = np.zeros((PAGE, PAGE), np.uint8)
-                for n, (page, x, y, w, h, ox, oy) in placed.items():
-                    if page == p:
-                        idx[y:y + h, x:x + w] = chosen[n][0]
-                mask = idx != 0
-                rgb_paths.append(os.path.join(work, '%s_%d_rgb.png' % (group, p)))
-                mask_paths.append(os.path.join(work, '%s_%d_mask.png' % (group, p)))
-                Image.fromarray(bleed(palette[idx], mask)).save(rgb_paths[-1])
-                Image.fromarray(np.repeat((mask * 255).astype(np.uint8)[..., None], 3, 2)).save(mask_paths[-1])
-            upscale(method, rgb_paths + mask_paths)
-            for p in range(count):
-                rgb = np.asarray(Image.open(rgb_paths[p]).convert('RGB'))
-                alpha = smooth_alpha(np.asarray(Image.open(mask_paths[p]).convert('L')))
-                if method == 'nearest':
-                    alpha = np.asarray(Image.open(mask_paths[p]).convert('L'))
-                Image.fromarray(np.dstack([rgb, alpha])).save(os.path.join(dst, '%s_%d.webp' % (group, p)),
-                                                              quality=92, method=4)
-            for n, (page, x, y, w, h, ox, oy) in placed.items():
-                index[n] = [group, page, x * SCALE, y * SCALE, w * SCALE, h * SCALE, ox, oy]
-            print(method, group, len(placed), 'sprites,', count, 'pages')
-        with open(os.path.join(dst, 'sprites.json'), 'w') as f:
-            json.dump({'scale': SCALE, 'chunk': CHUNK, 'groups': groups, 'sprites': index}, f)
+        do_levels(method, dst, levels, tiles, palettes['EPIS1'], level_numbers, work)
+        index, groups = do_sprites(method, dst, sprites, palettes, work)
+        pics = do_pictures(method, dst, pictures, palettes, work)
+        font_index = do_fonts(method, dst, fonts, palettes, work)
+        with open(os.path.join(dst, 'index.json'), 'w') as f:
+            json.dump({'scale': SCALE, 'chunk': CHUNK, 'groups': groups, 'sprites': index, 'pictures': pics,
+                       'fonts': font_index}, f)
     shutil.rmtree(work)
 
 

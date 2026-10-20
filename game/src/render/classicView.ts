@@ -110,28 +110,23 @@ export class ClassicView {
     return [(cx - this.sprite.x) / scale, (cy - this.sprite.y) / scale];
   }
 
-  draw(w: World): void {
-    const hiRes = this.hiRes.current !== null && this.hiRes.draw(w);
-    this.hiRes.root.visible = hiRes;
-    this.sprite.visible = !hiRes;
-    if (hiRes) {
-      this.app.render();
-      return;
-    }
+  /** A level; `alpha` (0..1) is how far the frame lies between the last two ticks (remastered view only). */
+  draw(w: World, alpha = 1): void {
+    if (this.showHiRes(this.hiRes.current !== null && this.hiRes.draw(w, alpha))) return;
     this.fb.render(w);
     this.present(w.flash ? this.flash : this.lut('EPIS1', w.fade));
   }
 
   /** A menu screen (main menu, text viewer, hangar, options). */
-  drawScreen(sc: Screen): void {
-    this.classic();
+  drawScreen(sc: Screen, alpha = 1): void {
+    if (this.showHiRes(this.hiRes.current !== null && this.hiRes.drawScreen(sc, alpha))) return;
     this.fb.renderScreen(sc);
     this.present(this.lut(sc.palette, sc.fade));
   }
 
   /** A video frame (2 x 2 pixels per source pixel), sampled down to the 320 x 200 view. */
   drawVideo(video: HTMLVideoElement): void {
-    this.classic();
+    this.showHiRes(false);
     this.ctx.imageSmoothingEnabled = false;
     this.ctx.fillStyle = '#000';
     this.ctx.fillRect(0, 0, W, H);
@@ -140,9 +135,12 @@ export class ClassicView {
     this.app.render();
   }
 
-  private classic(): void {
-    this.hiRes.root.visible = false;
-    this.sprite.visible = true;
+  /** Show the remastered picture (rendered at once) or the classic one (the caller presents it). */
+  private showHiRes(on: boolean): boolean {
+    this.hiRes.root.visible = on;
+    this.sprite.visible = !on;
+    if (on) this.app.render();
+    return on;
   }
 
   private lut(name: PaletteName, fade: number): Uint32Array {
