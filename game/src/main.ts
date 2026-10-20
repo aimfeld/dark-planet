@@ -93,6 +93,17 @@ async function fullscreen(): Promise<void> {
   if (TOUCH_DEVICE && document.fullscreenElement) await orientation.lock?.('landscape').catch(() => undefined);
 }
 
+/**
+ * The service worker (sw.js, written by the build) caches the game for the installed app and offline play.
+ * Registered after the data has loaded, so its downloads don't slow the first start. Also asks to keep the
+ * storage (saves, settings, cache) when the browser runs short of space.
+ */
+function registerOffline(base: string): void {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register(base + 'sw.js').catch((e) => console.warn('no service worker:', e));
+  navigator.storage?.persist?.().catch(() => undefined);
+}
+
 async function main(): Promise<void> {
   const status = document.getElementById('status')!;
   status.textContent = 'Lade Daten…';
@@ -110,6 +121,7 @@ async function main(): Promise<void> {
   });
   const music = new Music(base + 'music/');
   const video = new Video(base + 'video/');
+  registerOffline(base);
 
   const view = await ClassicView.create(document.getElementById('app')!, data);
   const keys = new Keyboard(window);

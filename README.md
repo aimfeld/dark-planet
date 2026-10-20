@@ -30,7 +30,7 @@ repository. The tools expect them at that path in a local checkout.
 | `original_source/dplanet-cd.conf` | DOSBox-X config that mounts the rebuilt CD, for music |
 | `tools/` | Asset extraction and reverse-engineering helpers |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
-| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`) |
+| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
 | `docs/` | Plan, reverse-engineering notes, file formats |
 
 ## Playing the original in DOSBox-X (with soundtrack)
@@ -80,7 +80,16 @@ saves, two players and the ending (see `docs/PLAN.md` Phase 3 for what is left t
 The game's assets are generated from `original_source/` and committed, so the game runs from a plain checkout:
 `game/public/data/` (sprites, tiles, menu pictures, fonts, texts, levels, tables and SFX; binaries gzip-compressed) and
 `game/public/music/` (CD tracks 2–9 as mono MP3) and `game/public/video/` (intro and ending as WebM). To regenerate
-them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music` and `npm run video`.
+them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music`, `npm run video` and `npm run icons`.
+
+### Installing as an app (PWA)
+The production build (`npm run build`, output in `game/dist/`) is an installable web app: `manifest.webmanifest`
+plus a service worker (`game/sw.js`, written to `dist/sw.js` with the file list by `vite.config.ts`) that caches
+the whole game (about 28 MB with music and videos), so the installed app also plays offline. On Android Chrome:
+menu → "App installieren"; on iPhone/iPad Safari: Teilen → "Zum Home-Bildschirm". Browsers only allow this over
+HTTPS (or on `localhost`), so a phone needs the build served over HTTPS, e.g. `npx vite preview --host` behind
+`tailscale serve`, or a static host such as GitHub Pages. The dev server (`npm run dev`) doesn't register the
+service worker.
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions
