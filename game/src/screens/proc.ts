@@ -50,20 +50,7 @@ export interface Settings {
   control: [number, number]; // 1 keyboard, 2 mouse, 3 joystick (gamepad), 4 keyboard WASD, 5 touch (remake); never equal
   cdSound: boolean;
   soundEffects: boolean;
-  remastered: boolean; // the remake's remastered graphics (Options, R, the touch HD button)
-  effects: boolean; // with remastered graphics: glow, light, particles, soft shadows
-}
-
-/** The graphics setting as Options and the R label show it ("Remastered+Effekte" just fits the Options line). */
-export function graphicsName(st: Settings): string {
-  return !st.remastered ? 'Classic' : st.effects ? 'Remastered+Effekte' : 'Remastered';
-}
-
-/** R, the HD button and the Options line: Classic -> Remastered -> Remastered+Effekte -> Classic. */
-export function nextGraphics(st: Settings): void {
-  if (!st.remastered) [st.remastered, st.effects] = [true, false];
-  else if (!st.effects) st.effects = true;
-  else st.remastered = false;
+  remastered: boolean; // the remake's remastered graphics with effects (Options, R, the touch HD button)
 }
 
 export interface Ctx {

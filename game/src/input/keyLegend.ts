@@ -29,5 +29,5 @@ export function keyLegend(control: readonly number[], active: readonly boolean[]
   const lines = control
     .map((c, i) => `Player${i + 1} — ${controls(c, shared)}`)
     .filter((_, i) => i === 0 || active[i]);
-  return [...lines, 'P: Pause · Esc: Spiel abbrechen · F: Vollbild · R: Grafik umschalten'];
+  return [...lines, 'P: Pause · Esc: Spiel abbrechen · F: Vollbild · R: Grafik classic/remastered'];
 }

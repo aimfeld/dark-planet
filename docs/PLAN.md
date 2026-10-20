@@ -130,7 +130,7 @@
   mean darkening, fades and the flash as an overlay; anything without an upscaled version nearest-scaled. Videos
   stay as they are.
   Methods compared: nearest, hq4x and xbr4 (ffmpeg filters), Real-ESRGAN x4plus (ncnn-vulkan in `~/opt/realesrgan`;
-  smears the dirt textures and shifts colours). **hq4x chosen by the user** (decision 18).
+  smears the dirt textures and shifts colours). **hq4x chosen by the user** (decision 23).
 - [x] Smooth motion (session 17, remastered graphics only): `HiResView.beforeTick` keeps the last tick's slots
   before each simulation tick, and every display frame draws positions between the two ticks (`alpha` = the
   loop's leftover time / 25 ms): x in level coordinates against the current scroll x (so the quake still shakes),
@@ -145,7 +145,7 @@
   (a level's chunks around the scroll position, the atlas pages of the sprites on screen, the screen's picture
   and font). The service worker keeps them out of the install cache (`vite.config.ts` REMASTER) and caches each
   file on first use in `dp-remaster-<hash>`, so what a player has seen also works offline.
-- [x] Audio remaster tried and **rejected by the user** (decision 19): the CD tracks are mono and band-limited to
+- [x] Audio remaster tried and **rejected by the user** (decision 24): the CD tracks are mono and band-limited to
   about 10 kHz (aliasing above, so the music was mixed at a low rate before the CD); A/B clips with a higher bitrate,
   pseudo-stereo, AudioSR (neural bandwidth extension; `~/opt/audiosr` and its model cache deleted in session 18) and, for the 8-bit SFX, denoising +
   resampling. The original sounds best; AudioSR adds annoying treble hiss. No original song files exist.
@@ -159,9 +159,11 @@
   number (shot sprites of players and enemies with their sprite cycles, the explosion animations); events come
   from comparing the drawn sprite tables of two ticks, so pause and freezes stop the particles. Many explosion
   parts at once share one budget, and their light is dimmed by 1/sqrt(count), so the 30-part kinds don't blow out
-  to white. Setting `Settings.effects`; R / Options line 5 / the HD button cycle Classic → Remastered →
-  Remastered+Effekte (the longest text that fits the Options line). Checked with A/B screenshots in headless
-  Chrome (levels 1, 2, 5, with forced explosions).
+  to white. Checked with A/B screenshots in headless Chrome (levels 1, 2, 5, with forced explosions).
+  At first a third mode (Remastered+Effekte); the user dropped the plain remastered mode (decision 25), so the
+  effects are part of Remastered, which is now the default setting. Saved settings from `main` have no
+  `remastered` key, so players of the deployed classic-only version get Remastered too. Until a screen's
+  remastered files have loaded (or offline, before they were ever cached) the classic picture shows.
 - [~] **User:** play with the effects (R twice from classic) and say what to keep, tone down or drop: glow,
   ground light, sparks, muzzle flashes, smoke, soft shadows. First look (session 18): "The effects look cool!",
   only the very bright lasers looked "a bit epileptic": beams (shot sprites at least 3x longer than wide: the
@@ -193,8 +195,9 @@
 15. No Ctrl/Alt/Space in the key legend on any platform (user, session 13): in a browser window the page can't stop the desktop from taking Alt+Space (window menu), Ctrl+Space (input method), Ctrl+Alt+arrows (Linux workspaces) or Ctrl+arrows (macOS), and on Windows AltGr also sends left Ctrl. The arrow player fires with X, switches altitude with C and selects a bonus with V (X+V uses it); the original Ctrl/Alt/Space still work unlisted (best in fullscreen with Keyboard Lock). With a WASD player in the game the arrow player uses , (fire), . (altitude) and - (select; , + - uses), the same on a Mac, and the WASD player X/C/V (left Shift would open Windows' Sticky Keys after five presses).
 16. Classic mode may make basic usability changes (user, session 14), e.g. hovering a main menu item selects it. Each deviation from the original is documented in `docs/gameplay-spec.md` §14.
 17. Hosting: GitHub Pages (user, session 14). GitLab-flow style: we develop on `main` and publish the `production` branch, which the GitHub Action deploys (`bin/deploy.sh`). The repo was renamed from `dark-planet-remastered` to `dark-planet` for the shorter URL. itch.io may be added later.
-18. Remastered graphics: hq4x (user, session 17), over xbr4 and Real-ESRGAN.
-19. Audio stays original (user, session 17): the remastered variants (higher bitrate, pseudo-stereo, AudioSR, cleaned SFX) add nothing or add hiss; the music was recorded in poor quality and no song files exist.
+23. Remastered graphics: hq4x (user, session 17), over xbr4 and Real-ESRGAN. (Numbered 18 on this branch at first; `main` has its own 18–22.)
+24. Audio stays original (user, session 17): the remastered variants (higher bitrate, pseudo-stereo, AudioSR, cleaned SFX) add nothing or add hiss; the music was recorded in poor quality and no song files exist.
+25. Two graphics modes only, Classic and Remastered (always with the effects); Remastered is the default (user, session 18).
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard

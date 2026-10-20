@@ -86,9 +86,9 @@ describe.skipIf(!hasData)('touch in the menus', () => {
     expect(game.screen.picture).toBe('OMBILD');
     click(120, 88); // line 3: CDSound
     expect(game.settings.cdSound).toBe(false);
-    click(120, 128); // line 5: Grafik (the remake's remastered graphics)
-    expect(game.settings.remastered).toBe(true);
-    expect(game.screen.texts.get(822)?.text).toBe('Grafik: Remastered');
+    click(120, 128); // line 5: Grafik (the remake's remastered graphics, on by default)
+    expect(game.settings.remastered).toBe(false);
+    expect(game.screen.texts.get(822)?.text).toBe('Grafik: Classic');
     click(120, 148); // line 6: Menu verlassen
     run(40);
     expect(game.screen.picture).toBe('UMBILD');

@@ -3,7 +3,7 @@
 // session 4); the remake's graphics line takes its place, so "Menu verlassen" stays line 6. The remake also
 // takes a tap or click on a line.
 
-import { cdPlay, delay, fadeIn, frame, graphicsName, nextGraphics, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
+import { cdPlay, delay, fadeIn, frame, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
 
 // DS:0x502 + 256 ctl; the remake adds WASD (a 2nd key set) and Touch
 const CONTROLS = ['Tastatur', 'Maus', 'Joystick', 'WASD', 'Touch'];
@@ -23,7 +23,7 @@ function lineText(ctx: Ctx, line: number): string {
     case 4:
       return 'SoundEffekte:' + onOff(st.soundEffects);
     case 5:
-      return 'Grafik: ' + graphicsName(st);
+      return 'Grafik: ' + (st.remastered ? 'Remastered' : 'Classic');
     default:
       return 'Menu verlassen';
   }
@@ -103,7 +103,7 @@ export function* options(ctx: Ctx): Proc {
         yield* waitKeyUp(ctx);
         yield* drawLines(ctx, true);
       } else if (line === 5) {
-        nextGraphics(st); // main.ts switches the renderer
+        st.remastered = !st.remastered; // main.ts switches the renderer
         yield* waitKeyUp(ctx);
         yield* drawLines(ctx, true);
       } else {

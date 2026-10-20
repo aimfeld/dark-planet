@@ -13,7 +13,7 @@ import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
 import { REMASTER_METHOD } from './render/hiResView';
-import { graphicsName, nextGraphics, type MenuInput, type SaveSlot, type Settings } from './screens/proc';
+import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
 
@@ -271,9 +271,9 @@ async function main(): Promise<void> {
     labelTimer = window.setTimeout(() => (remasterLabel.hidden = true), 2500);
   };
   toggleRemaster = () => {
-    nextGraphics(settings);
+    settings.remastered = !settings.remastered;
     saveSettings(settings);
-    showRemaster('Grafik: ' + graphicsName(settings));
+    showRemaster(settings.remastered ? 'Grafik: Remastered' : 'Grafik: Classic');
   };
 
   let acc = 0;
@@ -287,7 +287,6 @@ async function main(): Promise<void> {
     if (keys.takePress('KeyR')) toggleRemaster();
     const graphics = settings.remastered ? REMASTER_METHOD : null;
     if (view.hiRes.current !== graphics) void view.hiRes.use(graphics);
-    view.hiRes.effects = settings.effects;
     while (acc >= TICK_MS) {
       keys.sample();
       mouse.sample();

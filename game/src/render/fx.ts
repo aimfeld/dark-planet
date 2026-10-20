@@ -254,13 +254,6 @@ export class Fx {
     }
   }
 
-  /** Hide everything (effects off, or not a level). */
-  clear(): void {
-    for (const layer of [this.smoke, this.lights, this.explosionLights, this.halos, this.explosionHalos, this.bloom, this.sparks]) {
-      for (const c of layer.children) c.visible = false;
-    }
-  }
-
   /** A soft dot of diameter `size` source px centred on (x, y). */
   private soft(layer: Container, x: number, y: number, size: number, color: number, alpha: number): void {
     if (alpha <= 0.005 || size <= 0) return;
