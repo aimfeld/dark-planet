@@ -1,9 +1,9 @@
 // Keyboard -> per-tick player input. The original keys (spec §2) plus alternates, because browsers and
-// desktops grab some Ctrl/Alt combinations. Only player 1 uses the keyboard (mouse/gamepad come later).
+// desktops grab some Ctrl/Alt combinations. The keyboard player is whichever player chose control type 1.
 
-import type { PlayerInput } from '../sim/state';
+import { NO_INPUT, type PlayerInput } from '../sim/state';
 
-const BINDINGS: Record<keyof PlayerInput, string[]> = {
+const BINDINGS = {
   left: ['ArrowLeft'],
   right: ['ArrowRight'],
   up: ['ArrowUp'],
@@ -12,7 +12,8 @@ const BINDINGS: Record<keyof PlayerInput, string[]> = {
   altitude: ['AltLeft', 'AltRight', 'KeyC'],
   bonus: ['Space'],
 };
-const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown'];
+// keypad - / + select and use the joystick player's bonus (DS:0x6C31 / 0x6C32)
+const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown', 'NumpadSubtract', 'NumpadAdd'];
 const CAPTURED = new Set([...Object.values(BINDINGS).flat(), ...OTHER]);
 
 export class Keyboard {
@@ -41,11 +42,14 @@ export class Keyboard {
     this.tapped.clear();
   }
 
+  /** The keyboard player's flags (@0x1A1DD): Space selects a bonus, Ctrl + Space uses it. */
   player(): PlayerInput {
     const held = (codes: string[]) => codes.some((c) => this.sampled.has(c));
+    const fire = held(BINDINGS.fire), bonus = held(BINDINGS.bonus);
     return {
+      ...NO_INPUT,
       left: held(BINDINGS.left), right: held(BINDINGS.right), up: held(BINDINGS.up), down: held(BINDINGS.down),
-      fire: held(BINDINGS.fire), altitude: held(BINDINGS.altitude), bonus: held(BINDINGS.bonus),
+      fire, altitude: held(BINDINGS.altitude), select: bonus, use: bonus && fire,
     };
   }
 

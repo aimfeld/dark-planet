@@ -6,7 +6,7 @@ import { collisions } from './collisions';
 import { animTick, explosionTick, shadows, spriteCycles } from './effects';
 import { BOSS_BLACK_TICKS, BOSS_FADE_TICKS, BOSS_FREEZE_TICKS, enemyGuns, enemyUpdate, moveEnemyShots, spawnFromLevel } from './enemies';
 import {
-  addMoney, altitudeSwap, HUD, invulnerableTick, keyboardInput, lifeLost, LIVES_TEXT, MONEY_TEXT, movePlayer,
+  addMoney, altitudeSwap, HUD, invulnerableTick, playerInput, lifeLost, LIVES_TEXT, MONEY_TEXT, movePlayer,
   playerOut, respawnFlyIn, setLivesText, shieldRecharge,
 } from './player';
 import { FADE_STEPS, newPlayer, NO_INPUT, P1_SLOTS, p2Slots, playSound, stopSound, type PlayerInput, type World } from './state';
@@ -238,7 +238,7 @@ export function step(w: World, inputs: PlayerInput[]): void {
   const players = w.players;
   for (const p of players) if (p.active && p.pendingSwap !== 0) altitudeSwap(w, p);
   if (!w.autopilot) {
-    for (const p of players) if (p.active) keyboardInput(w, p, inputs[p.index] ?? NO_INPUT);
+    for (const p of players) if (p.active) playerInput(w, p, inputs[p.index] ?? NO_INPUT);
     for (const p of players) if (p.active) movePlayer(w, p, inputs[p.index] ?? NO_INPUT);
   }
   bonusTimers(w);

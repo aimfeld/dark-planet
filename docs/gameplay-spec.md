@@ -66,6 +66,10 @@ Defaults P1 = keyboard, P2 = mouse.
   different device types (O).
 - Joystick: centre sampled once at program start; a direction counts when the axis is more than 15 raw units
   from the centre (remake: use an analog dead zone instead).
+- Remake (session 10): the gamepad (standard mapping, first connected pad) is the joystick: left stick (dead zone
+  0.3) or d-pad, A = button 1, B = button 2, X/LB = select, Y/RB = use (keypad −/+ still work). The mouse player
+  captures the pointer during levels (Pointer Lock; relative movement drives a virtual pointer confined to the
+  screen, like the DOS driver); if the browser refuses the lock, the real pointer over the canvas is used.
 - Pause: P pauses after a 500 ms delay and resumes on the next P press (O).
 - Altitude toggle is ignored while a previous toggle's swap is pending (one tick).
 
@@ -75,9 +79,12 @@ Defaults P1 = keyboard, P2 = mouse.
   1 / 2 / 3. A new game starts with engine 1 (max 3).
 - Keyboard and joystick, every tick: holding left: vx −= 1 (if vx > −max); right: vx += 1 (if vx < max);
   up/down likewise for vy. With no key on an axis, that velocity moves 1 toward 0 on ticks where frame mod 4 = 0.
-- Mouse: target = (pointerX div 2, pointerY) in screen space (pointer range 640 × 200). Accelerate by 1 toward the
-  target on each axis (x only while 12 ≤ x ≤ 280, y down only while screen y ≤ 168). Inside a dead zone of
-  5 × max px from the target the velocity on that axis moves 1 toward 0 every tick. (O: the mouse uses the engine
+- Mouse (O, 0x1A34B, session 10): target = (pointerX div 2, pointerY) in screen space (pointer range 640 × 200),
+  compared with the jet sprite's **top-left corner** (not its centre). Accelerate by 1 toward the target on each
+  axis (x only while 12 ≤ x ≤ 280, y down only while screen y ≤ 168; the "up" test compares the sprite's x with
+  scrollY + 10, so moving up is never limited there). Inside a dead zone of 5 × max px from the target the
+  velocity on that axis moves 1 toward 0 every tick; there is no 4-tick decay. The direction flags stay off, so
+  the movement routine only applies the bounds. (O: the mouse uses the engine
   table directly, so with no engine max = 0 and the ship can't move; the game never gets there since engine 1 is
   given.)
 - Position: x += vx unless (vx < 0 and x + L ≤ 12) or (vx > 0 and x + R ≥ 308); y += vy unless

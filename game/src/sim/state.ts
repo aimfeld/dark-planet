@@ -22,18 +22,25 @@ export class SpriteTable {
   }
 }
 
-/** Raw per-tick input of one player, as the keyboard handler's flag bytes (DS:0x6C28...). */
+/** Raw per-tick input of one player, as the input handlers' flag bytes (DS:0x6C3B..., spec §2). */
 export interface PlayerInput {
-  left: boolean;
+  device: number; // control type: 1 keyboard, 2 mouse, 3 joystick (handlers @0x1A1DD / 0x1A34B / 0x1A58F)
+  left: boolean; // keyboard and joystick
   right: boolean;
   up: boolean;
   down: boolean;
-  fire: boolean; // Ctrl
-  altitude: boolean; // Alt
-  bonus: boolean; // Space: select a bonus; with fire (Ctrl) held: use it
+  fire: boolean; // Ctrl / left button / button 1
+  altitude: boolean; // Alt / right button / button 2
+  select: boolean; // select a bonus: Space / middle button / keypad -
+  use: boolean; // use it: Ctrl + Space / left + middle / keypad +
+  mouseX: number; // mouse: the pointer in screen pixels (mouse x div 2, y)
+  mouseY: number;
 }
 
-export const NO_INPUT: PlayerInput = { left: false, right: false, up: false, down: false, fire: false, altitude: false, bonus: false };
+export const NO_INPUT: PlayerInput = {
+  device: 1, left: false, right: false, up: false, down: false, fire: false, altitude: false, select: false, use: false,
+  mouseX: 0, mouseY: 0,
+};
 
 export interface Mount {
   reload: number; // counter (+0)

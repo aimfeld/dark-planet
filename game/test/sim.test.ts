@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Sprite, type GameData } from '../src/data';
 import { Framebuffer, H, W } from '../src/render/framebuffer';
 import { hitDetect } from '../src/sim/sprites';
-import { createWorld, type PlayerInput, type World } from '../src/sim/state';
+import { createWorld, NO_INPUT, type PlayerInput, type World } from '../src/sim/state';
 import { newGame, step } from '../src/sim/tick';
 import { bmp, gameData, hasData } from './helpers';
 
@@ -57,7 +57,7 @@ function script(tick: number): PlayerInput {
   const phase = Math.floor(tick / 60) % 4;
   return {
     left: phase === 0, right: phase === 2, up: tick % 200 < 30, down: tick % 200 > 170,
-    fire: tick % 50 < 35, altitude: tick % 400 === 0, bonus: false,
+    fire: tick % 50 < 35, altitude: tick % 400 === 0, select: false, use: false, device: 1, mouseX: 0, mouseY: 0,
   };
 }
 
@@ -104,7 +104,7 @@ describe.skipIf(!hasData)('simulation (needs game/public/data)', () => {
     const w = createWorld(data, 3);
     newGame(w);
     const ticks = Number(process.env.RENDER_TICK);
-    const idle = { left: false, right: false, up: false, down: false, fire: false, altitude: false, bonus: false };
+    const idle = NO_INPUT;
     for (let t = 0; t < ticks; t++) step(w, [idle]);
     const fb = new Framebuffer(data);
     fb.render(w);

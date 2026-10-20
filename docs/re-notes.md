@@ -161,6 +161,22 @@ weapons `ev_62efcd59…` (961c), `ev_aede7fbb…` (11a4), `ev_67aa34dc…` (3c37
   AH=84h DX=1 stick A → 6C54/6C56; 271f:0000 buttons → 6C60…6C63): ±15 around the centre 6C5C/6C5E sampled once at
   startup (@0x1D7A9). `a73e` movement: max = 2 or word DS:0x17EA[engine]; extents DS:0x185F/0x1865/0x186B/0x1871
   [jet]; frame base DS:0x1854[jet].
+- Handler details (session 10, objdump of 0x1A1DD–0x1A73E). Parameters are far pointers to the per-player flags;
+  keyboard/joystick: bp+0x30 left, 0x2C right, 0x28 up, 0x24 down, 0x20 fire, 0x1C select, 0x18 altitude high,
+  0x14 altitude latch, 0x10 use, 0x0C pending swap, 0x08 vx, 0x04 vy. Mouse: bp+0x04 jet sprite slot (word),
+  0x06 vy, 0x0A vx, 0x0E engine (byte), 0x10 pending swap, 0x14 use, 0x18 latch, 0x1C high, 0x20 select, 0x24 fire.
+  - **Observed** keyboard: select = Space, use = Ctrl AND Space; Alt toggles when latch = 0 and pending = 0, and
+    sets the latch whenever held. Velocity decays 1 toward 0 on frame mod 4 = 0 per axis without a direction.
+  - **Observed** mouse: x = mouse x div 2 (stored at 5516), y = 5518; dead zone = byte(5 · word 17EA[engine]).
+    Accelerates toward the pointer against SpriteX/SpriteY[slot] (the sprite corner); limits x ≤ 280 (right),
+    x ≥ 12 (left), y ≤ scrollY + 168 (down), and "up" compares scrollY + 10 with **SpriteX** (bug, always true in
+    practice). |x − mx| ≤ dz → vx toward 0, |my + scrollY − y| ≤ dz → vy toward 0, every tick. Buttons
+    (272c:00DC mask): 1 fire, 4 select, 4 AND 1 use, 2 altitude (latch set only on a toggle).
+  - **Observed** joystick: 271f:007E reads stick A into 6C54/6C56, 271f:0000 the four buttons into 6C60–6C63;
+    direction = axis beyond centre (6C5C/6C5E) ± 15; button 1 (6C60) fire, button 2 (6C61) altitude (latch set
+    only on a toggle), keypad − (6C31) select, keypad + (6C32) use; the same mod-4 decay as the keyboard.
+  - **Inferred**: the latch difference never shows, because the loop runs the pending swap (1d9e:25B7) before the
+    input handlers, so pending = 0 whenever they run.
 - Pause: P sets 4440, release clears it; the loop @0x1BFD9 delays 500 ms, then waits for the next P.
 
 ### Per-player globals (P1 / P2)

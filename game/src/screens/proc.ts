@@ -26,7 +26,7 @@ export interface MenuInput {
   anyKey(): boolean;
   /** Pointer in screen pixels (mouse x div 2, y) and the buttons held. */
   mouse: MouseInput;
-  /** Per-tick player input for the level (keyboard for now; mouse and gamepad come with two-player input). */
+  /** Per-tick player input for the level, by each player's control type (input/players.ts). */
   players: PlayerInput[];
 }
 

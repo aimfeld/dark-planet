@@ -83,7 +83,9 @@
 - [ ] **User:** try the menus (`cd game && npm run dev`): main menu glow and keys, story/manual/about, hangar doors and labels, briefing slide-in, options, CD music switching (menu → level → boss → menu).
 - [x] Shop and save/load (session 9): `src/screens/shop.ts` ports 1d9e:84BC with all its helpers (offers, buy with the large-pod placement on the pointer, sell, position change, player switch, money exchange, INFO.PAS texts, shadowed unaffordable offers), `src/save.ts` reads/writes the original 129-byte SAVE.DAT with its checksum (browser storage, base64; the original sample loads). Main menu "Spiel laden" works; a bad checksum shows the "Schlitzohr" message. New RE in re-notes "Shop rules (session 9)" (corrections: 272c:00DC is "button held", empty/unaffordable boxes ignore clicks, info lines are sprites 826+k, the item header has no offset). `test/shop.test.ts` drives it through the hangar; checked live in Chrome (cheat, buy + place a pod, Save, reload, load).
 - [ ] **User:** try the shop (hangar → Shop; GEDANKE for money): buying and placing large pods, selling, Position wechseln, jets, boni, Save + "Spiel laden", and with two players the PLAYER switch and GELD AUSTAUSCH.
-- [ ] Two players: mouse and gamepad steering (spec §2) for the control types chosen in the options; P2 can join already but has no input yet.
+- [x] Two players and control types (session 10): the mouse (0x1A34B) and joystick (0x1A58F) handlers are ported (`playerInput` in `src/sim/player.ts`); each player reads the device chosen in the options (`src/input/players.ts`). Gamepad API as the joystick (`src/input/gamepad.ts`), pointer lock for a mouse player during levels with the real pointer as fallback. `test/input.test.ts`; checked in Chrome with P1 mouse + P2 keyboard, then P2 on a mocked gamepad (pointer lock itself can't be granted in the automated tab).
+- [ ] **User:** play with the mouse (Options → Steuerung Player1: Maus): does the pointer get captured on entering a level (or on the first click), does the steering feel right? And with a gamepad as Joystick if you have one.
+- [ ] Decide: allow two players on one keyboard (a second key set, e.g. WASD)? The original can't (both players never share a control type).
 - [ ] Ending video (FLI → WebM, decision 7) after the ending text; for now the remake returns to the main menu.
 
 ### Phase 4: Remastered mode
@@ -102,6 +104,12 @@
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
 11. ~~Engine data stays local~~ (a misunderstanding in session 5). **Corrected (user, session 7):** all newly generated assets (sprites, tiles, levels, tables, sounds, soundtrack, videos) are under version control, kept small: compressed browser-friendly formats, no WAV files. Only `original_source/` stays local.
 12. The Golem's curse turns every jet's standard weapon into the Firestorm's basic gun (item 1): intentional, kept (user, session 7).
+
+## Notes (session 10, not yet confirmed by the user)
+- Gamepad mapping (a pad has no keypad): A fire, B altitude, X/LB select a bonus, Y/RB use it; left stick
+  (dead zone 0.3) or d-pad. The keypad −/+ still select/use for the joystick player.
+- A mouse player's pointer is captured (Pointer Lock) while a level runs and released in the menus. Browsers only
+  grant the lock after a user gesture, so it's requested when the level starts and again on each click.
 
 ## Notes (session 9, not yet confirmed by the user)
 - Input is now sampled once per 40 Hz tick, and a key or mouse button pressed and released between two ticks still

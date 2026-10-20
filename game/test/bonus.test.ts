@@ -62,10 +62,10 @@ describe.skipIf(!hasData)('bonuses (spec §5)', () => {
     }
     expect(p.bonus).toEqual([9, 2, 8]);
     expect(w.spr.n[p.slots.selFrame]).toBe(492);
-    step(w, [keys({ bonus: true })]); // select slot 1
+    step(w, [keys({ select: true })]); // select slot 1
     step(w, [NO_INPUT]);
     expect(p.selected).toBe(1);
-    step(w, [keys({ bonus: true, fire: true })]); // use the atom bomb
+    step(w, [keys({ select: true, use: true, fire: true })]); // use the atom bomb
     expect(p.bonus).toEqual([9, 8, 0]); // used, selection back to 0, compacted
     expect(p.selected).toBe(0);
     expect(p.shots.some((s) => s.active && s.type === 12)).toBe(true);
@@ -83,7 +83,7 @@ describe.skipIf(!hasData)('bonuses (spec §5)', () => {
     const w = await world();
     const p = w.players[0];
     p.bonus = [2, 0, 0];
-    step(w, [keys({ bonus: true, fire: true })]);
+    step(w, [keys({ select: true, use: true, fire: true })]);
     let flashTicks = 0;
     let exploded = -1;
     for (let t = 1; t <= 100; t++) {

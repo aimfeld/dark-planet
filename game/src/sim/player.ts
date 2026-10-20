@@ -14,11 +14,49 @@ function jetOf(w: World, p: Player) {
   return w.data.tables.jets[p.jet - 1];
 }
 
-/** Keyboard handler @0x1A1DD: altitude toggle on press, velocity decay every 4th tick. */
-export function keyboardInput(w: World, p: Player, k: PlayerInput): void {
+/** The input handler of the player's control type (game loop @0x1B787, DS:0x259E/0x259F). */
+export function playerInput(w: World, p: Player, k: PlayerInput): void {
   p.fire = k.fire;
-  p.selectKey = k.bonus; // Space
-  p.useKey = k.bonus && k.fire; // Ctrl + Space
+  p.selectKey = k.select;
+  p.useKey = k.use;
+  if (k.device === 2) mouseInput(w, p, k);
+  else keyboardInput(w, p, k);
+}
+
+/** Keyboard @0x1A1DD and joystick @0x1A58F: altitude toggle on press, velocity decay every 4th tick. */
+function keyboardInput(w: World, p: Player, k: PlayerInput): void {
+  altitudeButton(p, k);
+  if (!k.left && !k.right && mod(w.frame, 4) === 0) p.vx = towardZero(p.vx);
+  if (!k.up && !k.down && mod(w.frame, 4) === 0) p.vy = towardZero(p.vy);
+}
+
+/**
+ * Mouse @0x1A34B: accelerate the jet sprite's corner toward the pointer, stop inside a dead zone of 5 x max
+ * on each axis (every tick), right button toggles the altitude. The direction flags stay off, so movement
+ * @0x1A73E only applies the bounds.
+ */
+function mouseInput(w: World, p: Player, k: PlayerInput): void {
+  const max = p.engine === 0 ? 0 : w.data.tables.engines[p.engine - 1].max_speed; // word DS:0x17EA[engine]
+  const dead = 5 * max;
+  const s = p.slots.jet;
+  const x = w.spr.x[s], y = w.spr.y[s];
+  const my = k.mouseY + w.scrollY;
+  if (k.mouseX > x && x <= 280 && max > p.vx) p.vx += 1;
+  if (k.mouseX < x && x >= 12 && -max < p.vx) p.vx -= 1;
+  if (my > y && w.scrollY + 168 >= y && max > p.vy) p.vy += 1;
+  // (O: 0x1A43A compares the sprite's x with scrollY + 10, so moving up is never limited here)
+  if (my < y && w.scrollY + 10 <= x && -max < p.vy) p.vy -= 1;
+  if (Math.abs(x - k.mouseX) <= dead) p.vx = towardZero(p.vx);
+  if (Math.abs(my - y) <= dead) p.vy = towardZero(p.vy);
+  altitudeButton(p, k);
+}
+
+/**
+ * Alt / right button / button 2 toggle the altitude on press. (O: the mouse and joystick handlers set the
+ * latch only when they toggle, the keyboard whenever Alt is held; that differs only while a swap is pending,
+ * and the game loop always runs the pending swap before the input, so all three behave the same.)
+ */
+function altitudeButton(p: Player, k: PlayerInput): void {
   if (!k.altitude) p.altLatch = false;
   else {
     if (!p.altLatch && p.pendingSwap === 0) {
@@ -27,14 +65,10 @@ export function keyboardInput(w: World, p: Player, k: PlayerInput): void {
     }
     p.altLatch = true;
   }
-  if (!k.left && !k.right && mod(w.frame, 4) === 0) {
-    if (p.vx > 0) p.vx -= 1;
-    if (p.vx < 0) p.vx += 1;
-  }
-  if (!k.up && !k.down && mod(w.frame, 4) === 0) {
-    if (p.vy > 0) p.vy -= 1;
-    if (p.vy < 0) p.vy += 1;
-  }
+}
+
+function towardZero(v: number): number {
+  return v > 0 ? v - 1 : v < 0 ? v + 1 : v;
 }
 
 /** Movement @0x1A73E: accelerate, move inside the bounds, pick the banking frame. */
