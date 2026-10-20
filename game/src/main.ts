@@ -19,11 +19,11 @@ async function main(): Promise<void> {
     json: async (name) => (await fetch(base + name)).json(),
     binary: async (name) => (await fetch(base + name)).arrayBuffer(),
   }).catch((e) => {
-    status.textContent = 'game/public/data/ fehlt: npm run data (siehe README)';
+    status.textContent = 'Daten konnten nicht geladen werden (game/public/data/)';
     throw e;
   });
   const sfx = await Sfx.load(base).catch((e) => {
-    console.warn('no sounds (npm run data exports them):', e);
+    console.warn('no sounds:', e);
     return undefined;
   });
 

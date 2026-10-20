@@ -37,7 +37,10 @@
 - [x] Decode `.FNT` fonts → PNG + widths (`tools/extract_fonts.py`).
 - [x] **User:** sprite sheets, fonts and level renders match the game (session 3).
 - [x] Decode `.LEV` (tile grid + 600 spawn records) + `TI1/TI2.LIB` → full level PNGs, spawn maps with enemy sprites, `levels.json` (`tools/render_levels.py`). Tileset per episode: TI1 for levels 1–3, TI2 for 4–6.
-- [ ] Convert FLI videos → WebM; SFX → OGG; soundtrack → OGG.
+- [x] Soundtrack → MP3 (session 7): `tools/export_music.py` → `game/public/music/track02–09.mp3`, mono (both channels are identical), LAME VBR -V5, 12 MB in total. MP3 rather than OGG/Opus because Safari still decodes Ogg/WebM Opus unreliably (especially in Web Audio). Not yet played by the game.
+- [x] Generated assets under version control (session 7, decision 11 corrected): engine binaries as reproducible `*.bin.gz` (unpacked with `DecompressionStream`; the loader also accepts data a server already unpacked via `Content-Encoding: gzip`, as Vite's dev server does), JSON plain. SFX stay lossless 8-bit PCM inside `sounds.bin.gz` (700 KB) instead of OGG.
+- [ ] **User:** listen to a few `game/public/music/*.mp3` tracks; if -V5 mono sounds too lossy, raise `LAME_VBR_QUALITY` (-V4 adds about 15 %).
+- [ ] Convert FLI videos → WebM (when the intro/ending/briefings are built; decision 7).
 - [ ] Optional: package the original with js-dos as an instant browser-playable "museum" version.
 
 ### Phase 2: Reverse-engineer gameplay from DP.EXE
@@ -85,11 +88,11 @@
 4. Tech stack confirmed: TypeScript + PixiJS, browser-first.
 6. Simulation tick: fixed 40 Hz (measured ≈ 41 fps in the DOSBox-X reference; the original is CPU-bound).
 5. Soundtrack split: resolved in session 2 (2 menu, 3 story, 4 intro, 5/6/7 levels, 8 boss, 9 ending).
-7. Remaining Phase 1 conversions (FLI → WebM, SFX and music → OGG) wait until the engine scaffold needs them (user, session 4).
+7. Remaining Phase 1 conversions (FLI → WebM, SFX and music → OGG) wait until the engine scaffold needs them (user, session 4). Session 7: the music and SFX formats are settled (see Phase 1); FLI → WebM still waits.
 8. Original bugs are fixed in the remake, including any found later (user, session 4). List: `docs/gameplay-spec.md` §12.
 9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
-11. Engine data generated from `original_source/` (sprites, tiles, levels, tables) stays local (`game/public/data/`, gitignored), like the original files (confirmed by the user, session 5).
+11. ~~Engine data stays local~~ (a misunderstanding in session 5). **Corrected (user, session 7):** all newly generated assets (sprites, tiles, levels, tables, sounds, soundtrack, videos) are under version control, kept small: compressed browser-friendly formats, no WAV files. Only `original_source/` stays local.
 
 ## Notes (session 6, not yet confirmed by the user)
 - Two new original bugs are fixed per decision 8: §12 #13 (two inventory pickups in one tick lose one) and #14 (bonus shots read and unload mount records out of range).

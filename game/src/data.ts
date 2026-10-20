@@ -161,16 +161,26 @@ export interface RawData {
   binary: (name: string) => Promise<ArrayBuffer>;
 }
 
+/**
+ * The exported binaries are gzip files (*.bin.gz). Some web servers send .gz files with Content-Encoding: gzip,
+ * so fetch() has already unpacked them; only data that still starts with the gzip magic is unpacked here.
+ */
+export async function gunzip(buf: ArrayBuffer): Promise<ArrayBuffer> {
+  const b = new Uint8Array(buf);
+  if (b[0] !== 0x1f || b[1] !== 0x8b) return buf;
+  return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+}
+
 export async function loadGameData(raw: RawData): Promise<GameData> {
   const [tables, spriteIndex, spriteBin, tiles1, tiles2, levels, fontIndex, fontBin, palette] = await Promise.all([
     raw.json('tables.json'),
     raw.json('sprites.json'),
-    raw.binary('sprites.bin'),
-    raw.binary('tiles1.bin'),
-    raw.binary('tiles2.bin'),
+    raw.binary('sprites.bin.gz').then(gunzip),
+    raw.binary('tiles1.bin.gz').then(gunzip),
+    raw.binary('tiles2.bin.gz').then(gunzip),
     raw.json('levels.json'),
     raw.json('fonts.json'),
-    raw.binary('fonts.bin'),
+    raw.binary('fonts.bin.gz').then(gunzip),
     raw.json('palette.json'),
   ]);
   const sprites = new Map<number, Sprite>();

@@ -11,5 +11,4 @@ __pycache__/
 node_modules/
 dist/
 
-# Engine data generated from original_source/ (tools/export_engine_data.py), local only
-game/public/data/
+# Test renders

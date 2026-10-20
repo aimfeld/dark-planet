@@ -2,6 +2,7 @@
 // up to 32 voices mixed (StartSound 2769:09DC). The simulation only emits PlaySound/StopSound events
 // (sim/state.ts SoundEvent); the voice conditions of the original call sites are applied here.
 
+import { gunzip } from '../data';
 import type { SoundEvent } from '../sim/state';
 
 const SMIX_VOICES = 32;
@@ -21,11 +22,11 @@ export class Sfx {
     this.out.connect(ctx.destination);
   }
 
-  /** sounds.json + sounds.bin from tools/export_engine_data.py (index = PlaySound number). */
+  /** sounds.json + sounds.bin.gz from tools/export_engine_data.py (index = PlaySound number). */
   static async load(base: string): Promise<Sfx> {
     const [index, bin] = await Promise.all([
       fetch(base + 'sounds.json').then((r) => r.json() as Promise<{ rate: number; sounds: { offset: number; length: number }[] }>),
-      fetch(base + 'sounds.bin').then((r) => r.arrayBuffer()),
+      fetch(base + 'sounds.bin.gz').then((r) => r.arrayBuffer()).then(gunzip),
     ]);
     const ctx = new AudioContext();
     const pcm = new Int8Array(bin);

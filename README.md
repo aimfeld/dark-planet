@@ -30,6 +30,7 @@ repository. The tools expect them at that path in a local checkout.
 | `original_source/dplanet-cd.conf` | DOSBox-X config that mounts the rebuilt CD, for music |
 | `tools/` | Asset extraction and reverse-engineering helpers |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
+| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`) |
 | `docs/` | Plan, reverse-engineering notes, file formats |
 
 ## Playing the original in DOSBox-X (with soundtrack)
@@ -60,14 +61,18 @@ python3 tools/game_tables.py original_source $out/game_tables.json --check      
 ```sh
 cd game
 npm install
-npm run data   # once: exports sprites, tiles, levels and tables from original_source/ into game/public/data/
 npm run dev    # http://localhost:5173
-npm test       # simulation tests (the data-dependent ones need npm run data)
+npm test       # simulation tests
 ```
 Keys: Enter starts, arrows move, Ctrl or X fires, Alt or C switches altitude, Space selects a bonus, Ctrl+Space
 (or X+Space) uses it, P pauses, Esc aborts to the menu, F toggles fullscreen (in Chrome with Keyboard Lock, so
 desktop shortcuts don't take Ctrl/Alt combinations). Level 1 plays to the end, boss included; the menus are
-placeholders (see `docs/PLAN.md` Phase 3). After pulling, run `npm run data` again when the exported files change.
+placeholders (see `docs/PLAN.md` Phase 3).
+
+The game's assets are generated from `original_source/` and committed, so the game runs from a plain checkout:
+`game/public/data/` (sprites, tiles, fonts, levels, tables and SFX; binaries gzip-compressed) and
+`game/public/music/` (CD tracks 2–9 as mono MP3). To regenerate them (needs `original_source/`, `uv` and ffmpeg):
+`npm run data` and `npm run music`.
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions

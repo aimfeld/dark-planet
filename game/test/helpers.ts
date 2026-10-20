@@ -7,7 +7,7 @@ export const hasData = existsSync(join(DATA_DIR, 'tables.json'));
 
 let cached: Promise<GameData> | undefined;
 
-/** The exported game data (local only: run `npm run data` first). */
+/** The exported game data (game/public/data/, regenerated with `npm run data`). */
 export function gameData(): Promise<GameData> {
   cached ??= loadGameData({
     json: async (name) => JSON.parse(readFileSync(join(DATA_DIR, name), 'utf8')),
