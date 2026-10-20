@@ -106,7 +106,7 @@
 - [ ] **User:** install the app on the phone (needs HTTPS: the build behind `tailscale serve`, or a static host) and play once offline; check the icon on the home screen and that iOS opens it without the Safari bars.
 - [x] Hosting on GitHub Pages (decision 17): `.github/workflows/deploy.yml` builds `game/` (`npm ci`, `npm run build`) on every push to `production` and deploys `game/dist` to https://aimfeld.github.io/dark-planet/. The `github-pages` environment only accepts deploys from `production`. `bin/deploy.sh` publishes `main`: clean, pushed, tests and build pass, then fast-forwards `production` to it and follows the run with `gh`. The tests run only in the script, not in CI (some need `original_source/`). A clean checkout builds (checked locally).
 - [x] Installed app (user, session 14): it was hard to leave. The ⛶ button put an element fullscreen on top of the app's own fullscreen display, so Chrome showed its "swipe from the top / Back" hint and Back only left that layer. Now the button is hidden in the installed app (`display-mode: fullscreen`), and the main menu's Exit (and Esc) closes the installed app with `window.close()` (allowed while the window has a single history entry). Where that is refused (iOS), the old behaviour stays: black until a key, then the menu. `src/main.ts`; gameplay-spec §14.
-- [ ] **User:** on the phone, check that Exit closes the installed app (reopen it from the home screen; Android may keep it in the recent apps list, which is fine).
+- [x] **User:** Exit closes the installed app on the user's Android phone (session 14).
 - [ ] Later: also publish on itch.io (HTML5 upload of a `dist/` zip); offline/install is unreliable in its iframe, so GitHub Pages stays the main home.
 
 ### Phase 4: Remastered mode
