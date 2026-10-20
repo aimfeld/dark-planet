@@ -34,8 +34,8 @@ export interface TouchLayout {
   right: Rect;
   /** First key button (top left in landscape, below the game in portrait) and the direction they stack in. */
   keys: { x: number; y: number; dx: number; dy: number };
-  /** Top right: the fullscreen button. */
-  corner: { x: number; y: number };
+  /** Top right: the fullscreen button, then the remaster switch to its left (`size` px each). */
+  corner: { x: number; y: number; dx: number; size: number };
   unit: number; // a small button's size in CSS pixels
 }
 
@@ -63,6 +63,14 @@ export function touchLayout(vw: number, vh: number, inset: Insets): TouchLayout 
   const y = vh - inset.b - m - ch;
   // landscape: key buttons down the left column, fullscreen top right; portrait: a row below the game
   const row = game.y + game.h + m;
+  // Landscape: two buttons side by side in the strip right of the picture, smaller where it is narrow (the
+  // fire column below leaves no room to stack them).
+  const sideCorner = () => {
+    const g = Math.round(m / 2);
+    const strip = vw - inset.r - (game.x + game.w);
+    const size = Math.max(24, Math.min(unit, Math.floor((strip - 3 * g) / 2)));
+    return { x: vw - inset.r - g - size, y: inset.t + m, dx: -(size + g), size };
+  };
   return {
     game,
     left: { x: inset.l + m, y, w: cw, h: ch },
@@ -70,7 +78,7 @@ export function touchLayout(vw: number, vh: number, inset: Insets): TouchLayout 
     keys: landscape
       ? { x: inset.l + m + (cw - unit) / 2, y: inset.t + m, dx: 0, dy: unit + m }
       : { x: inset.l + m, y: row, dx: unit + m, dy: 0 },
-    corner: { x: vw - inset.r - m - unit, y: landscape ? inset.t + m : row },
+    corner: landscape ? sideCorner() : { x: vw - inset.r - m - unit, y: row, dx: -(unit + m), size: unit },
     unit,
   };
 }
@@ -120,6 +128,8 @@ export class TouchControls {
   private readonly knob = document.createElement('div');
   private readonly keyEls: HTMLElement[] = [];
   private readonly fullscreen = document.createElement('div');
+  private readonly remaster = document.createElement('div');
+  private remastered = false;
   private readonly holds = new Map<number, Hold>(); // by pointerId
   private dirs = { left: false, right: false, up: false, down: false };
   private down = new Set<string>(); // buttons and keys held now
@@ -131,7 +141,7 @@ export class TouchControls {
   private lastFireTap = -Infinity;
   private radius = 50;
 
-  constructor(parent: HTMLElement, onFullscreen?: () => void) {
+  constructor(parent: HTMLElement, onFullscreen?: () => void, onRemaster?: () => void) {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -157,6 +167,15 @@ export class TouchControls {
       });
       this.root.appendChild(this.fullscreen);
     }
+    if (onRemaster) {
+      this.remaster.className = 'b';
+      this.remaster.textContent = 'HD';
+      this.remaster.addEventListener('pointerup', (e) => {
+        e.stopPropagation();
+        onRemaster();
+      });
+      this.root.appendChild(this.remaster);
+    }
     parent.appendChild(this.root);
     // In a level the overlay takes every touch (stick anywhere on the left, the buttons by position, so a
     // finger can slide from one button to the next); in the menus only the buttons themselves.
@@ -168,7 +187,8 @@ export class TouchControls {
   }
 
   /** Per frame: whether a touch player is in a level, the keys the screen offers, and the layout. */
-  update(playing: boolean, keys: readonly TouchKey[], layout: TouchLayout): void {
+  update(playing: boolean, keys: readonly TouchKey[], layout: TouchLayout, remastered = false): void {
+    this.remastered = remastered;
     if (playing !== this.playing) {
       this.playing = playing;
       this.root.classList.toggle('play', playing);
@@ -215,7 +235,6 @@ export class TouchControls {
     const u = l.unit;
     const r = l.right;
     this.root.style.fontSize = `${Math.round(u * 0.24)}px`; // "Bonus wählen" fits a small button
-    this.fullscreen.style.fontSize = `${Math.round(u * 0.45)}px`;
     const put = (el: HTMLElement, x: number, y: number, size: number) => {
       Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${size}px`, height: `${size}px` });
     };
@@ -249,7 +268,15 @@ export class TouchControls {
       put(el, l.keys.x + i * l.keys.dx, l.keys.y + i * l.keys.dy, u);
       el.classList.toggle('on', this.down.has(k.code));
     });
-    if (this.fullscreen.parentElement) put(this.fullscreen, l.corner.x, l.corner.y, u);
+    let corner = 0; // the top right buttons, right to left
+    for (const el of [this.fullscreen, this.remaster]) {
+      if (!el.parentElement) continue;
+      put(el, l.corner.x + corner * l.corner.dx, l.corner.y, l.corner.size);
+      corner++;
+    }
+    this.fullscreen.style.fontSize = `${Math.round(l.corner.size * 0.45)}px`;
+    this.remaster.style.fontSize = `${Math.round(l.corner.size * 0.34)}px`;
+    this.remaster.classList.toggle('on', this.remastered);
     // The stick: where the thumb holds it, else a faint resting place in the left corner.
     this.radius = Math.round(l.left.w * 0.6);
     const hold = [...this.holds.values()].find((h) => h.role === 'stick');
@@ -291,7 +318,7 @@ export class TouchControls {
       this.place();
       return;
     }
-    if (!this.playing || e.target === this.fullscreen) return;
+    if (!this.playing || e.target === this.fullscreen || e.target === this.remaster) return;
     e.preventDefault();
     this.root.setPointerCapture(e.pointerId);
     const button = this.buttonAt(e.clientX, e.clientY);

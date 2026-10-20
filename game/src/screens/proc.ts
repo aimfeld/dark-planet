@@ -50,6 +50,7 @@ export interface Settings {
   control: [number, number]; // 1 keyboard, 2 mouse, 3 joystick (gamepad), 4 keyboard WASD, 5 touch (remake); never equal
   cdSound: boolean;
   soundEffects: boolean;
+  remastered: boolean; // the remake's remastered graphics with effects (Options, R, the touch HD button)
 }
 
 export interface Ctx {

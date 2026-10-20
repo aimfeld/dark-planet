@@ -8,6 +8,7 @@ import type { PaletteName, Screen } from '../screens/screen';
 import type { World } from '../sim/state';
 import { FADE_STEPS } from '../sim/state';
 import { flashLut, Framebuffer, H, paletteLut, W } from './framebuffer';
+import { HiResView } from './hiResView';
 
 export class ClassicView {
   private readonly fb: Framebuffer;
@@ -21,6 +22,8 @@ export class ClassicView {
   private readonly sprite: Sprite;
   private area: Rect | null = null;
   private below = 0; // CSS pixels kept free under the integer-scaled picture (the key legend)
+  /** The remastered renderer (experiment): draws levels while it has a method, the menus stay classic. */
+  readonly hiRes: HiResView;
 
   private constructor(private readonly app: Application, data: GameData) {
     this.fb = new Framebuffer(data);
@@ -35,6 +38,9 @@ export class ClassicView {
     this.texture.source.scaleMode = 'nearest';
     this.sprite = new Sprite(this.texture);
     app.stage.addChild(this.sprite);
+    this.hiRes = new HiResView(data);
+    this.hiRes.root.visible = false;
+    app.stage.addChild(this.hiRes.root);
     app.canvas.style.cursor = 'none'; // the hangar and the shop draw their own pointer sprite
     window.addEventListener('resize', () => this.layout());
     this.layout();
@@ -72,6 +78,13 @@ export class ClassicView {
 
   /** Largest integer scale that fits the window (in device pixels, so every source pixel stays sharp). */
   private layout(): void {
+    this.placeSprite();
+    const r = this.hiRes.root;
+    r.scale.set(this.sprite.scale.x / 4);
+    r.position.set(this.sprite.x, this.sprite.y);
+  }
+
+  private placeSprite(): void {
     if (this.area) {
       this.sprite.scale.set(this.area.w / W);
       this.sprite.x = this.area.x;
@@ -97,25 +110,37 @@ export class ClassicView {
     return [(cx - this.sprite.x) / scale, (cy - this.sprite.y) / scale];
   }
 
-  draw(w: World): void {
+  /** A level; `alpha` (0..1) is how far the frame lies between the last two ticks (remastered view only). */
+  draw(w: World, alpha = 1): void {
+    if (this.showHiRes(this.hiRes.current !== null && this.hiRes.draw(w, alpha))) return;
     this.fb.render(w);
     this.present(w.flash ? this.flash : this.lut('EPIS1', w.fade));
   }
 
   /** A menu screen (main menu, text viewer, hangar, options). */
-  drawScreen(sc: Screen): void {
+  drawScreen(sc: Screen, alpha = 1): void {
+    if (this.showHiRes(this.hiRes.current !== null && this.hiRes.drawScreen(sc, alpha))) return;
     this.fb.renderScreen(sc);
     this.present(this.lut(sc.palette, sc.fade));
   }
 
   /** A video frame (2 x 2 pixels per source pixel), sampled down to the 320 x 200 view. */
   drawVideo(video: HTMLVideoElement): void {
+    this.showHiRes(false);
     this.ctx.imageSmoothingEnabled = false;
     this.ctx.fillStyle = '#000';
     this.ctx.fillRect(0, 0, W, H);
     if (video.readyState >= 2) this.ctx.drawImage(video, 0, 0, W, H);
     this.texture.source.update();
     this.app.render();
+  }
+
+  /** Show the remastered picture (rendered at once) or the classic one (the caller presents it). */
+  private showHiRes(on: boolean): boolean {
+    this.hiRes.root.visible = on;
+    this.sprite.visible = !on;
+    if (on) this.app.render();
+    return on;
   }
 
   private lut(name: PaletteName, fade: number): Uint32Array {

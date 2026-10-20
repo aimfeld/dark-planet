@@ -14,9 +14,10 @@ import { playVideo } from './screens/video';
 
 /**
  * SETTINGS.DAT defaults without a file: P1 keyboard, CD sound and sound effects on. P2 is WASD (the original:
- * mouse), so two players can share one keyboard right away (user, session 12).
+ * mouse), so two players can share one keyboard right away (user, session 12). The remake starts with the
+ * remastered graphics (user, session 18).
  */
-export const DEFAULT_SETTINGS: Settings = { control: [1, 4], cdSound: true, soundEffects: true };
+export const DEFAULT_SETTINGS: Settings = { control: [1, 4], cdSound: true, soundEffects: true, remastered: true };
 
 /** A save slot in memory (tests, or no browser storage). */
 export function memorySlot(): SaveSlot {

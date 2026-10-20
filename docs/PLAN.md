@@ -126,8 +126,76 @@ Done (user, session 17): play-tested through, including two players; the open it
   enemy paths, HUD, game over, the two-player HUD with P1 out, all boss fights, the level transitions, music and the ending.
 - [ ] **User:** DOSBox-X recordings for the open checks (list in the session-11 notes below).
 
-### Phase 4: Remastered mode
-- [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
+### Phase 4: Remastered mode 🔄 (merged into `main` in session 18, 2026-10-20)
+- [x] Interpolated high-refresh renderer, upscaled assets, effects, mode switch in the menu (details below). The
+  music stays the original CD tracks (decision 24).
+- [x] Remastered graphics (branch `remaster-experiment`, session 17): `tools/remaster_upscale.py` upscales 4x into
+  `game/public/remaster/hq4x/` (16 MB AVIF since session 18, committed; 28 MB of WebP before): all six levels,
+  each as one picture (real tile neighbours, no seams) in 25 chunks of 1280 x 1024; every sprite, trimmed onto 4096 x 4096 atlas pages per
+  group (common, shop, episode 1, episode 2 in EPIS1; REST.LIB again in the main menu's HMBILD and the hangar's
+  UMBILD palette); the four PIC backgrounds in their screens' palettes; the four fonts as glyph atlases (mono fonts
+  white, tinted with the ink colour). Sprites and glyphs: colour and outline upscaled separately (transparent
+  pixels take the nearest opaque colour first, the upscaled outline becomes a narrow soft alpha edge).
+  `src/render/hiResView.ts` draws levels and menu screens with them in PixiJS: background chunks streamed by
+  scroll position, slots like `Framebuffer.render`/`renderScreen`, shadows as a black tint at the shadow table's
+  mean darkening, fades and the flash as an overlay; anything without an upscaled version nearest-scaled. Videos
+  stay as they are.
+  Methods compared: nearest, hq4x and xbr4 (ffmpeg filters), Real-ESRGAN x4plus (ncnn-vulkan in `~/opt/realesrgan`;
+  smears the dirt textures and shifts colours). **hq4x chosen by the user** (decision 23).
+- [x] Smooth motion (session 17, remastered graphics only): `HiResView.beforeTick` keeps the last tick's slots
+  before each simulation tick, and every display frame draws positions between the two ticks (`alpha` = the
+  loop's leftover time / 25 ms): x in level coordinates against the current scroll x (so the quake still shakes),
+  y on the screen; a slot moving more than 32 px per tick snaps. Costs one tick (25 ms) of display latency.
+  Classic mode is unchanged (whole ticks).
+- [x] Switching classic / remastered (session 17): `Settings.remastered`, saved with the other settings; **R**
+  anywhere (first G, changed to R by the user: G starts the hangar cheat), Options line 5 "Grafik: Classic /
+  Remastered", and on touch devices an **HD** button top right (left of the fullscreen button; in landscape both
+  share the narrow strip right of the picture, so they shrink to fit, 41 px on a phone). gameplay-spec §14.
+- [x] Download (session 17): the remastered graphics are never part of the initial download. In classic mode
+  nothing under `remaster/` is requested; in remastered mode `HiResView` loads per screen only what it draws
+  (a level's chunks around the scroll position, the atlas pages of the sprites on screen, the screen's picture
+  and font). The service worker keeps them out of the install cache (`vite.config.ts` REMASTER) and caches each
+  file on first use in `dp-remaster-<hash>`, so what a player has seen also works offline.
+- [x] Audio remaster tried and **rejected by the user** (decision 24): the CD tracks are mono and band-limited to
+  about 10 kHz (aliasing above, so the music was mixed at a low rate before the CD); A/B clips with a higher bitrate,
+  pseudo-stereo, AudioSR (neural bandwidth extension; `~/opt/audiosr` and its model cache deleted in session 18) and, for the 8-bit SFX, denoising +
+  resampling. The original sounds best; AudioSR adds annoying treble hiss. No original song files exist.
+- [x] Abandoned upscaling renders (`remaster/esrgan-anime`, `remaster/animevideo`) deleted (session 18). User
+  (session 18): the interpolated motion looks hardly smoother, since the original already moves smoothly; fine.
+- [x] Visual effects (session 18, `src/render/fx.ts`, render only, so the gameplay is unchanged): shots and
+  explosions glow (a blurred additive copy tinted with the sprite's bright colour, plus a soft halo); explosions
+  light the ground around them and start with a flash and sparks; ground explosions leave smoke under the sprites;
+  a new shot gets a muzzle flash, a shot ending inside the playfield (a hit) sparks; shadows are soft (each run
+  of shadow slots in its own blurred container, so the drawing order stays). What glows is chosen by sprite
+  number (shot sprites of players and enemies with their sprite cycles, the explosion animations); events come
+  from comparing the drawn sprite tables of two ticks, so pause and freezes stop the particles. Many explosion
+  parts at once share one budget, and their light is dimmed by 1/sqrt(count), so the 30-part kinds don't blow out
+  to white. Checked with A/B screenshots in headless Chrome (levels 1, 2, 5, with forced explosions).
+  At first a third mode (Remastered+Effekte); the user dropped the plain remastered mode (decision 25), so the
+  effects are part of Remastered, which is now the default setting. Saved settings from `main` have no
+  `remastered` key, so players of the deployed classic-only version get Remastered too. Until a screen's
+  remastered files have loaded (or offline, before they were ever cached) the classic picture shows.
+- [~] **User:** play with the effects (R twice from classic) and say what to keep, tone down or drop: glow,
+  ground light, sparks, muzzle flashes, smoke, soft shadows. First look (session 18): "The effects look cool!",
+  only the very bright lasers looked "a bit epileptic": beams (shot sprites at least 3x longer than wide: the
+  Duallaser, 8 x 200, re-fired every 10 ticks, and the enemy lasers) were sized by their length (a halo about
+  800 px across, a muzzle flash on every re-fire). Now beams get only a dim bloom (alpha 0.35), no halo, light,
+  muzzle flash or hit sparks, and other large shots' halos are capped at 8 px radius. Still open: whether that
+  is calm enough, and whether it runs smoothly on the phone.
+- [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
+  is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
+- [x] Assets committed (session 18), as AVIF (4:4:4, quality 60): 16 MB instead of 28 MB of WebP (quality 90).
+  Level 1 is 1.1 MB instead of 3.0 MB and closer to the lossless upscale (PSNR 42 against 38); WebP below quality
+  90 smooths away the dirt grain the user chose hq4x for. A browser without AVIF (Safari before 16.4) keeps the
+  classic graphics (`HiResView.use`, Pixi's `detectAvif`). Real-ESRGAN dropped from `tools/remaster_upscale.py`
+  (`~/opt/realesrgan` deleted). A tile-based level format was not pursued: hq4x output depends on the tile's
+  neighbours, so shared tiles would show seams.
+- [x] Prefetch (session 18): in the hangar `HiResView.prefetch` loads the next level's start (background chunks
+  24..22, the bottom of the level) and its sprite pages (common + the episode), so they load during the
+  briefing. Checked in headless Chrome: loaded before the level starts, its first frames are all remastered.
+- [ ] Maybe: now that Remastered is the default, cache the remastered files at install (best effort, like the
+  music and videos, +16 MB), so a fresh install plays remastered offline; today a file is cached on first use
+  and an unseen level shows classic offline.
 
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
@@ -152,6 +220,9 @@ Done (user, session 17): play-tested through, including two players; the open it
 20. Square pixels, no 4:3 aspect correction (user, session 17).
 21. Ball pods and ramming may damage the level 4/5 boss cores while their parts live, as in the original; only shots are blocked (user, session 17).
 22. The ending text leaves out MISSIONS.PAS 123–124 ("Hast du den Cheat schon entdeckt?"), as in the original (user, session 17).
+23. Remastered graphics: hq4x (user, session 17), over xbr4 and Real-ESRGAN.
+24. Audio stays original (user, session 17): the remastered variants (higher bitrate, pseudo-stereo, AudioSR, cleaned SFX) add nothing or add hiss; the music was recorded in poor quality and no song files exist.
+25. Two graphics modes only, Classic and Remastered (always with the effects); Remastered is the default (user, session 18).
 
 ## Notes (session 11, polish pass)
 - Recordings that would settle open questions (DOSBox-X with `dplanet.conf`, video recording from the Capture menu):

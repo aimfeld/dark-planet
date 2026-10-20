@@ -1,17 +1,22 @@
 // Service worker: the installed app (PWA) and offline play. Template: the build (vite.config.ts, offlinePlugin)
-// writes it to dist/sw.js behind a line `self.__BUILD__ = {core, media, coreVersion, mediaVersion}` with every
+// writes it to dist/sw.js behind a line `self.__BUILD__ = {core, media, remaster, coreVersion, ...}` with every
 // built file (paths relative to this file) and content hashes.
 // Core (app shell, data/, about 2 MB) is cached on install. The music and video (about 26 MB) go in their own
 // cache, best effort, so a code update doesn't download them again; what's missing streams from the network.
+// The remastered graphics (remaster/, about 28 MB) are not downloaded on install: each file goes into its own
+// cache when the game first loads it, so classic players never fetch them and remastered ones keep what they
+// have seen for offline play.
 // Cache first: an update installs in the background and takes over; main.ts (registerOffline) looks for one on
 // every start, when the app comes back to the screen and hourly, and reloads where nothing is lost.
 
-const { core, media, coreVersion, mediaVersion } = self.__BUILD__;
+const { core, media, remaster = [], coreVersion, mediaVersion, remasterVersion = 'none' } = self.__BUILD__;
 const CORE_CACHE = `dp-core-${coreVersion}`;
 const MEDIA_CACHE = `dp-media-${mediaVersion}`;
+const REMASTER_CACHE = `dp-remaster-${remasterVersion}`;
 const INDEX = new URL('index.html', self.location).href;
 const MEDIA_URLS = new Set(media.map((p) => new URL(p, self.location).href));
-const filling = new Set(); // media URLs being cached after a miss
+const REMASTER_URLS = new Set(remaster.map((p) => new URL(p, self.location).href));
+const filling = new Set(); // media and remaster URLs being cached after a miss
 
 /** Bypass the HTTP cache: index.html and data/ have no hash in their names. */
 const fresh = (path) => new Request(new URL(path, self.location), { cache: 'reload' });
@@ -38,7 +43,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     for (const name of await caches.keys()) {
-      if (name.startsWith('dp-') && name !== CORE_CACHE && name !== MEDIA_CACHE) await caches.delete(name);
+      const keep = [CORE_CACHE, MEDIA_CACHE, REMASTER_CACHE];
+      if (name.startsWith('dp-') && !keep.includes(name)) await caches.delete(name);
     }
     await self.clients.claim();
   })());
@@ -60,6 +66,15 @@ async function respond(event, request) {
   }
   const url = new URL(request.url);
   url.search = '';
+  if (REMASTER_URLS.has(url.href)) {
+    // Fetch once and keep a copy (the game asks for each file once per session).
+    const response = await fetch(request);
+    if (response.ok) {
+      const copy = response.clone();
+      event.waitUntil(caches.open(REMASTER_CACHE).then((cache) => cache.put(url.href, copy)).catch(() => undefined));
+    }
+    return response;
+  }
   if (MEDIA_URLS.has(url.href)) {
     event.waitUntil(caches.open(MEDIA_CACHE).then((cache) => cacheMedia(cache, url.href)).catch(() => undefined));
   }

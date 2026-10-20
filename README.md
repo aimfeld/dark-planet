@@ -13,7 +13,7 @@ reverse-engineering `DP.EXE`, with the help of an earlier prototype whose
 source survived.
 
 ## Status
-Gameplay reverse-engineered (`docs/gameplay-spec.md`); engine and classic mode in progress (`game/`). See [docs/PLAN.md](docs/PLAN.md) for the roadmap and progress.
+Gameplay reverse-engineered (`docs/gameplay-spec.md`); classic mode done, remastered mode (4x hq4x graphics, smooth motion, effects; the default) in `game/`. See [docs/PLAN.md](docs/PLAN.md) for the roadmap and progress.
 
 ## Repository layout
 The original game files (`original_source/`) are **not included** in this

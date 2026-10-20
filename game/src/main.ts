@@ -12,6 +12,7 @@ import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
+import { REMASTER_METHOD } from './render/hiResView';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
@@ -186,7 +187,12 @@ async function main(): Promise<void> {
   const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
   const pad = new Gamepad();
   // The installed app is fullscreen already (manifest); a second, element fullscreen would only add a way out to learn.
-  const touch = new TouchControls(document.body, TOUCH_DEVICE && !displayMode('fullscreen') ? () => void fullscreen() : undefined);
+  let toggleRemaster = () => undefined as void; // set once the settings are loaded
+  const touch = new TouchControls(
+    document.body,
+    TOUCH_DEVICE && !displayMode('fullscreen') ? () => void fullscreen() : undefined,
+    TOUCH_DEVICE ? () => toggleRemaster() : undefined,
+  );
   const layout = layoutCache();
   // For a touch (pointerup or touchend, not pointerdown, counts as the gesture that allows sound) or a key.
   const unlock = () => {
@@ -242,7 +248,7 @@ async function main(): Promise<void> {
   view.element.addEventListener('pointerdown', () => {
     if (mousePlays()) mouse.lock();
   });
-  if (import.meta.env.DEV) Object.assign(window, { game }); // for debugging in the browser console
+  if (import.meta.env.DEV) Object.assign(window, { game, view }); // for debugging in the browser console
   // The game keys below the picture (not with touch controls, which fill the window).
   const legend = document.getElementById('keys')!;
   const showKeys = () => {
@@ -254,6 +260,22 @@ async function main(): Promise<void> {
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
   };
 
+  // R, the touch HD button and the Options line switch between the classic and the remastered graphics,
+  // anywhere (menus, levels); the choice is a setting. The frame loop applies it.
+  const remasterLabel = document.getElementById('remaster')!;
+  let labelTimer = 0;
+  const showRemaster = (text: string) => {
+    remasterLabel.textContent = text;
+    remasterLabel.hidden = false;
+    clearTimeout(labelTimer);
+    labelTimer = window.setTimeout(() => (remasterLabel.hidden = true), 2500);
+  };
+  toggleRemaster = () => {
+    settings.remastered = !settings.remastered;
+    saveSettings(settings);
+    showRemaster(settings.remastered ? 'Grafik: Remastered' : 'Grafik: Classic');
+  };
+
   let acc = 0;
   let last = performance.now();
   let mouseWasPlaying = false;
@@ -262,12 +284,17 @@ async function main(): Promise<void> {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
+    if (keys.takePress('KeyR')) toggleRemaster();
+    const graphics = settings.remastered ? REMASTER_METHOD : null;
+    if (view.hiRes.current !== graphics) void view.hiRes.use(graphics);
     while (acc >= TICK_MS) {
       keys.sample();
       mouse.sample();
       pad.sample();
       touch.sample();
+      view.hiRes.beforeTick(game.view, game.world, game.screen);
       game.tick(input);
+      view.hiRes.afterTick(game.view, game.world);
       pauseTap = false;
       acc -= TICK_MS;
     }
@@ -282,7 +309,7 @@ async function main(): Promise<void> {
       if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
-    touch.update(touchPlays, game.touchKeys, layout());
+    touch.update(touchPlays, game.touchKeys, layout(), settings.remastered);
     view.setArea(touchUsed() ? layout().game : null);
     showKeys();
     if (mousePlays() !== mouseWasPlaying) {
@@ -290,9 +317,11 @@ async function main(): Promise<void> {
       if (mouseWasPlaying) mouse.lock();
       else mouse.unlock();
     }
-    if (game.view === 'world') view.draw(game.world);
+    const alpha = acc / TICK_MS; // how far this frame lies between the last tick and the next
+    if (game.view === 'screen' && game.screen.picture === 'UMBILD') view.hiRes.prefetch(game.world.level); // the hangar
+    if (game.view === 'world') view.draw(game.world, alpha);
     else if (game.view === 'video') view.drawVideo(video.element);
-    else view.drawScreen(game.screen);
+    else view.drawScreen(game.screen, alpha);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

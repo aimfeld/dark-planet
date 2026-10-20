@@ -1,12 +1,13 @@
 // Options @0x1C4CD (setup 0x1C443, lines 0x1C168, cursor 0x1C10B): OMBILD.PIC with the EPIS1 palette,
 // _BROADWA lines and the REST star as the cursor. The original's CPU line is dropped (decision 9, user,
-// session 4), so "Menu verlassen" moves up to line 5. The remake also takes a tap or click on a line.
+// session 4); the remake's graphics line takes its place, so "Menu verlassen" stays line 6. The remake also
+// takes a tap or click on a line.
 
 import { cdPlay, delay, fadeIn, frame, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
 
 // DS:0x502 + 256 ctl; the remake adds WASD (a 2nd key set) and Touch
 const CONTROLS = ['Tastatur', 'Maus', 'Joystick', 'WASD', 'Touch'];
-const LINES = 5;
+const LINES = 6;
 const CURSOR_SLOT = 12;
 const CURSOR = 556; // global sprite cycle 556..566, rate 4
 
@@ -21,6 +22,8 @@ function lineText(ctx: Ctx, line: number): string {
       return 'CDSound:' + onOff(st.cdSound);
     case 4:
       return 'SoundEffekte:' + onOff(st.soundEffects);
+    case 5:
+      return 'Grafik: ' + (st.remastered ? 'Remastered' : 'Classic');
     default:
       return 'Menu verlassen';
   }
@@ -97,6 +100,10 @@ export function* options(ctx: Ctx): Proc {
         st.cdSound = !st.cdSound;
         ctx.music?.setEnabled(st.cdSound);
         if (st.cdSound) cdPlay(ctx, 2);
+        yield* waitKeyUp(ctx);
+        yield* drawLines(ctx, true);
+      } else if (line === 5) {
+        st.remastered = !st.remastered; // main.ts switches the renderer
         yield* waitKeyUp(ctx);
         yield* drawLines(ctx, true);
       } else {
