@@ -136,7 +136,7 @@
   loop's leftover time / 25 ms): x in level coordinates against the current scroll x (so the quake still shakes),
   y on the screen; a slot moving more than 32 px per tick snaps. Costs one tick (25 ms) of display latency.
   Classic mode is unchanged (whole ticks).
-- [x] **G** switches classic / remastered anywhere (menus, levels), remembered in localStorage, in the key legend
+- [x] **R** switches classic / remastered anywhere (menus, levels), remembered in localStorage, in the key legend (first G, changed to R by the user in session 17)
   (gameplay-spec §14).
 - [x] Audio remaster tried and **rejected by the user** (decision 19): the CD tracks are mono and band-limited to
   about 10 kHz (aliasing above, so the music was mixed at a low rate before the CD); A/B clips with a higher bitrate,

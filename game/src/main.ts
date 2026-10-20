@@ -255,7 +255,7 @@ async function main(): Promise<void> {
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
   };
 
-  // G switches between the classic and the remastered graphics, anywhere (menus, levels), remembered.
+  // R switches between the classic and the remastered graphics, anywhere (menus, levels), remembered.
   const remasterLabel = document.getElementById('remaster')!;
   let labelTimer = 0;
   const showRemaster = (text: string) => {
@@ -290,7 +290,7 @@ async function main(): Promise<void> {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
-    if (keys.takePress('KeyG')) {
+    if (keys.takePress('KeyR')) {
       const order = [null, ...REMASTER_METHODS];
       const next = order[(order.indexOf(view.hiRes.current) + 1) % order.length];
       useMethod(next);
