@@ -1,6 +1,7 @@
 // Main menu: DrawMainMenu 0x1D60E and the menu loop in the main body @0x1D7C0. Six pre-drawn REST.LIB
 // item sprites over HMBILD.PIC; the selected one glows through the global sprite cycle [base+1, base+10].
-// Keyboard only in the original (the mouse can't select); the remake also takes a tap or click on an item.
+// Keyboard only in the original (the mouse can't select); in the remake the pointer selects the item it moves
+// onto, and a tap or click opens it.
 
 import { decodeSave } from '../save';
 import { hangar } from './hangar';
@@ -27,7 +28,7 @@ function* drawMainMenu(ctx: Ctx, selected: number): Proc {
   yield* fadeIn(ctx);
 }
 
-/** The item under a tap or click, 0 for none: its 25-pixel row (the sprites overlap) and its width. */
+/** The item under the pointer, 0 for none: its 25-pixel row (the sprites overlap) and its width. */
 function itemAt(ctx: Ctx, x: number, y: number): number {
   const s = ctx.screen;
   const i = Math.floor((y - 20) / 25) + 1;
@@ -89,22 +90,29 @@ export function* mainMenu(ctx: Ctx): Proc {
   // needs a fresh press.
   let escArmed = false;
   let mouseArmed = false; // a tap counts once the button was up
+  let pointer = [ctx.input.mouse.x, ctx.input.mouse.y]; // only a moving pointer selects, so a resting one doesn't undo the keys
+  const select = (i: number) => {
+    s.n[itemSlot(selected)] = itemSprite(selected);
+    selected = i;
+    s.n[itemSlot(selected)] += 1;
+  };
   for (;;) {
     const m = ctx.input.mouse;
     const tap = mouseArmed && m.down ? itemAt(ctx, m.x, m.y) : 0;
     mouseArmed = !m.down;
-    if (tap !== 0 && tap !== selected) {
-      s.n[itemSlot(selected)] = itemSprite(selected);
-      selected = tap;
-      s.n[itemSlot(selected)] += 1;
+    const moved = m.x !== pointer[0] || m.y !== pointer[1];
+    pointer = [m.x, m.y];
+    const hover = moved ? itemAt(ctx, m.x, m.y) : 0;
+    if (tap !== 0 && tap !== selected) select(tap);
+    else if (tap === 0 && hover !== 0 && hover !== selected) {
+      playSound(ctx, 12); // GRLASER, as for the arrow keys
+      select(hover);
     }
     const move = held('ArrowUp') ? -1 : held('ArrowDown') ? 1 : 0;
     if (move !== 0) {
       playSound(ctx, 12); // GRLASER
       yield* delay(100);
-      s.n[itemSlot(selected)] = itemSprite(selected);
-      selected = ((selected - 1 + move + ITEMS) % ITEMS) + 1;
-      s.n[itemSlot(selected)] += 1;
+      select(((selected - 1 + move + ITEMS) % ITEMS) + 1);
     }
     if (!held('Escape')) escArmed = true;
     if (escArmed && held('Escape')) {

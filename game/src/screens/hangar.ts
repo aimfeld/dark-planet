@@ -37,6 +37,15 @@ const JOIN_KEYS = [
 // The cheat (0x1CF34): typing G-E-D-A-N-K-E sets both players' money to 666666.
 const CHEAT = ['KeyG', 'KeyE', 'KeyD', 'KeyA', 'KeyN', 'KeyK', 'KeyE'];
 
+/** Dev build only (testing, not in the original): 1-6 start that level without the briefing, Shift+1-6 at its boss. */
+function devLevel(ctx: Ctx): { level: number; atBoss: boolean } | null {
+  if (!import.meta.env.DEV) return null;
+  const input = ctx.input;
+  const level = [1, 2, 3, 4, 5, 6].find((n) => input.held(`Digit${n}`));
+  if (level === undefined) return null;
+  return { level, atBoss: input.held('ShiftLeft') || input.held('ShiftRight') };
+}
+
 function pointer(ctx: Ctx): void {
   const s = ctx.screen;
   s.x[1] = ctx.input.mouse.x;
@@ -92,6 +101,16 @@ export function* hangar(ctx: Ctx): Proc {
   let cheat = 0;
   for (;;) {
     pointer(ctx);
+    const dev = devLevel(ctx);
+    if (dev) {
+      while (input.anyKey()) yield* frame(ctx, 15); // Shift is a bonus key in the level
+      w.level = dev.level;
+      const result = yield* shootEmAll(ctx, dev);
+      if (result === 'menu') return;
+      yield* setup(ctx);
+      hover = 0;
+      continue;
+    }
     if (input.anyKey()) {
       // Each key press must be the next letter, anything else starts over (a G as the first letter again).
       if (input.held(CHEAT[cheat])) cheat += 1;
@@ -162,12 +181,15 @@ export function* hangar(ctx: Ctx): Proc {
   }
 }
 
-/** "Shoot em all": the briefing, the level, then back to the hangar, the main menu or the ending. */
-function* shootEmAll(ctx: Ctx): Proc<'hangar' | 'menu'> {
+/**
+ * "Shoot em all": the briefing, the level, then back to the hangar, the main menu or the ending.
+ * dev: the dev level keys (devLevel), which skip the briefing and may start at the boss.
+ */
+function* shootEmAll(ctx: Ctx, dev?: { atBoss: boolean }): Proc<'hangar' | 'menu'> {
   const w = ctx.world;
   const [first, last] = BRIEFING[w.level - 1];
-  yield* textViewer(ctx, { file: 'MISSIONS.PAS', centred: false, first, last, mode: 2, frameDelay: 0 });
-  const result = yield* playLevel(ctx, w.level);
+  if (!dev) yield* textViewer(ctx, { file: 'MISSIONS.PAS', centred: false, first, last, mode: 2, frameDelay: 0 });
+  const result = yield* playLevel(ctx, w.level, dev?.atBoss);
   // Back from the level: faded out after a completed level; after game over or Esc the original cuts
   // straight to the main menu, which fades in from black.
   ctx.view = 'screen';

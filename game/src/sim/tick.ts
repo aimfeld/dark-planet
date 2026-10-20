@@ -4,7 +4,7 @@
 import { bombTimer, bonusInventory, bonusTimers, clearBonuses, pickupBonuses, placeInventory, x5IconFollow } from './bonus';
 import { collisions } from './collisions';
 import { animTick, explosionTick, shadows, spriteCycles } from './effects';
-import { BOSS_BLACK_TICKS, BOSS_FADE_TICKS, BOSS_FREEZE_TICKS, enemyGuns, enemyUpdate, moveEnemyShots, spawnFromLevel } from './enemies';
+import { BOSS_BLACK_TICKS, BOSS_FADE_TICKS, BOSS_FREEZE_TICKS, bossScrollY, enemyGuns, enemyUpdate, moveEnemyShots, spawnFromLevel } from './enemies';
 import {
   addMoney, altitudeSwap, HUD, invulnerableTick, playerInput, lifeLost, LIVES_TEXT, MONEY_TEXT, movePlayer,
   playerOut, respawnFlyIn, setLivesText, shieldRecharge,
@@ -43,12 +43,16 @@ export function newGame(w: World, twoPlayer = false): void {
   startLevel(w, 1);
 }
 
-/** StartLevel @0x1B582 + LevelReset @1d9e:0000 + LevelStartSprites @0x107F8 for the players in `w`. */
-export function startLevel(w: World, level: number): void {
+/**
+ * StartLevel @0x1B582 + LevelReset @1d9e:0000 + LevelStartSprites @0x107F8 for the players in `w`.
+ * atBoss (dev testing, not in the original): start scrolled to the boss record, so the first tick starts the boss fight.
+ */
+export function startLevel(w: World, level: number, atBoss = false): void {
   w.level = level;
   w.episode = Math.trunc((level - 1) / 3) + 1;
+  const y0 = atBoss ? bossScrollY(w, level) : 0;
   w.scrollX = 0;
-  w.scrollY = 0;
+  w.scrollY = y0;
   w.scrolling = true;
   w.autopilot = false;
   w.frame = 0;
@@ -91,7 +95,7 @@ export function startLevel(w: World, level: number): void {
     addMoney(w, p, 0);
     w.spr.n[HUD.money[i]] = MONEY_TEXT[i];
     w.spr.x[HUD.money[i]] = i === 0 ? 20 : 240;
-    w.spr.y[HUD.money[i]] = 10;
+    w.spr.y[HUD.money[i]] = y0 + 10;
     setLivesText(w, p);
     w.spr.n[HUD.icon[i]] = 491;
     w.spr.x[HUD.icon[i]] = i === 0 ? 30 : 260;
@@ -99,7 +103,7 @@ export function startLevel(w: World, level: number): void {
     w.spr.x[HUD.lives[i]] = i === 0 ? 45 : 275;
     const jet = p.slots.jet;
     w.spr.x[jet] = i === 0 ? 60 : 140;
-    w.spr.y[jet] = 140;
+    w.spr.y[jet] = y0 + 140;
     w.spr.n[jet] = t.jets[p.jet - 1].frame_base + 3;
     for (let m = 0; m < 8; m++) {
       const mt = p.mounts[m];
@@ -122,6 +126,7 @@ export function startLevel(w: World, level: number): void {
   w.spr.n[HUD.frameLeft] = 490;
   w.spr.n[HUD.frameRight] = 490;
   scrollHud(w);
+  if (atBoss) snapshot(w); // the boss start fades out from this frame, not from the last one drawn before
 }
 
 function scrollHud(w: World): void {

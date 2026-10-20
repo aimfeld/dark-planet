@@ -46,6 +46,22 @@ const WASD: KeySet = {
 // keypad - / + select and use the joystick player's bonus (DS:0x6C31 / 0x6C32)
 const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown', 'NumpadSubtract', 'NumpadAdd'];
 const CAPTURED = new Set([ARROWS, ARROWS_RIGHT, WASD, { OTHER }].flatMap((set) => Object.values(set).flat()));
+/**
+ * Modifier keys and the modifier states that mean they may still be down. The desktop can take a modifier's keyup
+ * (Ctrl+Alt+arrows switching workspaces on Linux) without the window losing focus; the key then stayed held, which
+ * can freeze the hangar: it waits for all keys to be released. Every later key or pointer event tells which
+ * modifiers are really down. AltGr is AltRight on German layouts, and Windows adds a left Ctrl to it.
+ */
+const MODIFIERS: [string, string[]][] = [
+  ['ControlLeft', ['Control', 'AltGraph']],
+  ['ControlRight', ['Control']],
+  ['AltLeft', ['Alt']],
+  ['AltRight', ['Alt', 'AltGraph']],
+  ['ShiftLeft', ['Shift']],
+  ['ShiftRight', ['Shift']],
+  ['MetaLeft', ['Meta', 'OS']],
+  ['MetaRight', ['Meta', 'OS']],
+];
 
 export class Keyboard {
   private readonly down = new Set<string>();
@@ -56,15 +72,30 @@ export class Keyboard {
   constructor(target: Window) {
     target.addEventListener('keydown', (e) => {
       if (CAPTURED.has(e.code)) e.preventDefault();
+      this.dropReleasedModifiers(e);
       if (!e.repeat) this.pressed.add(e.code);
       this.down.add(e.code);
       this.tapped.add(e.code);
     });
     target.addEventListener('keyup', (e) => {
       if (CAPTURED.has(e.code)) e.preventDefault();
+      this.dropReleasedModifiers(e);
       this.down.delete(e.code);
+      // macOS sends no keyup for keys released while Cmd is held; keys still held come back with their repeats.
+      if (e.code === 'MetaLeft' || e.code === 'MetaRight') this.down.clear();
     });
+    for (const type of ['pointerdown', 'pointermove'] as const) target.addEventListener(type, (e) => this.dropReleasedModifiers(e));
     target.addEventListener('blur', () => this.down.clear());
+    target.document?.addEventListener('visibilitychange', () => this.down.clear());
+  }
+
+  /** Forget modifiers the event says are up (except the event's own key, which keydown/keyup handle). */
+  private dropReleasedModifiers(e: KeyboardEvent | PointerEvent): void {
+    if (typeof e.getModifierState !== 'function') return;
+    const own = 'code' in e ? e.code : '';
+    for (const [code, states] of MODIFIERS) {
+      if (code !== own && this.down.has(code) && !states.some((m) => e.getModifierState(m))) this.down.delete(code);
+    }
   }
 
   /** Take the keys for the next tick: held now, or pressed since the last sample (a tap between ticks counts). */

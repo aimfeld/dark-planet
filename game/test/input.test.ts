@@ -83,7 +83,7 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
   const setup = () => {
     const target = new EventTarget();
     const keys = new Keyboard(target as unknown as Window);
-    const key = (type: string, code: string) => target.dispatchEvent(Object.assign(new Event(type), { code }));
+    const key = (type: string, code: string, extra = {}) => target.dispatchEvent(Object.assign(new Event(type), { code }, extra));
     return { keys, key };
   };
 
@@ -111,6 +111,40 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
     keys.sample();
     expect(keys.player(false, true)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
     expect(keys.player(true)).toMatchObject({ fire: false, altitude: false, select: false }); // not the WASD player's
+  });
+
+  it('forgets modifiers whose keyup the desktop took, and keys released while Cmd was held', () => {
+    const { keys, key } = setup();
+    // Key and pointer events with the browser's modifier state.
+    const send = (type: string, code: string, states: string[]) =>
+      key(type, code, { getModifierState: (m: string) => states.includes(m) });
+    const tick = () => {
+      keys.sample(); // a tap since the last sample still counts once
+      keys.sample();
+    };
+    // Ctrl+Alt+Left: the window manager takes the arrow and both keyups.
+    send('keydown', 'ControlLeft', ['Control']);
+    send('keydown', 'AltLeft', ['Control', 'Alt']);
+    tick();
+    expect(keys.anyKey()).toBe(true);
+    send('pointermove', '', []);
+    tick();
+    expect(keys.anyKey()).toBe(false);
+    // AltGr (AltRight, with a left Ctrl on Windows) stays held while the browser reports AltGraph.
+    send('keydown', 'ControlLeft', ['AltGraph']);
+    send('keydown', 'AltRight', ['AltGraph']);
+    send('pointermove', '', ['AltGraph']);
+    tick();
+    expect([keys.held('ControlLeft'), keys.held('AltRight')]).toEqual([true, true]);
+    send('keyup', 'AltRight', []);
+    tick();
+    expect(keys.anyKey()).toBe(false);
+    // Cmd+X: macOS sends no keyup for X.
+    send('keydown', 'MetaLeft', ['Meta']);
+    send('keydown', 'KeyX', ['Meta']);
+    send('keyup', 'MetaLeft', []);
+    tick();
+    expect(keys.anyKey()).toBe(false);
   });
 
   it('playerInputs: WASD in the game makes the arrow set right-handed', () => {

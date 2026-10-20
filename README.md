@@ -86,6 +86,13 @@ The game's assets are generated from `original_source/` and committed, so the ga
 `game/public/music/` (CD tracks 2–9 as mono MP3) and `game/public/video/` (intro and ending as WebM). To regenerate
 them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music`, `npm run video` and `npm run icons`.
 
+### Testing shortcuts
+- **GEDANKE** typed in the hangar sets both players' money to 666666, so the shop can sell anything. This cheat is
+  in the original game and works in every build.
+- **1–6** in the hangar start that level right away, without the briefing. **Shift+1–6** start it at the boss
+  fight. These keys work only on the dev server (`npm run dev`), not in the production build. They are not in the
+  original game. Finishing a level returns to the hangar with the next level selected, as usual.
+
 ### Installing as an app (PWA)
 The production build (`npm run build`, output in `game/dist/`) is an installable web app: `manifest.webmanifest`
 plus a service worker (`game/sw.js`, written to `dist/sw.js` with the file list by `vite.config.ts`) that caches

@@ -97,6 +97,11 @@ export function spawnFromLevel(w: World): void {
   }
 }
 
+/** The scroll position of the level's boss record, where StartBossFight runs (dev testing: start at the boss). */
+export function bossScrollY(w: World, level: number): number {
+  return w.data.levels[level - 1].records.find((r) => BOSS_TYPES.has(r.type))!.y;
+}
+
 /** StartBossFight's blocking parts in ticks: fade out (20 retraces), Delay(1200), fade in. */
 export const BOSS_FADE_TICKS = 11;
 export const BOSS_BLACK_TICKS = 48;

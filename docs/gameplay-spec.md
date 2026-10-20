@@ -685,6 +685,7 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
   one glowing (global sprite cycle). Up/Down: sound 12 + Delay(100), wrapping; Enter/Space: sound 16 + Delay(100).
   Items: new game, load game, story (CD track 3, text viewer), manual (Anleitung, pager), about (Horse
   Productions), Exit; Esc also quits.
+  Remake (§14): the pointer selects the item it moves onto (sound 12), a click or tap opens it.
 - **Text viewer** (RASTER.PIC + EPIS1, SUPER.FNT colour 0x1E, 11 px line pitch): mode 1 scrolls 1 px per frame
   with a new line every 11 frames (story 150 ms/frame, about 80, ending 130); mode 2 is the mission briefing
   (20 lines slide in from both sides, sound 47, wait for a key); mode 3 is the manual pager (18 lines, arrows
@@ -806,3 +807,24 @@ Priority order; each needs one short capture (`original_source/capture/`) or a d
 7. Debugger (optional): `bpm ds:16c2` never triggers; bonus drop rate ≈ 14 % over a level.
 8. Bonuses (session 6): a bonus can only be picked up while flying high; the atom bomb's grey flash; the level 1
    boss hit sounds.
+
+## 14. Usability changes in the remake (decision 16, user, session 14)
+Classic mode may make small usability changes where the original is awkward or a browser needs something else,
+as long as the game plays and feels the same. Each one is listed here. Not listed: original bugs (§12) and the
+remastered mode.
+| Where | Original | Remake |
+|---|---|---|
+| Start | starts at once | waits for a key or click ("Taste oder Klick zum Starten"), browsers only play sound after a gesture |
+| Intro / ending video | (FLI player, see re-notes) | any key or click skips the whole video |
+| Main menu | keyboard only | the pointer selects the item it moves onto (sound 12, like Up/Down; a resting pointer doesn't take the selection back from the keys), a click or tap opens it |
+| Main menu Exit / Esc | quits to DOS | black and silent until a key, then the main menu again; Esc needs a fresh press (one still held from the hangar doesn't quit) |
+| Bad SAVE.DAT checksum | message, then quits to DOS | message until a key, then the main menu |
+| Screens ended by a key | end while a key is still held | need a fresh press, so the confirm key doesn't skip them (§9.2) |
+| Text viewer, briefings, ending text | keyboard only | a click or tap ends them; the manual offers its keys as touch buttons |
+| Hangar | returns to its loop with the button possibly held | waits for the mouse button to be released after an item |
+| Options | keyboard | a click or tap on a line selects and switches it; settings live in browser storage |
+| Shop | mouse windows confine the pointer; PC-speaker beeps | the pointer sprite is clamped to the window (a browser can't confine the real pointer); no beeps |
+| Level pause | P resumes | also Esc while paused ends the level; a hidden page pauses the level |
+| Controls | keyboard, mouse, joystick | §2: WASD set (type 4, decision 13), touch (type 5, decision 14), gamepad as joystick, X/C/V instead of Ctrl/Alt/Space in the legend (decision 15), P2 defaults to WASD, Pointer Lock for a mouse player |
+| Input | read when the code polls | sampled once per 40 Hz tick; a press released before the sample still counts once |
+| Screen | 320 x 200 | the key legend below the picture; F toggles fullscreen |

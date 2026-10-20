@@ -22,6 +22,26 @@ describe.skipIf(!hasData)('menus', () => {
     expect(s.n[15]).toBeGreaterThanOrEqual(625);
   });
 
+  it('main menu: the pointer selects the item it moves onto, a resting one leaves the keys alone', async () => {
+    const { game, input, run, press } = await setup();
+    run(40);
+    const s = game.screen;
+    input.mouse.x = 160;
+    input.mouse.y = 105; // item 4: Spielanleitung
+    run(10);
+    expect(s.n[17]).toBeGreaterThanOrEqual(647);
+    expect(s.n[14]).toBe(613);
+    expect(s.picture).toBe('HMBILD'); // selected, not opened
+    press('ArrowDown', 1);
+    run(10);
+    expect(s.n[17]).toBe(646);
+    expect(s.n[18]).toBeGreaterThanOrEqual(658);
+    input.mouse.y = 30; // item 1
+    run(10);
+    expect(s.n[14]).toBeGreaterThanOrEqual(614);
+    expect(s.n[18]).toBe(657);
+  });
+
   it('new game -> hangar -> briefing -> level 1 -> Esc -> main menu', async () => {
     const { game, input, run, press, click, dump } = await setup();
     run(40);
@@ -49,6 +69,33 @@ describe.skipIf(!hasData)('menus', () => {
     run(40);
     expect(game.view).toBe('screen');
     expect(s.picture).toBe('HMBILD');
+  });
+
+  it('dev keys in the hangar: 3 starts level 3, Shift+5 starts level 5 at its boss', async () => {
+    const { game, input, run, press } = await setup();
+    run(40);
+    press('Enter');
+    run(40);
+    const w = game.world;
+    press('Digit3', 2, 5);
+    expect(game.view).toBe('world'); // no briefing
+    expect(w.level).toBe(3);
+    expect(w.scrolling).toBe(true);
+    expect(w.scrollY).toBeGreaterThan(-10);
+    press('Escape');
+    run(80);
+    press('Enter'); // main menu: new game
+    run(40);
+    expect(game.screen.picture).toBe('UMBILD');
+    input.keys.add('ShiftLeft');
+    press('Digit5', 2, 0);
+    input.keys.delete('ShiftLeft');
+    run(5);
+    expect(game.view).toBe('world');
+    expect(w.level).toBe(5);
+    expect(w.scrolling).toBe(false); // StartBossFight ran
+    expect(w.track).toBe(8);
+    expect(w.enemies.some((e) => e.active)).toBe(true);
   });
 
   it('options: control type skips the other player, CD sound toggles', async () => {

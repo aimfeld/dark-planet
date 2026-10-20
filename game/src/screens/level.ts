@@ -19,10 +19,10 @@ export function worldSounds(ctx: Ctx): void {
   w.sounds = [];
 }
 
-export function* playLevel(ctx: Ctx, level: number): Proc<LevelResult> {
+export function* playLevel(ctx: Ctx, level: number, atBoss = false): Proc<LevelResult> {
   const w = ctx.world;
   const held = (code: string) => ctx.input.held(code);
-  startLevel(w, level); // the level appears at full brightness (Epis1.pal set without a fade-in)
+  startLevel(w, level, atBoss); // the level appears at full brightness (Epis1.pal set without a fade-in)
   ctx.view = 'world';
   cdPlay(ctx, w.track);
   worldSounds(ctx); // the engine loops LevelStart started
