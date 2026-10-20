@@ -68,6 +68,8 @@ describe.skipIf(!hasData)('menus', () => {
     press('Enter');
     expect(s.texts.get(818)?.text).toBe('Steuerung Player1:WASD'); // the remake's second key set
     press('Enter');
+    expect(s.texts.get(818)?.text).toBe('Steuerung Player1:Touch'); // the remake's touch controls
+    press('Enter');
     press('Enter');
     expect(game.settings.control[0]).toBe(3);
     press('ArrowDown', 1);

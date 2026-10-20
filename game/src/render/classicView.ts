@@ -1,7 +1,9 @@
 // Shows the classic framebuffer with PixiJS: palette applied on the CPU, integer nearest-neighbour scale.
+// With touch controls the picture fills the place they leave free instead (phones have no pixels to spare).
 
 import { Application, Sprite, Texture } from 'pixi.js';
 import type { GameData } from '../data';
+import type { Rect } from '../input/touch';
 import type { PaletteName, Screen } from '../screens/screen';
 import type { World } from '../sim/state';
 import { FADE_STEPS } from '../sim/state';
@@ -17,6 +19,7 @@ export class ClassicView {
   private readonly rgba: Uint32Array;
   private readonly texture: Texture;
   private readonly sprite: Sprite;
+  private area: Rect | null = null;
 
   private constructor(private readonly app: Application, data: GameData) {
     this.fb = new Framebuffer(data);
@@ -45,8 +48,22 @@ export class ClassicView {
     return new ClassicView(app, data);
   }
 
+  /** Draw the picture into `area` (CSS pixels, 16:10), or integer-scaled in the middle of the window (null). */
+  setArea(area: Rect | null): void {
+    const a = this.area;
+    if (a === area || (a && area && a.x === area.x && a.y === area.y && a.w === area.w && a.h === area.h)) return;
+    this.area = area && { ...area };
+    this.layout();
+  }
+
   /** Largest integer scale that fits the window (in device pixels, so every source pixel stays sharp). */
   private layout(): void {
+    if (this.area) {
+      this.sprite.scale.set(this.area.w / W);
+      this.sprite.x = this.area.x;
+      this.sprite.y = this.area.y;
+      return;
+    }
     const dpr = window.devicePixelRatio || 1;
     const scale = Math.max(1, Math.floor(Math.min((window.innerWidth * dpr) / W, (window.innerHeight * dpr) / H)));
     this.sprite.scale.set(scale / dpr);

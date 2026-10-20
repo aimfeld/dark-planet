@@ -7,6 +7,7 @@ import type { Music } from '../audio/music';
 import type { Sfx } from '../audio/sfx';
 import type { VideoPlayer } from '../video';
 import type { GameData } from '../data';
+import type { TouchKey } from '../input/touch';
 import { FADE_STEPS, type PlayerInput, type World } from '../sim/state';
 import type { Screen } from './screen';
 
@@ -46,7 +47,7 @@ export interface SaveSlot {
 }
 
 export interface Settings {
-  control: [number, number]; // 1 keyboard, 2 mouse, 3 joystick (gamepad), 4 keyboard WASD (remake); never equal
+  control: [number, number]; // 1 keyboard, 2 mouse, 3 joystick (gamepad), 4 keyboard WASD, 5 touch (remake); never equal
   cdSound: boolean;
   soundEffects: boolean;
 }
@@ -66,6 +67,10 @@ export interface Ctx {
   view: 'screen' | 'world' | 'video';
   /** The browser can't quit: set by the main menu's Exit instead. */
   quit: boolean;
+  /** Keys the current screen offers as touch buttons (none: the screen takes taps as clicks). */
+  touchKeys: readonly TouchKey[];
+  /** A level is paused (P). */
+  paused: boolean;
 }
 
 /** Crt.Delay(ms). */

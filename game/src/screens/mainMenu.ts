@@ -1,12 +1,12 @@
 // Main menu: DrawMainMenu 0x1D60E and the menu loop in the main body @0x1D7C0. Six pre-drawn REST.LIB
 // item sprites over HMBILD.PIC; the selected one glows through the global sprite cycle [base+1, base+10].
-// Keyboard only (no pointer, the mouse can't select).
+// Keyboard only in the original (the mouse can't select); the remake also takes a tap or click on an item.
 
 import { decodeSave } from '../save';
 import { hangar } from './hangar';
 import { newGameState } from '../sim/tick';
 import { FADE_STEPS } from '../sim/state';
-import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
+import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
 import { textViewer } from './textViewer';
 
 const ITEMS = 6; // Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions (about), Exit
@@ -27,6 +27,23 @@ function* drawMainMenu(ctx: Ctx, selected: number): Proc {
   yield* fadeIn(ctx);
 }
 
+/** The item under a tap or click, 0 for none: its 25-pixel row (the sprites overlap) and its width. */
+function itemAt(ctx: Ctx, x: number, y: number): number {
+  const s = ctx.screen;
+  const i = Math.floor((y - 20) / 25) + 1;
+  if (i < 1 || i > ITEMS) return 0;
+  const slot = itemSlot(i);
+  return x >= s.x[slot] && x < s.x[slot] + s.spriteWidth(s.n[slot]) ? i : 0;
+}
+
+/** Wait for a key press or a tap (both released first). */
+function* waitAnyInput(ctx: Ctx): Proc {
+  const any = () => ctx.input.anyKey() || ctx.input.mouse.down;
+  while (any()) yield* delay(10);
+  while (!any()) yield* delay(10);
+  while (any()) yield* delay(10);
+}
+
 /**
  * Exit (item 6 or Esc): FadeOut(0, 10, 0) and the program ends. A browser page can't exit, so the remake
  * stays black and silent until a key is pressed, then shows the menu again (design).
@@ -35,9 +52,7 @@ function* quit(ctx: Ctx): Proc {
   yield* fadeOut(ctx, false, 10);
   ctx.music?.stop();
   ctx.quit = true;
-  yield* waitNoKey(ctx);
-  while (!ctx.input.anyKey()) yield* delay(10);
-  yield* waitNoKey(ctx);
+  yield* waitAnyInput(ctx);
   ctx.quit = false;
 }
 
@@ -60,9 +75,7 @@ function* cheated(ctx: Ctx): Proc {
     s.set(10 + i, 900 + i, 4, 8 + 8 * i);
   });
   s.fade = FADE_STEPS;
-  yield* waitNoKey(ctx);
-  while (!ctx.input.anyKey()) yield* delay(10);
-  yield* waitNoKey(ctx);
+  yield* waitAnyInput(ctx);
   s.clear();
 }
 
@@ -75,7 +88,16 @@ export function* mainMenu(ctx: Ctx): Proc {
   // The original quits at once while Esc is held, even an Esc still held from the hangar (I); the remake
   // needs a fresh press.
   let escArmed = false;
+  let mouseArmed = false; // a tap counts once the button was up
   for (;;) {
+    const m = ctx.input.mouse;
+    const tap = mouseArmed && m.down ? itemAt(ctx, m.x, m.y) : 0;
+    mouseArmed = !m.down;
+    if (tap !== 0 && tap !== selected) {
+      s.n[itemSlot(selected)] = itemSprite(selected);
+      selected = tap;
+      s.n[itemSlot(selected)] += 1;
+    }
     const move = held('ArrowUp') ? -1 : held('ArrowDown') ? 1 : 0;
     if (move !== 0) {
       playSound(ctx, 12); // GRLASER
@@ -90,7 +112,7 @@ export function* mainMenu(ctx: Ctx): Proc {
       escArmed = false;
       yield* drawMainMenu(ctx, selected);
     }
-    if (held('Enter') || held('Space')) {
+    if (tap !== 0 || held('Enter') || held('Space')) {
       playSound(ctx, 16); // DROHNE3
       yield* delay(100);
       switch (selected) {

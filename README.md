@@ -66,12 +66,14 @@ npm test       # simulation tests
 ```
 After a key or click the intro plays (any key skips it). Main menu: arrows and Enter. The hangar works with the
 mouse ("Shoot em all" starts the next level, "Multiplayer" adds player 2, "Optionen" sets each player's controls:
-Tastatur, Maus, Joystick = gamepad, or WASD). Keyboard in a level: arrows move, Ctrl or X fires, Alt or C switches
+Tastatur, Maus, Joystick = gamepad, WASD or Touch). Keyboard in a level: arrows move, Ctrl or X fires, Alt or C switches
 altitude, Space selects a bonus, Ctrl+Space (or X+Space) uses it. WASD (a second player on the same keyboard):
 W/A/S/D move, left Shift fires, Q switches altitude, E selects, Shift+E uses; meanwhile the arrow player uses right
 Ctrl (fire), right Alt (altitude) and right Shift (select; right Ctrl + right Shift uses). Mouse: the jet follows the pointer, left fires,
 right switches altitude, middle selects a bonus, left+middle uses it. Gamepad: stick or d-pad, A fires, B switches
-altitude, X/LB selects, Y/RB uses. P pauses, Esc aborts to the menu. F toggles fullscreen (in Chrome with Keyboard
+altitude, X/LB selects, Y/RB uses. Touch (the default on phones and tablets): a stick appears under the left thumb,
+the buttons on the right fire (double tap: autofire), switch altitude, select and use a bonus; ❚❚ pauses, ✕ in the
+pause ends the level; in the menus tap the items, a long press is the right mouse button. P pauses, Esc aborts to the menu. F toggles fullscreen (in Chrome with Keyboard
 Lock, so desktop shortcuts don't take Ctrl/Alt combinations). The whole game plays through, including the shop,
 saves, two players and the ending (see `docs/PLAN.md` Phase 3 for what is left to check).
 

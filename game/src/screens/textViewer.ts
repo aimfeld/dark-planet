@@ -1,5 +1,7 @@
 // TextViewer @0x1C7F2: story, manual, about, mission briefings and the ending text, in SUPER.FNT over
 // RASTER.PIC with the EPIS1 palette. Every line is a text sprite (sprites 791+i in slots 24+i), 11 px apart.
+// The remake also ends the scrolling texts and the briefings on a tap, and offers the manual's keys as touch
+// buttons.
 
 import { delay, fadeIn, fadeOut, frame, playSound, waitNoKey, type Ctx, type Proc } from './proc';
 
@@ -17,6 +19,11 @@ const FIRST_SLOT = 24;
 const PITCH = 11; // DS:0x904 + 6
 const INK = 0x1e; // FontColor: EPIS1 colour 30, near white
 const LEFT = 10;
+const MANUAL_KEYS = [
+  { code: 'PageUp', label: '▲' },
+  { code: 'PageDown', label: '▼' },
+  { code: 'Escape', label: '✕' },
+];
 
 export function* textViewer(ctx: Ctx, a: ViewerArgs): Proc {
   const s = ctx.screen;
@@ -34,8 +41,9 @@ export function* textViewer(ctx: Ctx, a: ViewerArgs): Proc {
   // the remake waits for all keys to be released first.
   let armed = false;
   const key = () => {
-    if (!ctx.input.anyKey()) armed = true;
-    return armed && ctx.input.anyKey();
+    const any = ctx.input.anyKey() || ctx.input.mouse.down;
+    if (!any) armed = true;
+    return armed && any;
   };
   const show = (i: number, text: string, x: number, y: number) => {
     s.makeText(FIRST_SPRITE + i, text);
@@ -78,6 +86,7 @@ export function* textViewer(ctx: Ctx, a: ViewerArgs): Proc {
       for (let k = 0; k <= 20; k++) show(k, line(c + k), LEFT, PITCH * k + 5);
     };
     page();
+    ctx.touchKeys = MANUAL_KEYS;
     const held = (...codes: string[]) => codes.some((code) => ctx.input.held(code));
     for (;;) {
       if (held('ArrowDown') && c + 18 < a.last) {
@@ -103,6 +112,7 @@ export function* textViewer(ctx: Ctx, a: ViewerArgs): Proc {
       if (armed && held('Enter', 'Escape')) break;
       yield* frame(ctx, 15);
     }
+    ctx.touchKeys = [];
   }
   yield* waitNoKey(ctx);
   yield* fadeOut(ctx);

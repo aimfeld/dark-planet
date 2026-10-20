@@ -9,6 +9,7 @@ import { keyboardLockSupported, toggleFullscreen } from './input/fullscreen';
 import { Gamepad } from './input/gamepad';
 import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
+import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
@@ -18,9 +19,12 @@ const TICK_MS = 1000 / 40; // decision (user, session 3): fixed 40 Hz, 1 tick = 
 const MAX_TICKS_PER_FRAME = 8; // after a stall, catch up at most this much instead of spiralling
 const SETTINGS_KEY = 'darkplanet.settings'; // SETTINGS.DAT
 const SAVE_KEY = 'darkplanet.save'; // SAVE.DAT, base64
+/** A phone or tablet: the primary pointer is a finger. */
+const TOUCH_DEVICE = window.matchMedia('(pointer: coarse)').matches;
 
 function loadSettings(): Settings {
   const s = structuredClone(DEFAULT_SETTINGS);
+  if (TOUCH_DEVICE) s.control = [5, 1]; // P1 touch (P2 the keyboard, for a tablet with one)
   try {
     Object.assign(s, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'));
   } catch {
@@ -55,6 +59,40 @@ const saveSlot: SaveSlot = {
   },
 };
 
+/** The notch and rounded corners (viewport-fit=cover), read from CSS env(). */
+function safeInsets(): Insets {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) ' +
+    'env(safe-area-inset-bottom) env(safe-area-inset-left)';
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const insets = { t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0,
+    b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0 };
+  probe.remove();
+  return insets;
+}
+
+/** The touch layout for the window, recomputed when its size changes. */
+function layoutCache(): () => TouchLayout {
+  let key = '';
+  let layout: TouchLayout;
+  return () => {
+    const k = `${window.innerWidth}x${window.innerHeight}`;
+    if (k !== key) {
+      key = k;
+      layout = touchLayout(window.innerWidth, window.innerHeight, safeInsets());
+    }
+    return layout;
+  };
+}
+
+/** Fullscreen (and on a phone or tablet the landscape lock, where the browser allows it). */
+async function fullscreen(): Promise<void> {
+  await toggleFullscreen().catch(() => undefined);
+  const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+  if (TOUCH_DEVICE && document.fullscreenElement) await orientation.lock?.('landscape').catch(() => undefined);
+}
+
 async function main(): Promise<void> {
   const status = document.getElementById('status')!;
   status.textContent = 'Lade Daten…';
@@ -77,37 +115,51 @@ async function main(): Promise<void> {
   const keys = new Keyboard(window);
   const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
   const pad = new Gamepad();
+  const touch = new TouchControls(document.body, TOUCH_DEVICE ? () => void fullscreen() : undefined);
+  const layout = layoutCache();
+  // For a touch (pointerup or touchend, not pointerdown, counts as the gesture that allows sound) or a key.
   const unlock = () => {
     sfx?.unlock();
     music.unlock();
   };
-  window.addEventListener('keydown', unlock);
-  window.addEventListener('pointerdown', unlock);
+  for (const type of ['keydown', 'pointerdown', 'pointerup', 'touchend']) window.addEventListener(type, unlock);
+  document.addEventListener('gesturestart', (e) => e.preventDefault()); // iOS pinch zoom
 
   let game: Game | undefined = undefined;
+  let pauseTap = false; // the page was hidden during a level: pause it (one P press)
   const input: MenuInput = {
-    held: (code) => keys.held(code),
-    anyKey: () => keys.anyKey(),
+    held: (code) => keys.held(code) || touch.held(code) || (code === 'KeyP' && pauseTap),
+    anyKey: () => keys.anyKey() || touch.anyKey(),
     mouse,
     get players() {
-      return playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad);
+      return playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad, touch);
     },
   };
+  const settings = loadSettings();
+  const touchUsed = () => settings.control.includes(5);
   // Browsers only play sound after a user gesture, so the intro (with its CD track) waits for one.
   status.textContent = '';
   const prompt = document.getElementById('start')!;
+  if (TOUCH_DEVICE) prompt.textContent = 'Dark Planet: Tippen zum Starten';
   prompt.hidden = false;
+  view.setArea(touchUsed() ? layout().game : null);
+  touch.update(false, [], layout());
   await new Promise<void>((resolve) => {
     const start = () => {
       window.removeEventListener('keydown', start);
-      window.removeEventListener('pointerdown', start);
+      window.removeEventListener('pointerup', start);
       resolve();
     };
     window.addEventListener('keydown', start);
-    window.addEventListener('pointerdown', start);
+    window.addEventListener('pointerup', start);
   });
   prompt.hidden = true;
-  game = new Game(createWorld(data, Date.now() >>> 0), input, loadSettings(), sfx, music, saveSettings, saveSlot, video);
+  game = new Game(createWorld(data, Date.now() >>> 0), input, settings, sfx, music, saveSettings, saveSlot, video);
+  document.addEventListener('visibilitychange', () => {
+    sfx?.setHidden(document.hidden);
+    music.setHidden(document.hidden);
+    if (document.hidden && game!.view === 'world' && !game!.paused) pauseTap = true;
+  });
   // A mouse player steers with the pointer captured (relative movement, as with the DOS driver); the
   // request needs a user gesture, so it is repeated on clicks during the level.
   const mousePlays = () =>
@@ -116,7 +168,7 @@ async function main(): Promise<void> {
     if (mousePlays()) mouse.lock();
   });
   if (import.meta.env.DEV) Object.assign(window, { game }); // for debugging in the browser console
-  status.textContent = keyboardLockSupported() ? '' : 'F: Vollbild (ohne Tastatursperre)';
+  status.textContent = TOUCH_DEVICE || keyboardLockSupported() ? '' : 'F: Vollbild (ohne Tastatursperre)';
 
   let acc = 0;
   let last = performance.now();
@@ -129,9 +181,14 @@ async function main(): Promise<void> {
       keys.sample();
       mouse.sample();
       pad.sample();
+      touch.sample();
       game.tick(input);
+      pauseTap = false;
       acc -= TICK_MS;
     }
+    const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
+    touch.update(touchPlays, game.touchKeys, layout());
+    view.setArea(touchUsed() ? layout().game : null);
     if (mousePlays() !== mouseWasPlaying) {
       mouseWasPlaying = !mouseWasPlaying;
       if (mouseWasPlaying) mouse.lock();

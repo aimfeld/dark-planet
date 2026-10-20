@@ -3,7 +3,12 @@
 
 import { FADE_STEPS } from '../sim/state';
 import { levelOver, startLevel, step } from '../sim/tick';
+import type { TouchKey } from '../input/touch';
 import { cdPlay, delay, RETRACE_MS, TICK_MS, type Ctx, type Proc } from './proc';
+
+const PAUSE_KEY: TouchKey = { code: 'KeyP', label: '❚❚' };
+const TOUCH_PLAYING = [PAUSE_KEY];
+const TOUCH_PAUSED = [PAUSE_KEY, { code: 'Escape', label: '✕' }];
 
 export type LevelResult = 'done' | 'gameover' | 'abort';
 
@@ -22,8 +27,12 @@ export function* playLevel(ctx: Ctx, level: number): Proc<LevelResult> {
   cdPlay(ctx, w.track);
   worldSounds(ctx); // the engine loops LevelStart started
   let result: LevelResult | null = null;
+  ctx.touchKeys = TOUCH_PLAYING;
   while (result === null) {
-    if (held('KeyP')) yield* pause(ctx);
+    if (held('KeyP') && (yield* pause(ctx))) {
+      result = 'abort';
+      break;
+    }
     step(w, ctx.input.players);
     worldSounds(ctx);
     if (w.track !== (ctx.music?.current ?? w.track)) cdPlay(ctx, w.track); // boss music (StartBossFight)
@@ -32,6 +41,7 @@ export function* playLevel(ctx: Ctx, level: number): Proc<LevelResult> {
     if (over) result = over;
     else if (held('Escape')) result = 'abort';
   }
+  ctx.touchKeys = [];
   // AfterLevel: every sound stops except 50 (the level 4 tank's death roar).
   ctx.sfx?.stopAll(50);
   if (result === 'done') {
@@ -43,11 +53,20 @@ export function* playLevel(ctx: Ctx, level: number): Proc<LevelResult> {
   return result;
 }
 
-/** Pause (P, DS:0x4440): Delay(500), then wait for the next P press. */
-function* pause(ctx: Ctx): Proc {
+/**
+ * Pause (P, DS:0x4440): Delay(500), then wait for the next P press. The remake also takes Esc here, which
+ * ends the level (true), so a touch player can abort from the pause, where the ✕ button is offered.
+ */
+function* pause(ctx: Ctx): Proc<boolean> {
   const held = () => ctx.input.held('KeyP');
+  ctx.paused = true;
+  ctx.touchKeys = TOUCH_PAUSED;
   yield* delay(500);
   while (held()) yield TICK_MS;
-  while (!held()) yield TICK_MS;
+  while (!held() && !ctx.input.held('Escape')) yield TICK_MS;
+  const abort = ctx.input.held('Escape');
   while (held()) yield TICK_MS;
+  ctx.paused = false;
+  ctx.touchKeys = TOUCH_PLAYING;
+  return abort;
 }

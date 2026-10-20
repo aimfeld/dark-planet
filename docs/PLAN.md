@@ -13,6 +13,7 @@
   - *Classic*: a 320×200 indexed framebuffer with the original palette, sprites and 8-bit SFX, integer-scaled with nearest-neighbour filtering.
   - *Remastered*: the same state rendered at native resolution and refresh rate with interpolation between ticks, plus upscaled assets (AI upscaling baseline, hand-refined later), particles, bloom and lighting, and the CD soundtrack as OGG/Opus.
   - Keep the 320×200 playfield proportions in both modes, because widening it would change the gameplay.
+- **Distribution (user, session 11):** the browser version is the product: desktop browsers, and phones and tablets with touch controls (installable from the browser as a PWA). Steam and the app stores are **optional**, probably not worth the hassle. If ever wanted: Electron rather than Tauri for Steam (the same Chromium on Windows, macOS, Linux and the Steam Deck; Tauri would use WebKitGTK there), Capacitor for Google Play / the App Store.
 - **Asset pipeline:** Python tools under `tools/` convert the original files into PNG atlases, JSON, OGG and WebM at build time. The user owns all assets.
 
 ## Phases
@@ -90,6 +91,11 @@
 - [x] Intro and ending videos (session 10): the game starts behind a "Taste oder Klick zum Starten" prompt (browsers need a gesture for sound), then plays the intro with CD track 4 (DPMAX.BAT), then the main menu; after the ending text the ending video plays with track 9, then the main menu. A key or click skips a video. `src/video.ts`, `src/screens/video.ts`, `test/video.test.ts`.
 - [ ] **User:** watch the intro and the ending (`npm run dev`; the ending: finish level 6, or call `game` in the console) and check the white flashes, the logo hold and the music; say whether the intro should play on every start.
 
+- [x] Touch controls for phones and tablets (session 11, decision 14): control type 5 "Touch" (`src/input/touch.ts`), the default on devices whose primary pointer is a finger. An HTML overlay beside the picture: a floating stick on the left (direction flags like the joystick, 8 directions), Feuer / Höhe / Bonus wählen / Bonus feuern on the right (a finger can slide between them; a double tap on Feuer locks autofire, the next tap releases it). Layout: beside the picture in landscape, below it in portrait, clear of the notch (`viewport-fit=cover`, safe-area insets); the picture fills the free space (non-integer scale). Menus take taps: main menu items, options lines, taps end the story/about/briefing/ending, the manual and the Multiplayer question offer their keys as buttons (`Ctx.touchKeys`), a long press is the right button (cancels a pod in the shop). Levels have a pause button; Esc (✕) while paused ends the level. Leaving the app pauses the level and silences the music. Fullscreen button with landscape lock where supported (not on iPhone: "Zum Home-Bildschirm" with the new `manifest.webmanifest` instead). Sound starts on `pointerup`/`touchend` (a touch's `pointerdown` doesn't count as a gesture). `test/touch.test.ts`; checked in headless Chrome emulating a phone (landscape and portrait) and a tablet: start, intro, menu, hangar, briefing, steering, firing, autofire, pause, ✕.
+- [~] **User:** play on a real phone and tablet (`npm run dev -- --host`, open the LAN address, or serve it over Tailscale): works on the user's Android phone (session 11). Still open: a tablet, an iPhone, and feedback on the steering feel, button sizes and places, autofire double tap, the shop with taps and long press.
+- [ ] Check the intro/ending WebM (VP9) on iPhone/iPad Safari; add an MP4 fallback if it doesn't play.
+- [ ] PWA icons (192/512 px) for `manifest.webmanifest`, and optionally a service worker for offline play.
+
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
 
@@ -107,6 +113,14 @@
 11. ~~Engine data stays local~~ (a misunderstanding in session 5). **Corrected (user, session 7):** all newly generated assets (sprites, tiles, levels, tables, sounds, soundtrack, videos) are under version control, kept small: compressed browser-friendly formats, no WAV files. Only `original_source/` stays local.
 12. The Golem's curse turns every jet's standard weapon into the Firestorm's basic gun (item 1): intentional, kept (user, session 7).
 13. Two players may share one keyboard: a second key set around WASD as an extra control type (user, session 10). The original never let both players use the keyboard.
+14. The game should work well on smartphones (landscape) and tablets with touch controls (user, session 11). Publishing on Steam or in the app stores is optional.
+
+## Notes (session 11, not yet confirmed by the user)
+- Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard
+  and joystick). Alternative if it feels wrong: drag steering through the mouse handler (the jet follows the
+  finger with an offset, like a captured mouse), at the cost of its 5 x max dead zone.
+- Remake additions that also work with a mouse: clicking main menu items and options lines, a click ends the
+  scrolling texts and briefings, Esc while paused ends the level.
 
 ## Notes (session 10, not yet confirmed by the user)
 - Gamepad mapping (a pad has no keypad): A fire, B altitude, X/LB select a bonus, Y/RB use it; left stick

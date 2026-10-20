@@ -4,6 +4,7 @@
 import type { Music } from './audio/music';
 import type { Sfx } from './audio/sfx';
 import type { GameData } from './data';
+import type { TouchKey } from './input/touch';
 import { mainMenu } from './screens/mainMenu';
 import { TICK_MS, type Ctx, type MenuInput, type Proc, type SaveSlot, type Settings } from './screens/proc';
 import { Screen } from './screens/screen';
@@ -31,6 +32,8 @@ export class Game implements Ctx {
   readonly screen: Screen;
   view: 'screen' | 'world' | 'video' = 'screen';
   quit = false;
+  touchKeys: readonly TouchKey[] = [];
+  paused = false;
   input: MenuInput;
   private readonly proc: Proc;
   private debt = 0; // ms the last step overran the tick

@@ -30,6 +30,10 @@ const DOORS = [
 /** Mission briefing lines in MISSIONS.PAS per level (DS:0x910 + 4 level). */
 const BRIEFING: [number, number][] = [[1, 14], [16, 30], [32, 47], [49, 64], [66, 79], [81, 96]];
 const ENDING: [number, number] = [98, 119];
+const JOIN_KEYS = [
+  { code: 'Enter', label: 'Ja' },
+  { code: 'Escape', label: 'Nein' },
+];
 // The cheat (0x1CF34): typing G-E-D-A-N-K-E sets both players' money to 666666.
 const CHEAT = ['KeyG', 'KeyE', 'KeyD', 'KeyA', 'KeyN', 'KeyK', 'KeyE'];
 
@@ -182,11 +186,12 @@ function* shootEmAll(ctx: Ctx): Proc<'hangar' | 'menu'> {
   return 'hangar';
 }
 
-/** "Multiplayer": P2 joins on Enter; it can't be undone. */
+/** "Multiplayer": P2 joins on Enter; it can't be undone. Touch gets Ja/Nein buttons (Enter / Esc). */
 function* multiplayer(ctx: Ctx): Proc {
   const input = ctx.input;
   if (!ctx.world.twoPlayer) {
     label(ctx, 'Verstärkung? Enter=Ja, Rest=Nein');
+    ctx.touchKeys = JOIN_KEYS;
     yield* frame(ctx, 15);
     while (!input.anyKey()) yield 10; // busy wait without redrawing
     if (input.held('Enter')) {
@@ -194,6 +199,7 @@ function* multiplayer(ctx: Ctx): Proc {
       ctx.screen.n[23] = P2_DOOR[1];
     }
     while (input.anyKey()) yield 10;
+    ctx.touchKeys = [];
   } else {
     label(ctx, 'Zurückschalten nicht möglich!');
     yield* frame(ctx, 15);

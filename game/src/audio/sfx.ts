@@ -39,6 +39,12 @@ export class Sfx {
     return new Sfx(ctx, buffers);
   }
 
+  /** The page is hidden: hold the mix (loops resume where they were). */
+  setHidden(hidden: boolean): void {
+    if (hidden) void this.ctx.suspend();
+    else this.unlock();
+  }
+
   /** Browsers start audio only after a user gesture; call this from key handlers. */
   unlock(): void {
     if (this.ctx.state === 'suspended') void this.ctx.resume();

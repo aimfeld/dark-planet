@@ -45,6 +45,12 @@ export class Music {
     this.audio.pause();
   }
 
+  /** The page is hidden (another app or tab): silence; shown again: the track continues. */
+  setHidden(hidden: boolean): void {
+    if (hidden) this.audio.pause();
+    else this.unlock();
+  }
+
   /** Call from a user gesture: starts the requested track if the browser blocked it before. */
   unlock(): void {
     if (this.enabled && this.track !== 0 && this.audio.paused) this.audio.play().catch(() => undefined);

@@ -1,10 +1,11 @@
 // Options @0x1C4CD (setup 0x1C443, lines 0x1C168, cursor 0x1C10B): OMBILD.PIC with the EPIS1 palette,
 // _BROADWA lines and the REST star as the cursor. The original's CPU line is dropped (decision 9, user,
-// session 4), so "Menu verlassen" moves up to line 5.
+// session 4), so "Menu verlassen" moves up to line 5. The remake also takes a tap or click on a line.
 
 import { cdPlay, delay, fadeIn, frame, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
 
-const CONTROLS = ['Tastatur', 'Maus', 'Joystick', 'WASD']; // DS:0x502 + 256 ctl; WASD: the remake's 2nd key set
+// DS:0x502 + 256 ctl; the remake adds WASD (a 2nd key set) and Touch
+const CONTROLS = ['Tastatur', 'Maus', 'Joystick', 'WASD', 'Touch'];
 const LINES = 5;
 const CURSOR_SLOT = 12;
 const CURSOR = 556; // global sprite cycle 556..566, rate 4
@@ -35,6 +36,12 @@ function* drawLines(ctx: Ctx, animate: boolean): Proc {
   }
 }
 
+/** The line under a tap (its text and the gap above it), 0 for none. */
+function lineAt(x: number, y: number): number {
+  const i = Math.floor((y - 37) / 20) + 1;
+  return x >= 15 && i >= 1 && i <= LINES ? i : 0;
+}
+
 function* waitKeyUp(ctx: Ctx): Proc {
   while (ctx.input.anyKey()) yield* frame(ctx, 15);
 }
@@ -55,8 +62,16 @@ export function* options(ctx: Ctx): Proc {
   yield* fadeIn(ctx);
   // The Enter/click that opened the options may still be held (the hangar is mouse-driven); wait for it.
   yield* waitKeyUp(ctx);
+  let mouseArmed = false; // a tap counts once the button was up
   for (;;) {
     yield* frame(ctx, 0);
+    const m = ctx.input.mouse;
+    const tap = mouseArmed && m.down ? lineAt(m.x, m.y) : 0;
+    mouseArmed = !m.down;
+    if (tap !== 0) {
+      line = tap;
+      cursor();
+    }
     const move = held('ArrowUp') ? -1 : held('ArrowDown') ? 1 : 0;
     if (move !== 0) {
       playSound(ctx, 12); // GRLASER
@@ -65,7 +80,7 @@ export function* options(ctx: Ctx): Proc {
       cursor();
     }
     if (held('Escape')) break;
-    if (held('Enter') || held('Space') || (held('ArrowRight') && line !== LINES)) {
+    if (tap !== 0 || held('Enter') || held('Space') || (held('ArrowRight') && line !== LINES)) {
       playSound(ctx, 16); // DROHNE3
       yield* delay(100);
       if (line === LINES) break;
