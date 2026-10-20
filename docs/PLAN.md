@@ -156,7 +156,7 @@
 - Recordings that would settle open questions (DOSBox-X with `dplanet.conf`, video recording from the Capture menu):
   1. Level 1 boss flying **high** and firing at the legs the whole time: does the escort (legs, 0x24, 180 energy)
      break off? In the remake it does after about 7 s of hits; the existing capture never shows it, but there the
-     player may not have hit it at all.
+     player may not have hit it at all. **Settled (user, session 17): the remake's level 1 boss matches the original.**
   2. Any of levels 2–6 (a save from the hangar is fine): the only reference for episode 2 so far are 1998 screenshots.
   3. Menus: ~~"Die Geschichte" for 30 s (scroll speed of the text viewer)~~ (fine, user, session 17), and the shop's "Grosse Pods" list.
 
