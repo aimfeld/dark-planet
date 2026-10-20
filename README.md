@@ -79,7 +79,7 @@ Lock, so desktop shortcuts don't take Ctrl/Alt combinations). Each player's cont
 below the picture. macOS takes Ctrl+arrows (Spaces, Mission Control) even then; to fire with Ctrl on a Mac, turn off
 "Mission Control", "Application windows" and "Move left/right a space" in System Settings → Keyboard → Keyboard
 Shortcuts → Mission Control. The whole game plays through, including the shop,
-saves, two players and the ending (see `docs/PLAN.md` Phase 3 for what is left to check).
+saves, two players and the ending (classic mode is done; `docs/PLAN.md` Phase 3 lists a few optional checks).
 
 The game's assets are generated from `original_source/` and committed, so the game runs from a plain checkout:
 `game/public/data/` (sprites, tiles, menu pictures, fonts, texts, levels, tables and SFX; binaries gzip-compressed) and
