@@ -18,11 +18,28 @@ export { HUD };
 const POD_START = [[-7, -22], [0, 0], [0, 0], [-17, 14], [4, 14], [-35, 16], [22, 16], [0, 0]];
 
 /** New game (main menu item 1 @0x1D769 + InitPlayer @0x1B2E3): level 1, P1 only (P2 joins in the hangar). */
-export function newGame(w: World, twoPlayer = false): void {
+export function newGameState(w: World): void {
   w.players = [newPlayer(0), newPlayer(1)];
   w.players[0].active = true;
-  w.players[1].active = twoPlayer;
-  w.twoPlayer = twoPlayer;
+  w.twoPlayer = false;
+  w.level = 1;
+  w.gameCompleted = false;
+}
+
+/**
+ * Hangar "Multiplayer" (game menu 0x1D095): DS:0x25A0 := 1 and InitPlayer(2). Original bug (spec §12 #11):
+ * InitPlayer also set P1 active again after P1 was out; the remake only adds P2.
+ */
+export function joinPlayer2(w: World): void {
+  w.players[1] = newPlayer(1);
+  w.players[1].active = true;
+  w.twoPlayer = true;
+}
+
+/** A new game started straight at level 1 (tests). */
+export function newGame(w: World, twoPlayer = false): void {
+  newGameState(w);
+  if (twoPlayer) joinPlayer2(w);
   startLevel(w, 1);
 }
 

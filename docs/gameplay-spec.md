@@ -663,17 +663,35 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
   the batch file plays the ending video (CD track 9).
 - Abort (Esc) and game over return to the main menu.
 
-### 9.2 Menus
-- Main menu: new game, load game, story, manual (Anleitung), about, quit (CD track 2; story = track 3).
-- Hangar (game menu, mouse): **Shoot em all** (mission briefing from MISSIONS.PAS, then the level),
-  **Shop**, **Multiplayer** (P2 joins: "Verstärkung? Enter=Ja"; can't be undone), **Optionen**, back to the
-  main menu.
-- Options: control type P1/P2, CD sound, sound effects. The original's CPU line is dropped (decision, user, session 4).
+### 9.2 Menus (details and addresses: re-notes "Main menu, hangar, options" and "Text viewer", session 8)
+- Menu loops run one pass per Delay(15) + draw (≈ 18 ms), not on the 40 Hz tick; palette fades are 20 steps,
+  one per 70 Hz retrace (≈ 0.29 s). The remake runs the menus as coroutines that keep these times (I: the draw
+  share of a pass, 3 ms, isn't measured).
+- **Main menu** (HMBILD.PIC/PAL, CD track 2, keyboard only): six REST.LIB item sprites (613 + 11 i), the selected
+  one glowing (global sprite cycle). Up/Down: sound 12 + Delay(100), wrapping; Enter/Space: sound 16 + Delay(100).
+  Items: new game, load game, story (CD track 3, text viewer), manual (Anleitung, pager), about (Horse
+  Productions), Exit; Esc also quits.
+- **Text viewer** (RASTER.PIC + EPIS1, SUPER.FNT colour 0x1E, 11 px line pitch): mode 1 scrolls 1 px per frame
+  with a new line every 11 frames (story 150 ms/frame, about 80, ending 130); mode 2 is the mission briefing
+  (20 lines slide in from both sides, sound 47, wait for a key); mode 3 is the manual pager (18 lines, arrows
+  by line, Left/Right/PgUp/PgDn by page, Enter/Esc leave). Any keyboard key ends modes 1 and 2.
+- **Hangar** (game menu, UMBILD.PIC/PAL, mouse pointer 612, _BROADWA labels at y 180): five hotspots; three doors
+  open while hovered (sounds 47 / 22); a click plays 21. **Shoot em all** (mission briefing from MISSIONS.PAS,
+  then the level), **Shop**, **Multiplayer** (P2 joins: "Verstärkung? Enter=Ja, Rest=Nein"; "Zurückschalten
+  nicht möglich!" afterwards), **Optionen**, **Zurück zu Hauptmenu** (or Esc). Nothing about the players is
+  shown. The cheat GEDANKE works here.
+- **Options** (OMBILD.PIC + EPIS1, _BROADWA colour 0x1F, star cursor 556): control type P1/P2 (Tastatur, Maus,
+  Joystick; never the same for both), CD sound, sound effects, "Menu verlassen". The original's CPU line is
+  dropped (decision, user, session 4). Leaving writes SETTINGS.DAT (remake: browser storage).
 - New game: level 1, P1 only, 5 lives, 0 money, Firestorm, engine 1, shield 1, no pods, no bonuses. A joining P2
   starts with the same. Lives, money, jet and equipment carry over between levels; life and shield are refilled
   and both players start high at (60, 140) (P1) and (140, 140) (P2).
 - During a level the engine sound 5 loops (heli: sound 49); "Shoot em all" starts 5 if an active player flies a
-  jet other than the Steptokopter and 49 if one flies the Steptokopter (both can run).
+  jet other than the Steptokopter and 49 if one flies the Steptokopter (both can run). The level appears at full
+  brightness (no fade-in).
+- Remake choices (design, session 8): screens that the original ends while a key is held need a fresh key press
+  (the confirm key could skip them); Exit (no program to quit in a browser) shows black until a key and returns
+  to the main menu; after a hangar item the remake waits for the mouse button to be released.
 
 ### 9.3 Sprite cycles (O, 1d9e:3105)
 Many sprites animate by themselves: every tick, any sprite whose number lies in a cycle range [first, last)

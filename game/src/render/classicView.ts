@@ -2,13 +2,14 @@
 
 import { Application, Sprite, Texture } from 'pixi.js';
 import type { GameData } from '../data';
+import type { PaletteName, Screen } from '../screens/screen';
 import type { World } from '../sim/state';
 import { FADE_STEPS } from '../sim/state';
 import { flashLut, Framebuffer, H, paletteLut, W } from './framebuffer';
 
 export class ClassicView {
   private readonly fb: Framebuffer;
-  private readonly luts: Uint32Array[]; // per fade level
+  private readonly luts: Record<PaletteName, Uint32Array[]>; // per palette and fade level
   private readonly flash = flashLut();
   private readonly canvas = document.createElement('canvas');
   private readonly ctx: CanvasRenderingContext2D;
@@ -19,7 +20,8 @@ export class ClassicView {
 
   private constructor(private readonly app: Application, data: GameData) {
     this.fb = new Framebuffer(data);
-    this.luts = Array.from({ length: FADE_STEPS + 1 }, (_, f) => paletteLut(data, f));
+    const levels = (name: PaletteName) => Array.from({ length: FADE_STEPS + 1 }, (_, f) => paletteLut(data, f, name));
+    this.luts = { EPIS1: levels('EPIS1'), HMBILD: levels('HMBILD'), UMBILD: levels('UMBILD') };
     this.canvas.width = W;
     this.canvas.height = H;
     this.ctx = this.canvas.getContext('2d')!;
@@ -29,6 +31,7 @@ export class ClassicView {
     this.texture.source.scaleMode = 'nearest';
     this.sprite = new Sprite(this.texture);
     app.stage.addChild(this.sprite);
+    app.canvas.style.cursor = 'none'; // the hangar and the shop draw their own pointer sprite
     window.addEventListener('resize', () => this.layout());
     this.layout();
   }
@@ -51,15 +54,30 @@ export class ClassicView {
     this.sprite.y = Math.floor((window.innerHeight - (H * scale) / dpr) / 2);
   }
 
-  draw(w: World): void {
-    this.fb.render(w);
-    this.present(w.flash ? this.flash : this.luts[Math.max(0, Math.min(FADE_STEPS, w.fade))]);
+  /** The canvas element (for pointer input). */
+  get element(): HTMLCanvasElement {
+    return this.app.canvas;
   }
 
-  /** A placeholder text screen (see Framebuffer.renderScreen). */
-  drawScreen(lines: [string, number][]): void {
-    this.fb.renderScreen(lines);
-    this.present(this.luts[FADE_STEPS]);
+  /** Client coordinates to 320 x 200 screen pixels. */
+  toScreen(cx: number, cy: number): [number, number] {
+    const scale = this.sprite.scale.x;
+    return [(cx - this.sprite.x) / scale, (cy - this.sprite.y) / scale];
+  }
+
+  draw(w: World): void {
+    this.fb.render(w);
+    this.present(w.flash ? this.flash : this.lut('EPIS1', w.fade));
+  }
+
+  /** A menu screen (main menu, text viewer, hangar, options). */
+  drawScreen(sc: Screen): void {
+    this.fb.renderScreen(sc);
+    this.present(this.lut(sc.palette, sc.fade));
+  }
+
+  private lut(name: PaletteName, fade: number): Uint32Array {
+    return this.luts[name][Math.max(0, Math.min(FADE_STEPS, fade))];
   }
 
   private present(lut: Uint32Array): void {

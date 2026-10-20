@@ -1,0 +1,100 @@
+// Main menu: DrawMainMenu 0x1D60E and the menu loop in the main body @0x1D7C0. Six pre-drawn REST.LIB
+// item sprites over HMBILD.PIC; the selected one glows through the global sprite cycle [base+1, base+10].
+// Keyboard only (no pointer, the mouse can't select).
+
+import { hangar } from './hangar';
+import { newGameState } from '../sim/tick';
+import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
+import { textViewer } from './textViewer';
+
+const ITEMS = 6; // Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions (about), Exit
+const itemSprite = (i: number) => 613 + 11 * (i - 1); // 0x265
+const itemSlot = (i: number) => 13 + i;
+
+function* drawMainMenu(ctx: Ctx, selected: number): Proc {
+  const s = ctx.screen;
+  if (ctx.settings.cdSound) cdPlay(ctx, 2);
+  s.clear();
+  for (let i = 1; i <= ITEMS; i++) {
+    const n = itemSprite(i);
+    s.set(itemSlot(i), n, 160 - (s.spriteWidth(n) >> 1), 26 + 25 * (i - 1) - (i === 1 ? 3 : 0));
+  }
+  s.n[itemSlot(selected)] += 1;
+  s.picture = 'HMBILD';
+  s.palette = 'HMBILD';
+  yield* fadeIn(ctx);
+}
+
+/**
+ * Exit (item 6 or Esc): FadeOut(0, 10, 0) and the program ends. A browser page can't exit, so the remake
+ * stays black and silent until a key is pressed, then shows the menu again (design).
+ */
+function* quit(ctx: Ctx): Proc {
+  yield* fadeOut(ctx, false, 10);
+  ctx.music?.stop();
+  ctx.quit = true;
+  yield* waitNoKey(ctx);
+  while (!ctx.input.anyKey()) yield* delay(10);
+  yield* waitNoKey(ctx);
+  ctx.quit = false;
+}
+
+export function* mainMenu(ctx: Ctx): Proc {
+  const s = ctx.screen;
+  const held = (code: string) => ctx.input.held(code);
+  let selected = 1;
+  ctx.view = 'screen';
+  yield* drawMainMenu(ctx, selected);
+  // The original quits at once while Esc is held, even an Esc still held from the hangar (I); the remake
+  // needs a fresh press.
+  let escArmed = false;
+  for (;;) {
+    const move = held('ArrowUp') ? -1 : held('ArrowDown') ? 1 : 0;
+    if (move !== 0) {
+      playSound(ctx, 12); // GRLASER
+      yield* delay(100);
+      s.n[itemSlot(selected)] = itemSprite(selected);
+      selected = ((selected - 1 + move + ITEMS) % ITEMS) + 1;
+      s.n[itemSlot(selected)] += 1;
+    }
+    if (!held('Escape')) escArmed = true;
+    if (escArmed && held('Escape')) {
+      yield* quit(ctx);
+      escArmed = false;
+      yield* drawMainMenu(ctx, selected);
+    }
+    if (held('Enter') || held('Space')) {
+      playSound(ctx, 16); // DROHNE3
+      yield* delay(100);
+      switch (selected) {
+        case 1:
+          newGameState(ctx.world);
+          yield* hangar(ctx);
+          yield* drawMainMenu(ctx, selected);
+          break;
+        case 2:
+          // Load game (1d9e:05D9) comes with the shop and the saves.
+          break;
+        case 3:
+          cdPlay(ctx, 3);
+          yield* textViewer(ctx, { file: 'STORY.TXT', centred: false, first: 1, last: 261, mode: 1, frameDelay: 150 });
+          yield* drawMainMenu(ctx, selected);
+          break;
+        case 4:
+          yield* textViewer(ctx, { file: 'ANLEIT.UNG', centred: false, first: 1, last: 288, mode: 3, frameDelay: 0 });
+          yield* drawMainMenu(ctx, selected);
+          break;
+        case 5:
+          yield* textViewer(ctx, { file: 'ABOUT.TXT', centred: true, first: 1, last: 199, mode: 1, frameDelay: 80 });
+          yield* drawMainMenu(ctx, selected);
+          break;
+        case 6:
+          yield* quit(ctx);
+          yield* drawMainMenu(ctx, selected);
+          break;
+      }
+      yield* waitMouseUp(ctx);
+    }
+    yield* frame(ctx, 15);
+  }
+}

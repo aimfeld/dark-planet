@@ -1,60 +1,89 @@
-// Boot: load the data, run the fixed 40 Hz game loop (menu placeholder, levels) and draw the classic view.
+// Boot: load the data, run the fixed 40 Hz game loop (menus, levels) and draw the classic view.
 
+import { Music } from './audio/music';
 import { Sfx } from './audio/sfx';
 import { loadGameData } from './data';
-import { Game } from './game';
+import { DEFAULT_SETTINGS, Game } from './game';
 import { Keyboard } from './input/keyboard';
 import { keyboardLockSupported, toggleFullscreen } from './input/fullscreen';
+import { Mouse } from './input/mouse';
 import { ClassicView } from './render/classicView';
-import { createWorld } from './sim/state';
+import type { MenuInput, Settings } from './screens/proc';
+import { createWorld, NO_INPUT } from './sim/state';
 
 const TICK_MS = 1000 / 40; // decision (user, session 3): fixed 40 Hz, 1 tick = 1 original frame
 const MAX_TICKS_PER_FRAME = 8; // after a stall, catch up at most this much instead of spiralling
+const SETTINGS_KEY = 'darkplanet.settings'; // SETTINGS.DAT
+
+function loadSettings(): Settings {
+  const s = structuredClone(DEFAULT_SETTINGS);
+  try {
+    Object.assign(s, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'));
+  } catch {
+    // no storage (private window) or a broken entry: the defaults
+  }
+  return s;
+}
+
+function saveSettings(s: Settings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  } catch {
+    // not persisted
+  }
+}
 
 async function main(): Promise<void> {
   const status = document.getElementById('status')!;
   status.textContent = 'Lade Daten…';
-  const base = import.meta.env.BASE_URL + 'data/';
+  const base = import.meta.env.BASE_URL;
   const data = await loadGameData({
-    json: async (name) => (await fetch(base + name)).json(),
-    binary: async (name) => (await fetch(base + name)).arrayBuffer(),
+    json: async (name) => (await fetch(base + 'data/' + name)).json(),
+    binary: async (name) => (await fetch(base + 'data/' + name)).arrayBuffer(),
   }).catch((e) => {
     status.textContent = 'Daten konnten nicht geladen werden (game/public/data/)';
     throw e;
   });
-  const sfx = await Sfx.load(base).catch((e) => {
+  const sfx = await Sfx.load(base + 'data/').catch((e) => {
     console.warn('no sounds:', e);
     return undefined;
   });
+  const music = new Music(base + 'music/');
 
-  const game = new Game(createWorld(data, Date.now() >>> 0), sfx);
   const view = await ClassicView.create(document.getElementById('app')!, data);
   const keys = new Keyboard(window);
-  window.addEventListener('keydown', () => sfx?.unlock());
+  const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
+  const unlock = () => {
+    sfx?.unlock();
+    music.unlock();
+  };
+  window.addEventListener('keydown', unlock);
+  window.addEventListener('pointerdown', unlock);
+
+  const input: MenuInput = {
+    held: (code) => keys.held(code),
+    anyKey: () => keys.anyKey(),
+    mouse,
+    // P1 on the keyboard; mouse and gamepad steering come with the two-player input
+    get players() {
+      return [keys.player(), NO_INPUT];
+    },
+  };
+  const game = new Game(createWorld(data, Date.now() >>> 0), input, loadSettings(), sfx, music, saveSettings);
+  status.textContent = keyboardLockSupported() ? '' : 'F: Vollbild (ohne Tastatursperre)';
 
   let acc = 0;
   let last = performance.now();
-  let shown = 0;
   const frame = (now: number) => {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
-    if (keys.takePress('KeyP') && game.screen === 'level') game.paused = !game.paused;
     while (acc >= TICK_MS) {
-      game.tick({ input: keys.player(), enter: keys.takePress('Enter'), escape: keys.takePress('Escape') });
+      game.tick(input);
       acc -= TICK_MS;
     }
-    if (game.screen === 'level' || game.screen === 'fadeout') view.draw(game.world);
-    else view.drawScreen(game.screenText());
-    if (now - shown > 250) {
-      shown = now;
-      const w = game.world;
-      const p = w.players[0];
-      status.textContent = game.screen !== 'level' ? (keyboardLockSupported() ? '' : 'F: Vollbild (ohne Tastatursperre)') :
-        `${game.paused ? 'PAUSE  ' : ''}tick ${w.frame}  scrollY ${w.scrollY}  ` +
-        `life ${p.life} shield ${p.shield} lives ${p.lives} $${p.money}  ` +
-        `enemies ${w.enemies.filter((e) => e.active).length}`;
-    }
+    if (game.view === 'world') view.draw(game.world);
+    else view.drawScreen(game.screen);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

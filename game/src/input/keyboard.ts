@@ -12,7 +12,7 @@ const BINDINGS: Record<keyof PlayerInput, string[]> = {
   altitude: ['AltLeft', 'AltRight', 'KeyC'],
   bonus: ['Space'],
 };
-const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF'];
+const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown'];
 const CAPTURED = new Set([...Object.values(BINDINGS).flat(), ...OTHER]);
 
 export class Keyboard {
@@ -38,6 +38,16 @@ export class Keyboard {
       left: held(BINDINGS.left), right: held(BINDINGS.right), up: held(BINDINGS.up), down: held(BINDINGS.down),
       fire: held(BINDINGS.fire), altitude: held(BINDINGS.altitude), bonus: held(BINDINGS.bonus),
     };
+  }
+
+  /** A key (KeyboardEvent.code) is held, like the keyboard ISR's flag bytes. */
+  held(code: string): boolean {
+    return this.down.has(code);
+  }
+
+  /** AnyKey 1d9e:3605. */
+  anyKey(): boolean {
+    return this.down.size > 0;
   }
 
   /** True once per key press. */

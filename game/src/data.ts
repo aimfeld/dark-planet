@@ -144,7 +144,8 @@ export interface Font {
   width: number;
   height: number;
   widths: number[];
-  glyphs: Uint8Array; // 256 x height x width
+  multicolor: boolean;
+  glyphs: Uint8Array; // 256 x height x width: palette indices (multicolour) or 1 = set pixel (mono)
 }
 
 export interface GameData {
@@ -153,8 +154,15 @@ export interface GameData {
   tiles: Uint8Array[]; // per episode: 32 x 32 tiles, 1024 bytes each
   levels: Level[];
   fonts: Record<string, Font>;
-  palette: { rgb: number[][]; shadow: number[] };
+  palette: { rgb: number[][]; shadow: number[]; menus: Record<MenuPalette, number[][]> };
+  pictures: Record<Picture, Uint8Array>; // 320 x 200 palette indices
+  texts: Record<string, string[]>; // the game's text files by file name, as lines
 }
+
+/** Full-screen PIC backgrounds, in the order tools/export_engine_data.py writes them. */
+export const PICTURES = ['HMBILD', 'UMBILD', 'OMBILD', 'RASTER'] as const;
+export type Picture = (typeof PICTURES)[number];
+export type MenuPalette = 'HMBILD' | 'UMBILD';
 
 export interface RawData {
   json: (name: string) => Promise<unknown>;
@@ -172,7 +180,7 @@ export async function gunzip(buf: ArrayBuffer): Promise<ArrayBuffer> {
 }
 
 export async function loadGameData(raw: RawData): Promise<GameData> {
-  const [tables, spriteIndex, spriteBin, tiles1, tiles2, levels, fontIndex, fontBin, palette] = await Promise.all([
+  const [tables, spriteIndex, spriteBin, tiles1, tiles2, levels, fontIndex, fontBin, palette, pictureBin, texts] = await Promise.all([
     raw.json('tables.json'),
     raw.json('sprites.json'),
     raw.binary('sprites.bin.gz').then(gunzip),
@@ -182,14 +190,16 @@ export async function loadGameData(raw: RawData): Promise<GameData> {
     raw.json('fonts.json'),
     raw.binary('fonts.bin.gz').then(gunzip),
     raw.json('palette.json'),
+    raw.binary('pictures.bin.gz').then(gunzip),
+    raw.json('texts.json'),
   ]);
   const sprites = new Map<number, Sprite>();
   for (const [n, [offset, w, h]] of Object.entries(spriteIndex as Record<string, [number, number, number]>)) {
     sprites.set(Number(n), new Sprite(w, h, new Uint8Array(spriteBin, offset, w * h)));
   }
   const fonts: Record<string, Font> = {};
-  for (const [name, f] of Object.entries(fontIndex as Record<string, { width: number; height: number; offset: number; widths: number[] }>)) {
-    fonts[name] = { width: f.width, height: f.height, widths: f.widths, glyphs: new Uint8Array(fontBin, f.offset, 256 * f.width * f.height) };
+  for (const [name, f] of Object.entries(fontIndex as Record<string, { width: number; height: number; offset: number; widths: number[]; multicolor: boolean }>)) {
+    fonts[name] = { width: f.width, height: f.height, widths: f.widths, multicolor: f.multicolor, glyphs: new Uint8Array(fontBin, f.offset, 256 * f.width * f.height) };
   }
   return {
     tables: tables as Tables,
@@ -198,5 +208,7 @@ export async function loadGameData(raw: RawData): Promise<GameData> {
     levels: levels as Level[],
     fonts,
     palette: palette as GameData['palette'],
+    pictures: Object.fromEntries(PICTURES.map((name, i) => [name, new Uint8Array(pictureBin, i * 64000, 64000)])) as GameData['pictures'],
+    texts: texts as GameData['texts'],
   };
 }

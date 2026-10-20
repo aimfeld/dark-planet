@@ -536,6 +536,336 @@ Static analysis (REA CLI decompiles + objdump of segment 0x1000). Evidence IDs: 
   when +9 > 23; 22 → by +5: 0 (0, −s), 1 (s−2, −(s−2)), 2 (s, 0), 3 (s−2, s−2), 4 (0, s), 5 (−(s−2), s−2), 6 (−s, 0),
   7 (−(s−2), −(s−2)).
 
+## Main menu, hangar, options (session 8)
+
+Addresses linear (seg 0x1000 main, 0x1D9E game unit, 0x28BE AniVGA). O = observed in code, I = inferred.
+Sprite slot arrays: SpriteN DS:0x3146+2·slot, SpriteX DS:0xC2F0+2·slot, SpriteY DS:0xCA22+2·slot. Lower slot = in front.
+
+### Shared helpers (O)
+- `1d9e:2A7E Frame(ep)` = SpriteCycles(ep) (1d9e:3105, ep 0 = global cycles only) + sprite-cache load (1d9e:2F7C, XMS paging, no
+  remake equivalent) + AniVGA Animate (28be:2CEF). Every menu loop iteration calls it once: the cycle counter DS:0x5530 +1 per call.
+- `1d9e:2754 SpriteWidth(n)` = record width field ×4 (= full sheet width in sprites.json, multiple of 4).
+- `1d9e:2E58 MakeText(n, s)` = AniVGA MakeTextSprite (28be:1FC5) with the current font; text sprite width = text px rounded up to 4 (I).
+  Font colours: DS:0x25B9 = ink, DS:0x25BA = background; equal → transparent background (O, 28be:2420/2755).
+- `1d9e:098A FadeIn(style, steps)` (Pascal order). Every menu call is FadeIn(0, 20): palette := black, Frame(0), then AniVGA Fade
+  28be:027F from black to the target palette DS:0x4140 in 20 retrace steps (≈0.29 s). (Ghidra prints the args reversed.)
+- `1d9e:0907 FadeOut(waitMouse, steps, x)`: if waitMouse, wait until no mouse button; palette → black in `steps` steps; Frame(0).
+  Menus use FadeOut(1, 20, 0); program exit uses FadeOut(0, 10, 0).
+- `28be:5411 LoadPic(name)` → background page; `28be:0389 LoadPal(name, dst)`; `28be:01F6 SetPalette(pal, 1)`; `28be:1B75 LoadFont`.
+- `1000:C06E PointerToMouse(slot 1)`: INT 33h fn 3; SpriteX[1] = mouseX div 2, SpriteY[1] = mouseY (also DS:0x5516/0x5518 = x/2, y).
+- `272c:011B MouseDown` = left OR right OR middle held (level, not edge). `1d9e:3605 AnyKey` = last port-0x60 byte is a make code (1..0x80).
+- `1000:C0A9 ClearScreen`: all 920 slots := 0, scroll 0/0, AniVGA window reset.
+- Keyboard ISR 1d9e:362E sets/clears held flags: 6C30 Esc, 6C2C Enter, 6C2F Space, 6C2A Up, 6C2B Down, 6C28 Left, 6C29 Right,
+  6C2D Ctrl, 6C2E Alt, 4440 P, 6C31 kp−, 6C32 kp+, 6C39 PgUp, 6C3A PgDn, letters 6C33 G 6C34 E 6C35 D 6C36 A 6C37 N 6C38 K.
+
+### Main menu (DrawMainMenu 0x1D60E + loop in entry 0x1D7C0) (O)
+- Setup: CDPlay(2) if CD on; clear 920 slots; Frame(0); items i=1..6 in slots 13+i: sprite 613+11(i−1) (REST.LIB: Neues Spiel,
+  Spiel laden, Die Geschichte, Spielanleitung, Horse Productions(=About), Exit); x = 160 − SpriteWidth(base)/2, y = 26+25(i−1),
+  item 1 y −3. → (x,y): 1 (92,23) 2 (100,51) 3 (84,76) 4 (92,101) 5 (76,126) 6 (140,151). Selected item = 1: its sprite := base+1.
+  Background HMBILD.PIC, palette HMBILD.PAL, FadeIn(0,20). Slot 1 (pointer) has sprite 0 → no visible pointer.
+- Selected-item animation: sprite cycles (global table) [base+1, base+10] rate 2 → frames base+1…base+10 then back to base+1
+  (cycle counter mod 2 = 0). Deselect sets the sprite back to base (unanimated frame); the new selection gets base+1.
+- Loop per iteration: CDRepeat; PointerToMouse; Frame(0); input; Delay(15).
+  Up held → PlaySound 12 (GRLASER), Delay(100), selection −1 (1 → 6 wraps). Down → sound 12, Delay(100), +1 (6 → 1).
+  Held keys auto-repeat each iteration (~115 ms + draw). Enter or Space → sound 16 (DROHNE3), Delay(100), then:
+  1 new game: P2 off (DS:0x25A0 := 0), InitPlayer(1) (0x1B2E3), level 1, episode var 0 → hangar 0x1D095 → DrawMainMenu.
+  2 load: 1d9e:05D9; on success → hangar → DrawMainMenu.  3 Story: CDPlay(3), TextViewer(story.txt, raster.pic, 0, 1, 261, 1, 0, 150).
+  4 TextViewer(anleit.ung, raster.pic, 0, 1, 288, 3, 0, 0). 5 TextViewer(about.txt, raster.pic, 1, 1, 199, 1, 0, 80). 3–5 then DrawMainMenu.
+  6 quit. Afterwards: wait until no mouse button.
+- Esc held at the top of an iteration → quit at once (no confirm): FadeOut(0,10,0), shutdown 1d9e:3A15, exit.
+  Quirk (I): Esc still held when returning from the hangar (its Esc only waits for the mouse) quits the program.
+- Mouse cannot select or confirm in the main menu (only Enter/Space).
+- Timing (I): one iteration ≈ 15 ms delay + draw (≈50–60 Hz on the reference machine); cycle rate 2 ⇒ ~25 frames/s for the glow.
+
+### Hangar / game menu 0x1D095 (setup 0x1CE10) (O)
+- Setup (also re-run after shop, options and each level): FadeOut(1,20,0); clear slots; slot 1 pointer sprite 612 (8×11 arrow);
+  slot 20 = 579 at (87,96); slot 21 = 589 at (242,102); slot 22 = 599 at (230,7); slot 23 = 610 (P2 not joined) / 611 (joined)
+  at (24,134). LoadPic UMBILD.PIC; font _BROADWA.FNT (mono 9×16), ink 4, bg 4 (transparent); LoadPal UMBILD.PAL; FadeIn(0,20).
+  Then loop (pointer + Frame + Delay(15)) until no mouse button. CD music is not changed here (track 2 from the main menu keeps playing).
+- Hotspots (x = mouseX/2, y = mouseY, inclusive, DS:0x98E+8i: x1,y1,x2,y2), labels DS:0x917+0x15i:
+  1 (92,110)-(185,154) "Shoot em all"; 2 (245,111)-(320,154) "Shop"; 3 (20,126)-(76,170) "Multiplayer";
+  4 (228,18)-(312,58) "Optionen"; 5 (77,175)-(282,200) "Zurück zu Hauptmenu".
+- Per iteration: PointerToMouse; cheat check; Frame(0); Delay(15); for i=1..5 if pointer inside: label text sprite 817 in slot 3,
+  x = 160 − width/2, y = 180; on entering 1 or 2: StopSound(47) if playing, PlaySound 47 (DOORUP); entering 4: same with 22 (ALARM01).
+  If any mouse button is down → PlaySound 21 (LRM003B) and run the item. No hover → slot 3 sprite 0. Leaving 1/2 (or 4) plays
+  47 (or 22) again the same way. Door anims: every 5th iteration (DS:0x552E mod 5) slot 20 steps toward 588 while 1 is hovered,
+  else back toward 579; slot 21 likewise 589↔598 for 2; slot 22 steps every iteration 599↔609 for 4. AnimTick (1d9e:33FA); DS:0x552E+1.
+  Esc held → leave: FadeOut(1,20,0), return to the main menu (DrawMainMenu).
+- Items: 1 Shoot em all: TextViewer(missions.pas, raster.pic, 0, from, to, 2, 0, 0) with lines per level (DS:0x910):
+  L1 1–14, L2 16–30, L3 32–47, L4 49–64, L5 66–79, L6 81–96; episode := (level−1) div 3 + 1; FadeOut(1,20,0); GameSetup 1d9e:0000;
+  StartLevel(0x1B582, level name DS:0x932+256·level); LevelStartSprites 0x107F8; engine sound 5 / 49 loops (spec §9.2);
+  LoadPal Epis1.pal + SetPalette directly (the level starts at full brightness, no fade-in); game loop 0x1B787.
+  Completed → ClearScreen, TextViewer(missions.pas, raster.pic, 0, 98, 119, 1, 0, 130), WriteEndVideoBat, shutdown/exit.
+  Else CDPlay(2) if CD on; ClearScreen; unless aborted/game over (DS:0x3E05) re-run setup; aborted/game over → loop ends → main menu.
+  2 Shop: FadeOut(1,20,0); shop 1d9e:84BC; ClearScreen; setup.  4 Optionen: FadeOut(1,20,0); options; ClearScreen; setup.
+  5 Zurück: same exit as Esc.
+  3 Multiplayer, P2 not joined: label "Verstärkung? Enter=Ja, Rest=Nein" (slot 3, y 180), Frame, Delay(15), then busy-wait
+  (no redraw) for any key; if Enter is held: DS:0x25A0 := 1, InitPlayer(2) (0x1B2E3), slot 23 := 611, Frame. Any other key: no.
+  Joined: label "Zurückschalten nicht möglich!", Frame; wait until no button and no key, then until a button or key, then release.
+- Cheat (0x1CF34, counter in the hangar frame, starts 0): on each key make, the expected letter of G,E,D,A,N,K,E (by held flag)
+  advances it, anything else resets it to 0 (G restarts at 1); each key waits for release (with Frame + Delay(15)).
+  At 7: P1 money (DS:0x18F2) and P2 money (DS:0x18F6) := 666666 (also for an inactive P2), PlaySound 20 (AIDBONUS) twice.
+- Nothing about the player (money, level, lives) is shown in the hangar.
+
+### Options 0x1C4CD (setup 0x1C443, lines 0x1C168, cursor 0x1C10B) (O)
+- Entered after the hangar's FadeOut. LoadPic OMBILD.PIC; font _BROADWA, ink 0x1F, bg 0x1F (transparent); clear slots; Frame;
+  draw lines; cursor; LoadPal EPIS1.PAL; FadeIn(0,20).
+- Lines i=1..6: text sprite 817+i in slot 2+i at x 70, y 40+20(i−1). Texts (no space before control names):
+  "Steuerung Player1:" + Tastatur|Maus|Joystick (DS:0x502+256·ctl), "Steuerung Player2:" + same, "CDSound:" + " an"/" aus",
+  "SoundEffekte:" + " an"/" aus", "CPU:" + " 486"/" Pentium"/" Pentium II"/' "Cray"', "Menu verlassen".
+  Redrawing all lines does Frame + Delay(15) per line.
+- Cursor: slot 12 sprite 556 (REST star; global cycle 556…565 rate 4) at x = 70 − 51 = 19, y = 30 + 20(line−1). Start line 1.
+- Loop: PointerToMouse (no pointer sprite) ; Frame(0); Up/Down (held) → sound 12, Delay(100), line ∓1 wrapping 1↔6.
+  Esc → leave. Enter, Space, or Right (not on line 6) → sound 16, Delay(100), then:
+  1/2: control +1 (3 → 1), skipping the other player's value; redraw; wait for key release (with Frame + Delay(15)).
+  3: CD off → on only if a CD drive was found (DS:0x3E20), then CDPlay(2); on → off and StopCD (2628:0194); wait release; redraw.
+  4: SFX toggle (on only if a sound card was found, DS:0x3E1D); redraw (no release wait: held Enter keeps toggling every ~115 ms).
+  5: CPU 1→2→3→4→1; redraw (no release wait). 6: leave. After any action: wait until no mouse button. Delay(15) per iteration.
+- Leave: write SETTINGS.DAT (0x1AA85; format already in docs/file-formats.md), return to the hangar (ClearScreen + setup).
+
+### Pictures and palettes (O, from the literals next to each LoadPic/LoadPal)
+HMBILD.PIC + HMBILD.PAL (main menu); UMBILD.PIC + UMBILD.PAL (hangar); OMBILD.PIC + EPIS1.PAL (options);
+RASTER.PIC + EPIS1.PAL (text viewer, literal 0x1C7DC next to Super.fnt 0x1C7E6 — I, verify in the viewer). PIC files have no palette.
+REST.LIB sprites 579–613 and the menu items are drawn with the screen's palette, so preview sheets rendered with EPIS1 look wrong.
+
+## Text viewer, mission briefings, ending text (session 8)
+
+Evidence: REA pseudocode `ev_d52e5fec…` (TextViewer 0x1C7F2), `ev_b822bd25…` (DrawPage 0x1C6CF),
+`ev_420dccbb…` (MakeTextSprite 1d9e:2E58); objdump of seg 0x1000 / 0x1D9E / AniVGA 0x28BE (session-8 scratch, not kept).
+Literal addresses are linear (file offset = lin − 0x10000 + 8608). O = Observed, I = Inferred, U = Unknown.
+
+### TextViewer @0x1C7F2 (near, main program)
+Pascal signature (O, push order at the call sites; Ghidra lists the params reversed):
+`TextViewer(fileName, picName: string; centred: boolean; firstLine, lastLine, mode, picTable, frameDelay: integer)`
+
+| Caller | file | pic | centred | first | last | mode | picTable | delay |
+|---|---|---|---|---|---|---|---|---|
+| Main menu 3 Story @0x1D932 (after CDPlay(3)) | story.txt @0x1D73F | raster.pic @0x1D749 | 0 | 1 | 261 | 1 | 0 | 150 |
+| Main menu 4 Anleitung @0x1D95D | anleit.ung @0x1D754 | raster.pic | 0 | 1 | 288 | 3 | 0 | 0 |
+| Main menu 5 About @0x1D989 | about.txt @0x1D75F | raster.pic | 1 | 1 | 199 | 1 | 0 | 80 |
+| Game menu "Shoot em all" briefing @0x1D294 | missions.pas @0x1D034 | raster.pic @0x1D041 | 0 | [DS:0x910+4·lvl] | [DS:0x912+4·lvl] | 2 | 0 | 0 |
+| Ending after level 6 @0x1D36E | missions.pas | raster.pic | 0 | 98 | 119 | 1 | 0 | 130 |
+
+Briefing line table (O, DS:0x914…): L1 1–14, L2 16–30, L3 32–47, L4 49–64, L5 66–79, L6 81–96
+(= MISSIONS.PAS blocks "MISSION n:" … last text line).
+
+#### Setup (O, 0x1C826–0x1C8B3)
+1. SpriteN[1..920] := 0 (all sprites cleared).
+2. `FadeOut(style 0, 20 steps, waitMouse 1)` 1d9e:0907: wait until mouse buttons are released, palette → black in
+   20 steps (AniVGA Fade 28be:027F, ≈ 0.29 s), then Animate once while black.
+3. Assign/Reset the text file (TP Text, `ReadLn` into string[255]; CR/LF lines, no control codes in any of the files).
+4. `LoadPalette('epis1.pal' @0x1C7DC)` → DS:0x4140, SetPalette at once (I: a brief flash of the old screen in EPIS1
+   colours until the fade-in blacks it out again; the remake can skip it).
+5. LoadPicture(picName) = **RASTER.PIC with the EPIS1 palette** (no own palette).
+6. LoadFont('Super.fnt' @0x1C7E6): SUPER.FNT, mono 8×8, every glyph 8 px wide (fixed pitch). Glyph index = CP437 byte.
+7. Text colours: FontColor DS:0x25B9 := 0x1E (EPIS1 #30 = RGB 244,244,244), FontBack DS:0x25BA := 0.
+   AniVGA text-to-sprite (28be:1FC5 ≈ 0x2A3A0): set bit → FontColor; clear bit → 0 if FontColor = FontBack, else
+   FontBack. Here FontBack = 0 = transparent, so text is plain near-white with transparent background (O).
+8. `FadeIn(style 0, 20)` 1d9e:098A: black palette, Animate, fade to DS:0x4140 in 20 steps.
+Constants (O, typed consts never written): DS:0x902 = 5 (top margin), DS:0x904 = 5 → **line pitch = 0x904 + 6 = 11 px**.
+
+Text lines are text sprites: `MakeTextSprite(sprite, s)` 1d9e:2E58 (AniVGA 28be:1FC5, reuses the load slot per
+sprite number); an empty line becomes " " (@0x1C7F0 / @0x1C6CD). Sprites 0x317+i (791…811) in slots 24+i.
+Clip window: the viewer doesn't set one. It's full screen (0–319) whenever ResetScreen 0x1C0A9 (SetAnimateWindow
+0,0,319,199) or the startup has run (I). Lines start at x = 10, so 39+ char lines (STORY has 40/41-char lines,
+ABOUT 47 but centred) run past x = 319 and are clipped at the screen edge (I, check in DOSBox-X).
+
+#### Mode 1: auto-scroll credits style (Story, About, Ending)
+- Skip firstLine−1 lines; line counter C (DS:0x906) := firstLine; frame counter f := 0; ring index r := 0.
+- Each frame (O): f += 1; CDRepeat; every text slot 24…44 with a sprite: y −= 1 (scroll 1 px/frame);
+  if f mod 11 = 0: if C ≤ lastLine { r := (r+1) mod 20 (1..19,0,…); read the next line; sprite 791+r at y = 200,
+  x = 10 (centred = 0) or 160 − TextWidth div 2 (centred = 1; 28be:1F37, I: = 8·length) }; C += 1 regardless.
+  Then Delay(frameDelay ms); DrawFrame 1d9e:2A7E (sprite cycles + Animate).
+- Ends when C > lastLine + 20 (the last line has scrolled 220 px, off the top) or a key is down
+  (KeyDown 1d9e:3605 = port 0x60 holds a make code 1…0x80: **any keyboard key, mouse doesn't count**).
+- Duration: 11·(lastLine − firstLine + 21) frames; one frame = frameDelay + draw time (U: ≈ a few ms in DOSBox-X).
+  Story 3091 frames × ≈ 150 ms ≈ 7.7 min; About 2409 × ≈ 80 ms ≈ 3.2 min; Ending 462 × ≈ 130 ms ≈ 60 s.
+  Remake at 40 Hz: 1 px every round((delay + ~5 ms)/25 ms) ticks, i.e. Story 6, About 3–4, Ending 5–6 ticks/px (I).
+- picTable: an unused leftover. Each frame it checks 4 entries (sprite at DS:0x900+6·t+2i, trigger line at
+  DS:0x906+6·t+2i, slot 44+i at (200,200), moving up) for "picture sprites appear at line N"; for t = 0 (every
+  caller) the triggers are lines 623/613/643 and are never reached. The remake ignores it (O table, I purpose).
+
+#### Mode 2: mission briefing (static page with slide-in)
+- Skip firstLine−1 lines; for i = 1…20: read a line; text = " " if empty or C > lastLine; sprite 791+i in slot 24+i,
+  **y = 11·i** (0x904+6)·i + 0x902 − 5; x = −340 for odd i, +360 for even i (s·350 + 10, s alternating −1/+1).
+- Delay(13); PlaySound(47 DOORUP); 50 frames: odd lines x += 7, even lines x −= 7 (all reach x = 10),
+  DrawFrame, Delay(13). ≈ 50 × (13 ms + draw) ≈ 0.8 s → remake 50 frames ≈ 25–32 ticks or keep 50 ticks at 40 Hz (I).
+- Then loop: DrawFrame; Delay(20); CDRepeat; until any key is down. Briefing lines are ≤ 16, so y ≤ 176 (all visible).
+  The mouse can't dismiss it (KeyDown only); the game menu reached it by a mouse click.
+
+#### Mode 3: manual pager (Anleitung)
+- C := firstLine (1). DrawPage 0x1C6CF: re-reads the file from the start, shows lines C…C+20 at x = 10,
+  y = 11·k + 5 (k = 0…20); rows k ≥ 18 lie below y 200, so **18 visible lines** (y 5…192).
+- Each frame: CDRepeat; keys (held-state flags from the keyboard ISR 1d9e:362E; O mapping below):
+  Down (scan 0x50 → DS:0x6C2B): if C + 18 < lastLine then C += 1 → max top line 270 (shows 270–287);
+  Up (0x48 → 0x6C2A): if C > firstLine then C −= 1; Left 0x4B (0x6C28) or PgUp 0x49 (0x6C39): C −= 18 (min 1),
+  Delay(150); Right 0x4D (0x6C29) or PgDn 0x51 (0x6C3A): C += 18, if C + 18 > lastLine then C := lastLine − 18,
+  Delay(150). Any of these redraws the page. Then DrawFrame; Delay(15).
+- Ends on Enter (0x1C → 0x6C2C) or Esc (0x01 → 0x6C30) (held state).
+  Held Up/Down scroll one line per frame (≈ 15 ms + draw + file re-read); remake: 1 line/tick (I).
+
+#### Exit (all modes, O)
+Wait until no key is down (Delay(10) polls), Close the file, FadeOut(0, 20, waitMouse 1). The caller redraws its own
+screen (main menu: DrawMainMenu 0x1D60E → CDPlay(2) again; FadeIn). Quirk (I): the viewer is entered with the
+confirm key (Enter/Space) still possibly held; mode 1/2 exit as soon as a key is down and mode 3 on held Enter, so a
+long press can skip the screen. The remake should require a fresh key press after the fade-in.
+
+### Briefing in the "Shoot em all" flow (O, game menu 0x1D25F–0x1D341)
+PlaySound(0x15) on the click (@0x1D24F, I: menu click sound) → TextViewer(missions.pas, mode 2, level lines) →
+episode := (level−1) div 3 + 1 → FadeOut(0,20,1) (already black) → 1d9e:0000 (setup) → StartLevel(levelfile) →
+LevelStartSprites 0x107F8 (loads **fire.fnt** @0x107EF) → engine sounds 5/49 → LoadPalette('Epis1.pal' @0x1D04C) +
+SetPalette **without a fade-in** (the level appears at once) → game loop 0x1B787.
+
+### Ending (O, 0x1D344–0x1D377)
+If DS:0x6C53 (game completed): ResetScreen 0x1C0A9 (clear sprites, scroll 0/0, SetAnimateWindow(0,0,319,199), Animate)
+→ TextViewer(missions.pas, raster.pic, not centred, lines 98–119, mode 1, delay 130) → WriteEndVideoBat 0x1AC74 →
+Shutdown(0) 1d9e:3A15 (restores the system, prints the message for a non-zero code, then Halt). DPMAX.BAT then plays
+CD track 9 + ENDING.TXT (FLIs). Lines 120–126 ("übrigens: Hast du den Cheat schon entdeckt?") are never shown
+(last = 119). The music during the ending text is whatever DS:0x3E03 holds, kept looping by CDRepeat: track 8 from
+StartBossFight's CDPlay(8) (I). Any key skips the text.
+
+### Fonts (O): there is no font table; one "current font", loaded where needed (AniVGA LoadFont 28be:1B75)
+- fire.fnt: LevelStartSprites @0x10803 (HUD money/lives).
+- Super.fnt: text viewer @0x1C89D (story, manual, about, briefings, ending).
+- _broadwa.fnt: Options @0x1C45F (colours 0x1F/0x1F) and the game menu draw @0x1CEB7 (colours 4/4; its status text
+  sprite 0x331 at y 180, centred). Out of scope here; for the hangar fork.
+- default.fnt: shop 1d9e:84E5 (colours 0x1C/0x1C).
+- Main menu: colours 2/2 but its items are pre-drawn REST.LIB sprites, not text.
+FUN_1000_af0f (startup) loads no font. Mono fonts take FontColor/FontBack as above; the multicolour FIRE font uses its
+own pixel colours (I, from the second branch @28be:2755; not needed here).
+
+### Other text screens on this path
+- "Loading..." is written in text mode by the main body before the graphics start (O); then text-mode progress
+  strings ("XMS initialisieren...", "Sounds laden...", "Sprites laden...", "Gamesettings laden...", per session-2 notes).
+- No level-title screen: StartLevel runs straight after the briefing (O).
+- Shutdown messages (1d9e:3908…, O): "Keine Soundkarte gefunden!", "Zuwenig konventionellen Speicher!",
+  "Palettedatei nicht vorhanden!", "IOResult Fehler trat auf!", "Fehler beim XMS-allokieren",
+  "Na du kleines Schlitzohr, so läuft das aber nicht! / Da musste schon früher aufstehen, um den Saveschutz /
+  übers Ohr zu hauen!!!" (save-file tamper check).
+
+### Unknown / to check in DOSBox-X
+- Real frame time of the viewer loops (Delay + Animate) → scroll speed of Story/About/Ending.
+- Whether 39–41 char lines are clipped at x = 319 (expected) or wrap.
+
+## Shop screen and load/save (session 8; implementation pending)
+
+Evidence: Ghidra pseudocode of 1d9e:84BC (`ev_08cdf79d…`) plus CLI decompiles of every 1d9e helper
+(decompiles), objdump of the whole image (session-8 scratch files, not kept; the shop's action dispatch
+0x26141–0x261E5 was dropped by Ghidra as "unreachable" and is read from the disassembly).
+Layout check (session-8 scratch render, not kept): sprite 501 on RASTER.PIC with every hit rectangle drawn; all line up.
+Slot arrays: SpriteN DS:0x3146+2s, SpriteX DS:0xC2F0+2s, SpriteY DS:0xCA22+2s; draw-mode byte DS:0xB820+s.
+Coordinates are 320×200. The mouse driver x is halved (mouse x 0..639 → 0..319), y is used as is.
+Labels: O = Observed in code, I = Inferred.
+
+### Screen setup (O, 84BC)
+- If a mouse button is still held on entry: Crt Sound(500 Hz), Delay(500), NoSound (PC-speaker beep, 3BC9).
+- Font `default.fnt` (6×6 mono; AniVGA 28be:1B75), background `raster.pic`, palette `Epis1.pal`, fade in
+  20 steps (28be:578A(20)). Scroll 0/0, all sprite slots cleared, clip 0..319 × 0..199.
+- Text colour: DS:0x25B9 = DS:0x25BA = 0x1C, so fg = 0x1C (EPIS1 RGB 228,228,228) with a transparent background
+  (AniVGA draws bg only when 25B9 ≠ 25BA, @0x2B009). Text sprites are built by 1d9e:2E58(spriteNo, string).
+- Static sprites: slot 64 = **501** (the whole 316×196 panel) at (3,3). Pointer: slot 1 = **495** (arrow 8×11)
+  and slot 2 = 496 (4×1) both at (mouseX/2, mouseY), updated every frame.
+- Player number text sprite 849 (slot 45) at (76,122) = "1"/"2" right of the PLAYER button.
+- Money text sprite 837 (slot 23), centred at x 124 (x = 124 − w/2), y 122. Same sprite number as the HUD money.
+- Category name text sprite 840 (slot 3), centred x 94, y 141: "Kleine Pods", "Grosse Pods", "Boni",
+  "Antriebe", "Schilde", "Kugel Pods", "Jets" (literals 1d9e:3C1C…3C55; cat 1..7).
+- Mode frame slot 33 = **506** (32×19 yellow frame) at (160 + 40(mode−1), 130).
+- Initial state: mode 1 (KAUFEN), category 2 (Grosse Pods), page 0, no selection; info box shows SPEZIAL3.
+  Current player DS:0x9BF = 1 if P1 active, else 2.
+
+### Main loop (O)
+Per iteration: CDRepeat, pointer update, click cooldown DS:0x9BE (10 iterations after each handled click),
+mode-button cooldown DS:0xA26 (7 after a mode change), cycle anims (33FA; nothing in the shop starts one),
+Animate, Delay(15). A click (any button, 272c:011B) when the cooldown is 0 runs, in order:
+1. Money exchange button: x 145..177, y 101..119 ("GELD AUSTAUSCH") → 6A7E.
+2. Player switch: x 43..83, y 120..130 ("PLAYER"), only in a two-player game (DS:0x25A0): switches to the
+   other player if active (sound 22 ×2), else SPEZIAL16 + sound 23 ×2. Then redraw jet/offers.
+3. Mode buttons (7007), i = 1..4: x 160+40(i−1) .. 188+40(i−1), y 130..148: 1 KAUFEN, 2 VERKAUFEN,
+   3 POSITION WECHSEL, 4 HAUPT MENU. Clicking a different mode: sound 22 ×2, frame 506 moves, header cleared;
+   mode 1 → page 0, rebuild offers, SPEZIAL3; mode 2 → hide offers (6556), SPEZIAL2; mode 3 → hide offers,
+   SPEZIAL10, highlight frames. **Mode 4 exits the shop at once.**
+4. Mode 1: category arrows (6F7C): left x 36..50, right x 136..150, y 136..149, wrap 1..7 (sound 22 ×2);
+   offer boxes (67A0); clicking the KAUFEN button again (5311, same rect, cooldown A26 ≤ 0) → Delay(130), buy (75BE).
+   Mode 2: a click not on VERKAUFEN selects a mounted item (5373); then if the selection is sellable (5165) and
+   the click was on VERKAUFEN → sell (5558).
+   Mode 3: click selects a position (5373); if it holds a large pod → swap UI (811F).
+Exit: write back the edited player record, DS:0x9BF := 1, wait for button release, clear DS:0xB820 modes.
+
+### Offer list (O, 6216 / 5D66 / 67A0)
+- Offers: up to 20 (cat, id) per category sorted by price (rules in spec §10). 5 boxes per page, i = 1..5.
+- Box i: frame area x 56i−34 .. 56i+17, y 163..188 (click rect). Empty entry: **503** (TV-noise 52×27) at
+  (56i−34, 161) and empty price text.
+- Item sprite (slot 12+i) at x = dxCat[cat] + 56i + ofsX(cat,id), y = dyCat[cat] + ofsY(cat,id) + 163;
+  dxCat (cat 1..7) = −15,−13,−21,−15,−17,−17,−17; dyCat = 0,0,−2,0,0,0,−1 (DS:0xA11/0xA19).
+  ofs (ItemInfo fields 11/12): small, large, shield (1,1); engine (0,0); boni (DS:0x1795[id] = 1,5,3,5,4,4,4,5,5,0,5; 1);
+  ball pods (3,2),(1,1),(1,1); jets dx −3,−2,−1,−2,0, dy 0.
+  Sprites: small 507,517,509,508,171,510,534; large = in-game pod sprites 43,49,62,56,58,69,74,81,87,94,139;
+  boni 393,410,418,435,439,443,447,453,459,464,484; engines 512,530,542; shields 511,519,543; ball 110,100,120;
+  jets 537,538,539,541,540; standard weapons by jet 516,507,518,171,518.
+- **Unaffordable** (price > money): a second copy of the sprite in slot 7+i with draw mode 3 (DS:0xB820 = shadow
+  mode, the same as enemy shadows) over it → I: shown darkened. Clicks on it are ignored (no sound).
+- Price text sprite 840+i (slots 18..22), centred x 56i−7, y 190.
+- Page arrows: right x 301..312, y 159..192 (only if entry page+6 exists), left x 7..19 (page > 0): page ±5,
+  selection cleared, sound 22 ×2.
+- Selecting box i: frame **502** (52×29) in slot 24 at (56i−34, 161), info text (THEMA=cat, ART=id), header
+  (icon + price), sound 21 ×2. Empty box → sound 23 ×2.
+
+### Info box and header (O, 4366 / 4288)
+- Texts from `Info.Pas` (read at runtime): `BEGIN THEMA<cat>` … `BEGIN ART<id>` … `END ART<id>`, or
+  `BEGIN SPEZIAL<n>` … `END SPEZIAL<n>`. Max 18 chars × 6 lines. Line k (1..6): text sprite 827+k, slot 33+k,
+  x 203, y 38 + 10k (48, 58, … 98). Missing ART → "Noch kein Text!" at (203,48) plus a PC-speaker beep
+  (Sound(1000), Delay(100), NoSound).
+- SPEZIAL texts: first the header (4288) with sprite **520** ("INFO", slot 31) at (233,15), no price.
+- Item header: slot 31 = item icon at (250 + ofsX, 9 + ofsY) (shop sprite of the item); price text sprite 848
+  (slot 32) centred x 257, y 36 (empty when 0). In sell mode the price shown is the refund (½, boni ¼, I from 0b9b).
+- Messages used: 1 jet can't be sold; 2 sell help; 3 buy help; 4 no mount here; 5 "Gekauft"; 6 "Verkauft";
+  7 all positions taken (waits for a click); 8 no ball pods on this jet (switching to Kugel Pods with the
+  Firestorm); 9 placement help; 10 position-change help; 11 boni sell at ¼; 12 standard pod can't be sold;
+  13 can't mount this; 14 max 2 of the same pod; 15 3 boni already; 16 partner is dead; 17 "Spiel gespeichert!".
+- After a buy: SPEZIAL5 + line 2 = "Investiert:" + price (sprite 828, slot 35, (203,58)).
+  After a sell: SPEZIAL6 + "Rückzahlung: " + refund (same sprite/position).
+
+### Jet display (O, 5909) — positions table DS:0x9C2 (x) / 0x9D0 (y), index p:
+p: 0 large(mount 0) (103,13) | 1 engine (101,77) | 2 small (84,18) | 3 standard (123,18) | 4..7 large mounts 3..6
+(73,45) (133,45) (53,49) (153,49) | 8 ball (59,15) | 9 shield (13,15) | 10 jet (93,41) | 11..13 boni (10/38/66, 89).
+- Jet sprite (slot 128) at (93 + 10 + jetDx, 41 + 3 + jetDy). Engine slot 46 at (101,77). Shield slot 47 at (14,16).
+  Standard weapon slot 53 at (124,19). Mounts 0,1,3..7 → slots 51+m at (X[p] + ofsX, Y[p] + ofsY).
+  Boni slots 48..50 at (X[11+k] + boniDx[id] − 1, 90).
+- Highlight frames (4FC7): 497 (16×24) for large-pod positions, 498 (24×21) engine/ball/shield, 499 (16×18)
+  small/standard, 505 (36×32) jet, 500 (28×26) boni; at (X[p], Y[p]). Buy mode shows them on every position of the
+  category that the jet has (slots 27..31); sell/position mode shows one on the selected position (slot 31, which
+  also holds the header icon, so the icon disappears: quirk).
+- Category positions (DS:0x9E8): 1 small [2]; 2 large [0,4,5,6,7]; 3 boni [11,12,13]; 4 engine [1]; 5 shield [9];
+  6 ball [8]; 7 jet [10]. Click rect per position: x..x+w, y..y+h with w = 9,16,19,19,19,23,34 and
+  h = 17,22,19,19,19,24,30 by category (DS:0x9DD/0x9E5).
+
+### Buying a large pod / position change (O, 75BE / 811F)
+- Pointer becomes the pod's sprite (slot 1, slot 2 hidden), mouse window x 3..179, y 7..117, pointer set to (95,60);
+  SPEZIAL9 shown. Right button cancels (buy) / only when nothing held (swap). Left click on a free valid position
+  installs (pay, sound 22 ×2, "Gekauft"); an invalid one shows SPEZIAL4. Swap: clicking another large pod swaps
+  it into the hand (Delay 200); an empty mount the jet has places it and ends. Afterwards the pointer and the
+  window (0..638 × 0..199) are restored.
+
+### Money exchange (O, 6A7E)
+Only if both players are active (else sound 23). Panel **535** (slot 61) at (203,51); header icon **536** ("EXIT",
+slot 31) at (231,7); mouse window x 200..312, y 4..119. P1 money text 837 centred x 231, y 62; P2 money 838
+centred x 280, y 96; step text 811 (slot 25) at (240,79); step table 1/100/1000/9000, default 1000.
+Rects (absolute): P1→P2 x 277..289, y 60..71; P2→P1 x 221..232, y 93..104; step up x 265..272, y 77..81;
+step down y 82..86. Transfer moves min(money, step) (28be:58E6), sound 22; no money → sound 23 + Delay(100).
+Ends on a click while the pointer touches EXIT (HitDetect slot 31 vs slot 1), sound 22, back to SPEZIAL3.
+
+### Sounds
+21 LRM003B select offer; 22 ALARM01 button/ok; 23 BMBLITZ error. Each is played twice back to back (I: louder).
+
+### Load / save (O)
+- Save (1d9e:0350) is silent; the shop pays the Save price, writes back the current player record, saves, shows
+  SPEZIAL17 "Spiel gespeichert! Vertrau mir!!".
+- Load (1d9e:05D9, main menu item 2): no SAVE.DAT (IOResult ≠ 0) → returns false, nothing shown, menu stays.
+  Bad checksum → Shutdown(6): the program quits to DOS printing "Na du kleines Schlitzohr, so läuft das aber nicht!" /
+  "Da musste schon früher aufstehen, um den Saveschutz" / "übers Ohr zu hauen!!!" (literals 1d9e:3998–39FF).
+  Success → straight into the game menu (hangar).
+Unknown: AniVGA 28be:0106(0x28), 50F2/5063(0) and DS:0x25C0 := 2 in the setup.
+
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.

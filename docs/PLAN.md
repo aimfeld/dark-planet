@@ -59,7 +59,8 @@
 - [x] **User:** original bugs: the remake fixes them (session 4; fixes listed in `docs/gameplay-spec.md` §12).
 - [ ] Update the spec from the DOSBox-X captures (§13).
 - [x] Extract all gameplay tables to JSON for the engine (session 5): `tools/game_tables.py` (jets, engines, shields, items/prices, standard weapons and pod volleys, shot types, enemy types/guns/shot kinds, explosion anims and kinds, sprite anims and cycles, bonus drops, levels and boss spawns, sound names, shadow brightness). `--check` compares it with the spec values: 0 mismatches. New code findings (Explode, AnimTick, SpawnShot, SetShadowTab, HitDetect, StartBossFight) in re-notes "Engine tables (session 5)".
-- [ ] Not yet covered: the text viewer/menus in detail, mission briefing layout, exact HUD fonts, the ending sequence timing.
+- [x] Menus, text viewer, mission briefings, ending text, options, shop screen and load/save flow (session 8, static RE by three parallel forks): re-notes "Main menu, hangar, options", "Text viewer…", "Shop screen and load/save". Fonts: FIRE (HUD), SUPER (text viewer), _BROADWA (hangar, options), DEFAULT (shop). Palettes: HMBILD/UMBILD own .PAL, OMBILD and RASTER use EPIS1.
+- [ ] DOSBox-X checks for the menus: real frame time of the text viewer (scroll speed of story/about/ending), whether 39+ character lines are clipped at x 319.
 
 ### Phase 3: Engine + classic mode 🔄
 - [x] Project scaffold (session 5): `game/` with Vite + TypeScript + PixiJS + Vitest. Fixed 40 Hz loop in `src/main.ts`, separate from rendering (catch-up capped at 8 ticks). Keyboard input (original keys plus X = fire, C = altitude, because browsers grab Ctrl/Alt combinations). Engine data from `tools/export_engine_data.py` into `game/public/data/` (local only, gitignored like `original_source/`; `npm run data`).
@@ -78,7 +79,11 @@
 - [x] Episode 2 and the bosses (session 7): all 43 enemy subs, all 22 enemy-shot patterns, Direction8 and Nearest(2), the per-type hooks (snake facing and head fire, turret facing, parts riding on the cores), BossScript for levels 2–6 (`src/sim/bosses.ts`: level 2 core dropping to the ground, snake shortening from the back, tank, fortress, Golem intro/curse/teleport/rocks/bounce/lasers/death), Quake's sound 14. Levels 2–6 play through to their bosses (`test/bosses.test.ts`). Fixes per decision 8: §12 #7–9 (session 4 list) and new #17 (snake ghost sprite), #18 (dead Golem paid again), #19 (snake refill without the 2P bonus). Spec correction: the curse also turns the standard weapon into item 1, the Firestorm's gun.
 - [ ] **User:** play levels 2–6 (episode 2 enemies, all five bosses) and report differences.
 - [x] **User:** the Golem curse turning every jet's standard weapon into the Firestorm's gun is intentional (decision 12).
-- [ ] Menus, hangar, shop, saves, options, mission briefings, two players (mouse/joystick/gamepad input).
+- [x] Menus (session 8): main menu, text viewer (story, manual, about, briefings, ending text), hangar with doors, labels, Multiplayer join and the GEDANKE cheat, options (stored in browser storage), CD music (`src/audio/music.ts`, tracks loop like CDRepeat; level, boss and menu tracks). The menus are generator coroutines (`src/screens/`) that yield the milliseconds each step takes, so they keep the original's Delay(15) loop passes and 70 Hz fades while the levels keep the 40 Hz tick. Exporter: `pictures.bin.gz` (HMBILD/UMBILD/OMBILD/RASTER), the menu palettes, all four fonts, `texts.json`. `test/menus.test.ts` (screens dumped to `test-output/menu-*.bmp`).
+- [ ] **User:** try the menus (`cd game && npm run dev`): main menu glow and keys, story/manual/about, hangar doors and labels, briefing slide-in, options, CD music switching (menu → level → boss → menu).
+- [ ] Shop screen (spec in re-notes "Shop screen and load/save"; rules already in spec §10) and save/load (SAVE.DAT → browser storage; the "Save" item and main-menu "Spiel laden").
+- [ ] Two players: mouse and gamepad steering (spec §2) for the control types chosen in the options; P2 can join already but has no input yet.
+- [ ] Ending video (FLI → WebM, decision 7) after the ending text; for now the remake returns to the main menu.
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.

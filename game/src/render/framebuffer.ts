@@ -2,6 +2,7 @@
 // No DOM here, so it also runs in tests.
 
 import type { GameData } from '../data';
+import { cp437, type PaletteName, type Screen } from '../screens/screen';
 import { FADE_STEPS, MODE_SHADOW, SLOTS, type World } from '../sim/state';
 
 export const W = 320;
@@ -31,7 +32,7 @@ export class Framebuffer {
       const x0 = full ? 0 : CLIP_X0, x1 = full ? W - 1 : CLIP_X1;
       const x = spr.x[slot] - sx0, y = spr.y[slot] - sy0;
       const text = w.texts.get(n);
-      if (text !== undefined) this.text(text, x, y, x0, x1);
+      if (text !== undefined) this.text(text, 'FIRE', 0, x, y, x0, x1);
       else this.sprite(n, x, y, x0, x1, spr.mode[slot] === MODE_SHADOW);
     }
   }
@@ -75,19 +76,23 @@ export class Framebuffer {
     }
   }
 
-  /** A placeholder screen: lines of FIRE text, centred, on black (menus are not ported yet). */
-  renderScreen(lines: [string, number][]): void {
-    this.px.fill(0);
-    const widths = this.data.fonts.FIRE.widths;
-    for (const [text, y] of lines) {
-      const w = [...text].reduce((a, ch) => a + widths[cp437(ch)], 0);
-      this.text(text, (W - w) >> 1, y, 0, W - 1);
+  /** A menu screen: the PIC background, then slots 920..0 over the full screen (no clip window). */
+  renderScreen(sc: Screen): void {
+    const px = this.px;
+    if (sc.picture) px.set(this.data.pictures[sc.picture]);
+    else px.fill(0);
+    for (let slot = SLOTS - 1; slot >= 0; slot--) {
+      const n = sc.n[slot];
+      if (n === 0) continue;
+      const t = sc.texts.get(n);
+      if (t) this.text(t.text, t.font, t.ink, sc.x[slot], sc.y[slot], 0, W - 1);
+      else this.sprite(n, sc.x[slot], sc.y[slot], 0, W - 1, false);
     }
   }
 
-  /** Text sprites (money, lives, invulnerability countdown) in the FIRE font. */
-  private text(text: string, x: number, y: number, x0: number, x1: number): void {
-    const f = this.data.fonts.FIRE;
+  /** A text sprite: multicolour fonts carry their own colours, mono fonts draw set pixels in `ink`. */
+  private text(text: string, font: string, ink: number, x: number, y: number, x0: number, x1: number): void {
+    const f = this.data.fonts[font];
     const px = this.px;
     for (const ch of text) {
       const code = cp437(ch);
@@ -98,7 +103,7 @@ export class Framebuffer {
         for (let i = 0; i < f.widths[code]; i++) {
           const sx = x + i;
           const c = f.glyphs[g + j * f.width + i];
-          if (c !== 0 && sx >= x0 && sx <= x1) px[sy * W + sx] = c;
+          if (c !== 0 && sx >= x0 && sx <= x1) px[sy * W + sx] = f.multicolor ? c : ink;
         }
       }
       x += f.widths[code];
@@ -127,9 +132,6 @@ export class Framebuffer {
   }
 }
 
-const CP437: Record<string, number> = { 'ä': 0x84, 'ö': 0x94, 'ü': 0x81, 'Ä': 0x8e, 'Ö': 0x99, 'Ü': 0x9a, 'ß': 0xe1 };
-const cp437 = (ch: string) => CP437[ch] ?? ch.charCodeAt(0) & 0xff;
-
 /** VGA DAC value (0..63) to 8 bits, as tools/export_engine_data.py converts the palette. */
 const dac8 = (c6: number) => Math.floor((c6 * 255) / 63);
 
@@ -137,9 +139,9 @@ const dac8 = (c6: number) => Math.floor((c6 * 255) / 63);
  * 32-bit RGBA lookup for the palette (little-endian ABGR words for ImageData), at fade level `fade`
  * (0 = black .. FADE_STEPS = full; AniVGA's fade steps the 6-bit DAC values linearly).
  */
-export function paletteLut(data: GameData, fade = FADE_STEPS): Uint32Array {
+export function paletteLut(data: GameData, fade = FADE_STEPS, name: PaletteName = 'EPIS1'): Uint32Array {
   const lut = new Uint32Array(256);
-  data.palette.rgb.forEach((rgb, i) => {
+  (name === 'EPIS1' ? data.palette.rgb : data.palette.menus[name]).forEach((rgb, i) => {
     const [r, g, b] = rgb.map((c8) => dac8(Math.trunc((Math.round((c8 * 63) / 255) * fade) / FADE_STEPS)));
     lut[i] = 0xff000000 | (b << 16) | (g << 8) | r;
   });

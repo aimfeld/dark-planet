@@ -1,100 +1,50 @@
-// Game flow around the simulation: main menu -> level -> (fade out) -> hangar -> next level, as in the
-// original's menu loop (main body @0x1D769, hangar @0x1D095, AfterLevel @0x1B6D1). The menus and the
-// hangar are placeholders until they are ported; the level itself is the deterministic simulation.
+// Runs the game's coroutines (screens/proc.ts) on the fixed 40 Hz tick: main menu, text viewer, hangar,
+// options and the levels, as in the original's menu loop (main body @0x1D769, hangar @0x1D095).
 
+import type { Music } from './audio/music';
 import type { Sfx } from './audio/sfx';
-import { FADE_STEPS, type PlayerInput, type World } from './sim/state';
-import { levelOver, newGame, startLevel, step } from './sim/tick';
+import type { GameData } from './data';
+import { mainMenu } from './screens/mainMenu';
+import { TICK_MS, type Ctx, type MenuInput, type Proc, type Settings } from './screens/proc';
+import { Screen } from './screens/screen';
+import type { World } from './sim/state';
 
-/** AfterLevel's fade-out: 20 palette steps at 70 Hz, about 11 ticks. */
-const FADE_TICKS = 11;
+/** SETTINGS.DAT defaults without a file: P1 keyboard, P2 mouse, CD sound and sound effects on. */
+export const DEFAULT_SETTINGS: Settings = { control: [1, 2], cdSound: true, soundEffects: true };
 
-export type Screen = 'menu' | 'level' | 'fadeout' | 'hangar';
+export class Game implements Ctx {
+  readonly data: GameData;
+  readonly screen: Screen;
+  view: 'screen' | 'world' = 'screen';
+  quit = false;
+  input: MenuInput;
+  private readonly proc: Proc;
+  private debt = 0; // ms the last step overran the tick
 
-export interface Keys {
-  input: PlayerInput;
-  enter: boolean; // pressed this tick
-  escape: boolean;
-}
-
-export class Game {
-  screen: Screen = 'menu';
-  paused = false;
-  message = '';
-  private fade = 0;
-
-  constructor(readonly world: World, private readonly sfx?: Sfx) {}
-
-  private sounds(): void {
-    this.sfx?.handle(this.world.sounds);
-    this.world.sounds = [];
+  constructor(
+    readonly world: World,
+    input: MenuInput,
+    readonly settings: Settings = structuredClone(DEFAULT_SETTINGS),
+    readonly sfx?: Sfx,
+    readonly music?: Music,
+    private readonly persist: (s: Settings) => void = () => undefined,
+  ) {
+    this.data = world.data;
+    this.screen = new Screen(world.data);
+    this.input = input;
+    music?.setEnabled(settings.cdSound);
+    this.proc = mainMenu(this);
   }
 
-  private play(level: number | null): void {
-    if (level === null) newGame(this.world);
-    else startLevel(this.world, level);
-    this.screen = 'level';
-    this.paused = false;
-    this.sounds(); // the engine loop started by the level start
+  saveSettings(): void {
+    this.persist(this.settings);
   }
 
-  /** AfterLevel: every sound stops except 50 (the level 4 tank's death roar). */
-  private afterLevel(): void {
-    this.sfx?.stopAll(50);
-  }
-
-  /** One 40 Hz tick of whatever screen is shown. */
-  tick(keys: Keys): void {
-    const w = this.world;
-    switch (this.screen) {
-      case 'menu':
-        if (keys.enter) this.play(null);
-        break;
-      case 'hangar':
-        if (keys.enter) this.play(w.level + 1);
-        else if (keys.escape) this.screen = 'menu';
-        break;
-      case 'fadeout':
-        this.fade -= 1;
-        w.fade = Math.round((FADE_STEPS * this.fade) / FADE_TICKS);
-        if (this.fade > 0) break;
-        if (w.gameCompleted) {
-          this.message = 'Spiel geschafft!';
-          this.screen = 'menu';
-        } else this.screen = 'hangar';
-        break;
-      case 'level': {
-        if (this.paused) break;
-        step(w, [keys.input]);
-        this.sounds();
-        const over = levelOver(w);
-        if (over === 'done') {
-          this.afterLevel();
-          this.fade = FADE_TICKS;
-          this.screen = 'fadeout';
-        } else if (over === 'gameover' || keys.escape) {
-          // game over and Esc go straight back to the main menu (DS:0x3E05), without a fade
-          this.afterLevel();
-          this.message = over === 'gameover' ? 'Game over' : '';
-          this.screen = 'menu';
-        }
-        break;
-      }
-    }
-  }
-
-  /** Lines for the placeholder screens. */
-  screenText(): [string, number][] {
-    if (this.screen === 'hangar') {
-      return [
-        [`Level ${this.world.level} geschafft`, 50],
-        [`Enter: Shoot em all`, 100],
-        [`(Level ${this.world.level + 1})`, 120],
-        ['Esc: Hauptmenu', 160],
-      ];
-    }
-    const lines: [string, number][] = [['DARK PLANET', 40], ['Enter: Neues Spiel', 100], ['F: Vollbild', 150]];
-    if (this.message) lines.push([this.message, 70]);
-    return lines;
+  /** One 40 Hz tick: run coroutine steps until their time adds up to 25 ms. */
+  tick(input: MenuInput): void {
+    this.input = input;
+    let budget = TICK_MS - this.debt;
+    while (budget > 0) budget -= this.proc.next().value ?? TICK_MS;
+    this.debt = -budget;
   }
 }

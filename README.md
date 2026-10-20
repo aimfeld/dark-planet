@@ -64,13 +64,14 @@ npm install
 npm run dev    # http://localhost:5173
 npm test       # simulation tests
 ```
-Keys: Enter starts, arrows move, Ctrl or X fires, Alt or C switches altitude, Space selects a bonus, Ctrl+Space
-(or X+Space) uses it, P pauses, Esc aborts to the menu, F toggles fullscreen (in Chrome with Keyboard Lock, so
-desktop shortcuts don't take Ctrl/Alt combinations). Level 1 plays to the end, boss included; the menus are
-placeholders (see `docs/PLAN.md` Phase 3).
+Main menu: arrows and Enter. The hangar works with the mouse ("Shoot em all" starts the next level). In a level:
+arrows move, Ctrl or X fires, Alt or C switches altitude, Space selects a bonus, Ctrl+Space (or X+Space) uses it,
+P pauses, Esc aborts to the menu. F toggles fullscreen (in Chrome with Keyboard Lock, so desktop shortcuts don't
+take Ctrl/Alt combinations). All six levels play to the end; the shop, saves and two-player controls are still
+missing (see `docs/PLAN.md` Phase 3).
 
 The game's assets are generated from `original_source/` and committed, so the game runs from a plain checkout:
-`game/public/data/` (sprites, tiles, fonts, levels, tables and SFX; binaries gzip-compressed) and
+`game/public/data/` (sprites, tiles, menu pictures, fonts, texts, levels, tables and SFX; binaries gzip-compressed) and
 `game/public/music/` (CD tracks 2–9 as mono MP3). To regenerate them (needs `original_source/`, `uv` and ffmpeg):
 `npm run data` and `npm run music`.
 
