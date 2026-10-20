@@ -713,6 +713,11 @@ money can be exchanged in the shop; the game ends when both are out. P2's HUD is
   free mount of the player's choice, at most 2 of the same; boni go to a free bonus slot (3 max). "1 Leben" adds a
   life at once, "Save" saves at once. A new jet refunds the old one at half price and installs its standard weapon.
 - Selling: half price (boni a quarter). The jet and the standard weapon can't be sold.
+- Large pods slide inward: an outer pod (mount 5 / 6) moves to the inner mount on its side (3 / 4) whenever that
+  is free, after buying, selling or moving a pod (O, 1d9e:4BE4). Engines and shields must be sold before a
+  better one can be bought. Buying a jet shows the refund for the old one ("Verkauft"), not "Gekauft".
+- Position change (Position wechseln): only large pods; click one to take it, click another to swap, click a free
+  mount to place it. After selling, Kaufen opens the category of the last selected position (O).
 - Save price: 4000 + 10000·min(level − 2, 4) for the level about to be played (4000 … 44000; level 1 gives a
   negative value, see §12).
 - Money exchange (both active): move min(own money, step) to the other player; step 1 / 100 / 1000 / 9000.
@@ -754,7 +759,7 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 3 | Only P1's ball pod damages enemies (both destroy enemy shots) | both players' ball pods deal contact damage |
 | 4 | Autogun never plays its fire sound | play its table sound (2 MINIPOD) |
 | 5 | P2's velocity isn't reset between levels | reset both players' velocity at level start |
-| 6 | Save price on level 1 is negative (−6000) | price = 4000 + 10000·min(max(level − 2, 0), 4) (*design*: 4000 on level 1) |
+| 6 | Save price on level 1 is negative (−6000), so the original never offers Save on level 1 (the list needs price > 0) | price = 4000 + 10000·min(max(level − 2, 0), 4) (*design*: 4000 on level 1) |
 | 7 | Level 3 snake debris always flies toward x = 0 (target cleared before use) | fly toward the random target x the script picks |
 | 8 | Golem curse: P2's pod explosions appear at P1's pod positions | explode at P2's pods |
 | 9 | Level 4 tank drifts 2 px left per loop (I: unintended) | closed loop with no net drift (*design*) |

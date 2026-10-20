@@ -1,6 +1,6 @@
 // Sprite-table helpers shared by the game logic.
 
-import type { Sprite } from '../data';
+import type { GameData, Sprite } from '../data';
 import type { World } from './state';
 
 export function sprite(w: World, n: number): Sprite | undefined {
@@ -23,17 +23,28 @@ export function centerY(w: World, slot: number): number {
   return w.spr.y[slot] + (spriteH(w, w.spr.n[slot]) >> 1);
 }
 
+export interface SlotTable {
+  n: Int32Array;
+  x: Int32Array;
+  y: Int32Array;
+}
+
 /**
  * AniVGA HitDetect @28be:29B9: within the overlap of the two bounding boxes there must be some row
  * where both sprites' opaque spans [x + left, x + right] intersect, and some column where both
  * [y + top, y + bottom] intersect (empty columns skipped). Not pixel-exact.
  */
 export function hitDetect(w: World, a: number, b: number): boolean {
+  return hitDetectIn(w.data, w.spr, a, b);
+}
+
+/** HitDetect on any slot table (the level's or a menu screen's). */
+export function hitDetectIn(data: GameData, t: SlotTable, a: number, b: number): boolean {
   if (a === b) return false;
-  const sa = sprite(w, w.spr.n[a]);
-  const sb = sprite(w, w.spr.n[b]);
+  const sa = t.n[a] > 0 ? data.sprites.get(t.n[a]) : undefined;
+  const sb = t.n[b] > 0 ? data.sprites.get(t.n[b]) : undefined;
   if (!sa || !sb) return false;
-  const xa = w.spr.x[a], ya = w.spr.y[a], xb = w.spr.x[b], yb = w.spr.y[b];
+  const xa = t.x[a], ya = t.y[a], xb = t.x[b], yb = t.y[b];
 
   const rowTop = Math.max(ya, yb), rowBottom = Math.min(ya + sa.h, yb + sb.h) - 1;
   const colLeft = Math.max(xa, xb), colRight = Math.min(xa + sa.w, xb + sb.w) - 1;

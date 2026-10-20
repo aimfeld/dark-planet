@@ -4,6 +4,7 @@
 import { joinPlayer2 } from '../sim/tick';
 import { playLevel } from './level';
 import { options } from './options';
+import { shop } from './shop';
 import { cdPlay, fadeIn, fadeOut, frame, playSound, stopSound, waitMouseUp, type Ctx, type Proc } from './proc';
 import { textViewer } from './textViewer';
 
@@ -128,7 +129,10 @@ export function* hangar(ctx: Ctx): Proc {
           break;
         }
         case 2:
-          // The shop (1d9e:84BC) is not ported yet.
+          yield* fadeOut(ctx);
+          yield* shop(ctx);
+          s.clear();
+          yield* setup(ctx);
           break;
         case 3:
           yield* multiplayer(ctx);

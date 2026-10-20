@@ -11,6 +11,7 @@ export interface Jet {
   id: number;
   name: string;
   price: number;
+  shop_sprite: number;
   max_life: number;
   ram_damage: number;
   frame_base: number;
@@ -27,6 +28,7 @@ export interface Pod {
   reload: number;
   volley: Volley[];
   sprite?: number;
+  shop_sprite?: number; // small pods (large and ball pods show their game sprite)
   fire_anim?: number | null;
   contact_damage?: number;
   orbit_factor?: number;
@@ -75,8 +77,8 @@ export interface ExplosionPart {
 
 export interface Tables {
   jets: Jet[];
-  engines: { id: number; max_speed: number }[];
-  shields: { id: number; max: number; recharge_every: number }[];
+  engines: { id: number; name: string; price: number; shop_sprite: number; max_speed: number }[];
+  shields: { id: number; name: string; price: number; shop_sprite: number; max: number; recharge_every: number }[];
   small_pods: Pod[];
   large_pods: Pod[];
   ball_pods: Pod[];

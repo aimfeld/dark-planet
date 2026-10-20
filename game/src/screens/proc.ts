@@ -24,10 +24,24 @@ export interface MenuInput {
   held(code: string): boolean;
   /** AnyKey 1d9e:3605: some key is down. */
   anyKey(): boolean;
-  /** Pointer in screen pixels (mouse x div 2, y) and "any button held" (MouseDown 272c:011B). */
-  mouse: { x: number; y: number; down: boolean };
+  /** Pointer in screen pixels (mouse x div 2, y) and the buttons held. */
+  mouse: MouseInput;
   /** Per-tick player input for the level (keyboard for now; mouse and gamepad come with two-player input). */
   players: PlayerInput[];
+}
+
+export interface MouseInput {
+  x: number;
+  y: number;
+  down: boolean; // any button (MouseDown 272c:011B)
+  left: boolean; // single buttons (272c:00DC: INT 33h fn 3, BX and mask)
+  right: boolean;
+}
+
+/** SAVE.DAT (one slot), kept in browser storage by main.ts. */
+export interface SaveSlot {
+  read(): Uint8Array | null;
+  write(bytes: Uint8Array): void;
 }
 
 export interface Settings {
@@ -45,6 +59,7 @@ export interface Ctx {
   readonly music?: Music;
   readonly settings: Settings;
   saveSettings(): void;
+  readonly saves: SaveSlot;
   /** What the renderer shows: the menu screen or the level. */
   view: 'screen' | 'world';
   /** The browser can't quit: set by the main menu's Exit instead. */

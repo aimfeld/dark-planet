@@ -22,6 +22,7 @@ export class Screen {
   readonly n = new Int32Array(SLOTS); // SpriteN
   readonly x = new Int32Array(SLOTS); // SpriteX (screen coordinates)
   readonly y = new Int32Array(SLOTS); // SpriteY
+  readonly mode = new Uint8Array(SLOTS); // draw mode byte (DS:0xB820 + slot): MODE_SHADOW darkens what is behind
   readonly texts = new Map<number, TextSprite>(); // text sprites by sprite number (MakeTextSprite 1d9e:2E58)
   font = 'FIRE'; // the current font (LoadFont 28be:1B75)
   ink = 0;

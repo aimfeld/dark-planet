@@ -86,7 +86,7 @@ export class Framebuffer {
       if (n === 0) continue;
       const t = sc.texts.get(n);
       if (t) this.text(t.text, t.font, t.ink, sc.x[slot], sc.y[slot], 0, W - 1);
-      else this.sprite(n, sc.x[slot], sc.y[slot], 0, W - 1, false);
+      else this.sprite(n, sc.x[slot], sc.y[slot], 0, W - 1, sc.mode[slot] === MODE_SHADOW);
     }
   }
 

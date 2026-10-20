@@ -2,8 +2,10 @@
 // item sprites over HMBILD.PIC; the selected one glows through the global sprite cycle [base+1, base+10].
 // Keyboard only (no pointer, the mouse can't select).
 
+import { decodeSave } from '../save';
 import { hangar } from './hangar';
 import { newGameState } from '../sim/tick';
+import { FADE_STEPS } from '../sim/state';
 import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
 import { textViewer } from './textViewer';
 
@@ -39,6 +41,31 @@ function* quit(ctx: Ctx): Proc {
   ctx.quit = false;
 }
 
+/**
+ * A SAVE.DAT with a wrong checksum: Shutdown(6) quits to DOS with this message (literals 1d9e:3998-39FF).
+ * The remake shows it until a key is pressed, then the main menu again (design).
+ */
+function* cheated(ctx: Ctx): Proc {
+  const s = ctx.screen;
+  yield* fadeOut(ctx, false, 10);
+  ctx.music?.stop();
+  s.clear();
+  s.picture = null;
+  s.palette = 'EPIS1';
+  s.font = 'DEFAULT'; // (DOS text mode in the original)
+  s.ink = 0x1c;
+  const lines = ['Na du kleines Schlitzohr, so läuft das aber nicht!', 'Da musste schon früher aufstehen, um den Saveschutz', 'übers Ohr zu hauen!!!'];
+  lines.forEach((str, i) => {
+    s.makeText(900 + i, str);
+    s.set(10 + i, 900 + i, 4, 8 + 8 * i);
+  });
+  s.fade = FADE_STEPS;
+  yield* waitNoKey(ctx);
+  while (!ctx.input.anyKey()) yield* delay(10);
+  yield* waitNoKey(ctx);
+  s.clear();
+}
+
 export function* mainMenu(ctx: Ctx): Proc {
   const s = ctx.screen;
   const held = (code: string) => ctx.input.held(code);
@@ -72,9 +99,15 @@ export function* mainMenu(ctx: Ctx): Proc {
           yield* hangar(ctx);
           yield* drawMainMenu(ctx, selected);
           break;
-        case 2:
-          // Load game (1d9e:05D9) comes with the shop and the saves.
+        case 2: {
+          // Load 1d9e:05D9: no save -> nothing happens; a bad checksum ends the program with a message.
+          const saved = ctx.saves.read();
+          if (saved === null) break;
+          if (decodeSave(saved, ctx.world)) yield* hangar(ctx);
+          else yield* cheated(ctx);
+          yield* drawMainMenu(ctx, selected);
           break;
+        }
         case 3:
           cdPlay(ctx, 3);
           yield* textViewer(ctx, { file: 'STORY.TXT', centred: false, first: 1, last: 261, mode: 1, frameDelay: 150 });

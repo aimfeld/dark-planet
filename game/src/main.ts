@@ -8,12 +8,13 @@ import { Keyboard } from './input/keyboard';
 import { keyboardLockSupported, toggleFullscreen } from './input/fullscreen';
 import { Mouse } from './input/mouse';
 import { ClassicView } from './render/classicView';
-import type { MenuInput, Settings } from './screens/proc';
+import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld, NO_INPUT } from './sim/state';
 
 const TICK_MS = 1000 / 40; // decision (user, session 3): fixed 40 Hz, 1 tick = 1 original frame
 const MAX_TICKS_PER_FRAME = 8; // after a stall, catch up at most this much instead of spiralling
 const SETTINGS_KEY = 'darkplanet.settings'; // SETTINGS.DAT
+const SAVE_KEY = 'darkplanet.save'; // SAVE.DAT, base64
 
 function loadSettings(): Settings {
   const s = structuredClone(DEFAULT_SETTINGS);
@@ -32,6 +33,24 @@ function saveSettings(s: Settings): void {
     // not persisted
   }
 }
+
+const saveSlot: SaveSlot = {
+  read() {
+    try {
+      const b64 = localStorage.getItem(SAVE_KEY);
+      return b64 === null ? null : Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    } catch {
+      return null;
+    }
+  },
+  write(bytes) {
+    try {
+      localStorage.setItem(SAVE_KEY, btoa(String.fromCharCode(...bytes)));
+    } catch {
+      // not persisted
+    }
+  },
+};
 
 async function main(): Promise<void> {
   const status = document.getElementById('status')!;
@@ -69,7 +88,7 @@ async function main(): Promise<void> {
       return [keys.player(), NO_INPUT];
     },
   };
-  const game = new Game(createWorld(data, Date.now() >>> 0), input, loadSettings(), sfx, music, saveSettings);
+  const game = new Game(createWorld(data, Date.now() >>> 0), input, loadSettings(), sfx, music, saveSettings, saveSlot);
   status.textContent = keyboardLockSupported() ? '' : 'F: Vollbild (ohne Tastatursperre)';
 
   let acc = 0;
@@ -79,6 +98,8 @@ async function main(): Promise<void> {
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
     while (acc >= TICK_MS) {
+      keys.sample();
+      mouse.sample();
       game.tick(input);
       acc -= TICK_MS;
     }

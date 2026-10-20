@@ -747,7 +747,7 @@ own pixel colours (I, from the second branch @28be:2755; not needed here).
 - Real frame time of the viewer loops (Delay + Animate) → scroll speed of Story/About/Ending.
 - Whether 39–41 char lines are clipped at x = 319 (expected) or wrap.
 
-## Shop screen and load/save (session 8; implementation pending)
+## Shop screen and load/save (session 8; implemented and extended in session 9)
 
 Evidence: Ghidra pseudocode of 1d9e:84BC (`ev_08cdf79d…`) plus CLI decompiles of every 1d9e helper
 (decompiles), objdump of the whole image (session-8 scratch files, not kept; the shop's action dispatch
@@ -808,15 +808,18 @@ Exit: write back the edited player record, DS:0x9BF := 1, wait for button releas
 - Page arrows: right x 301..312, y 159..192 (only if entry page+6 exists), left x 7..19 (page > 0): page ±5,
   selection cleared, sound 22 ×2.
 - Selecting box i: frame **502** (52×29) in slot 24 at (56i−34, 161), info text (THEMA=cat, ART=id), header
-  (icon + price), sound 21 ×2. Empty box → sound 23 ×2.
+  (icon + price), sound 21 ×2. Session 9 correction: 67A0 only calls 660A for a box with an affordable item, so
+  clicks on empty or unaffordable boxes do nothing (660A's sound-23 branch is unreachable from there).
 
 ### Info box and header (O, 4366 / 4288)
 - Texts from `Info.Pas` (read at runtime): `BEGIN THEMA<cat>` … `BEGIN ART<id>` … `END ART<id>`, or
-  `BEGIN SPEZIAL<n>` … `END SPEZIAL<n>`. Max 18 chars × 6 lines. Line k (1..6): text sprite 827+k, slot 33+k,
+  `BEGIN SPEZIAL<n>` … `END SPEZIAL<n>`. Max 18 chars × 6 lines (SPEZIAL1/3/16 have 7). Session 9 correction:
+  line k (1..7) is text sprite 826+k (0x33A+k), slot 33+k,
   x 203, y 38 + 10k (48, 58, … 98). Missing ART → "Noch kein Text!" at (203,48) plus a PC-speaker beep
   (Sound(1000), Delay(100), NoSound).
 - SPEZIAL texts: first the header (4288) with sprite **520** ("INFO", slot 31) at (233,15), no price.
-- Item header: slot 31 = item icon at (250 + ofsX, 9 + ofsY) (shop sprite of the item); price text sprite 848
+- Item header: slot 31 = item icon at (250, 9) (session 9: 660A passes dx = dy = 0; only the SPEZIAL and EXIT
+  headers use offsets) (shop sprite of the item); price text sprite 848
   (slot 32) centred x 257, y 36 (empty when 0). In sell mode the price shown is the refund (½, boni ¼, I from 0b9b).
 - Messages used: 1 jet can't be sold; 2 sell help; 3 buy help; 4 no mount here; 5 "Gekauft"; 6 "Verkauft";
   7 all positions taken (waits for a click); 8 no ball pods on this jet (switching to Kugel Pods with the
@@ -865,6 +868,62 @@ Ends on a click while the pointer touches EXIT (HitDetect slot 31 vs slot 1), so
   "Da musste schon früher aufstehen, um den Saveschutz" / "übers Ohr zu hauen!!!" (literals 1d9e:3998–39FF).
   Success → straight into the game menu (hangar).
 Unknown: AniVGA 28be:0106(0x28), 50F2/5063(0) and DS:0x25C0 := 2 in the setup.
+
+### Shop rules (session 9, O; decompiles of every 1d9e shop helper + objdump of the dispatch 0x8714–0x880F)
+Locals of 84BC (via the frame link): mode −0x1B, category −0x19, page −0x1D, selected box −0x1A, selected
+position −0x1C (20 = none), offers −0x5D + 3i (cat byte, id word), player record −0x9C … −0x86.
+- **272c:00DC(mask)** is INT 33h fn 3 and BX AND mask: a button *held* (1 left, 2 right), not a press count.
+  The 130 + 130 ms delays before a buy and the 200 ms after picking up a pod keep the click from repeating.
+- **ItemInfo 3C5A(cat, field, id)**: field 1 price, 2 sprite, 3 id, 4 count (7/11/11/3/3/4/5), 11/12 offsets;
+  side effect: copies the category name to DS:0x3E08. Index 0 of each price table is garbage (neighbouring
+  data, e.g. 786440), which is what makes 6216's "cheaper than the current candidate" selection sort work.
+  Save price: 4000 (DS:0x17CA) + 10000·min(level − 2, 4) (28be:58E6 = min).
+- **Offers 6216**: 20 rounds; each picks the cheapest id with price > 0 and price > the previous pick
+  (strictly, so equal prices drop out); jets only id > jet; boni only DS:0x1789[id] ≠ 0 (2, 5–9) or id 4 or 11.
+  Ownership is not checked. Ends with the highlight frames of every position of the category (50A5).
+  The original level-1 Save price (−6000) fails "price > 0", so Save isn't offered on level 1 at all.
+- **Positions**: 47B8 item at p, 4A37 occupied (mount.occupied, or engine/shield/jet > 0, or bonus ≠ 0), 49EA
+  exists (DS:0x18A4 + 8·jet + mount; non-mounts always), 48C8 p → mount (0 → 0, 2..8 → p − 1, boni 11..13 →
+  slot 0..2), 4930(index, cat) the reverse, 4864 p → category, 5373 position under the pointer (also sets the
+  category: after picking a position in sell mode, Kaufen opens that category).
+- **4BE4 (pod compaction)**: if mount 6 is occupied and mount 4 free, the pod moves to 4; same for 5 → 3. Runs
+  after buying a large pod, selling a mount and after a position change, so a pod placed outside a free inner
+  mount slides inward.
+- **Buy 75BE** (only if the offer exists and price ≤ money):
+  large pod: 2 of the same mounted → SPEZIAL14; no free mount → SPEZIAL7 and wait for the left button; else the
+  pod on the pointer (window x 3..179, y 7..117, pointer to (95, 60)), SPEZIAL9; left button on a free existing
+  large position installs it (73CC: 7143 + pay + sounds 22 ×2), 4BE4, offers rebuilt, "Gekauft"; on another
+  position SPEZIAL4; right button cancels. Boni: "1 Leben" lives + 1; "Save" pays, writes the record back and
+  saves (0350), SPEZIAL17; others go to the first free bonus slot, none → SPEZIAL15. Jet: 5558 sells the current
+  jet first (half price back, the "Verkauft / Rückzahlung" message stays), then 7143 sets the jet and mount 2 :=
+  {reload 0, loaded, occupied, item = jet, cat 8}, pay, offers rebuilt (no "Gekauft"). Small pod, engine,
+  shield, ball pod: the category's single position must be free and exist, else SPEZIAL13 (so an engine or
+  shield must be sold before buying another). Every buy ends with the jet redraw 5909.
+- **7143 install**: mounts only when free: {occupied, item, reload 0, loaded, cat}; boni slot := id; engine,
+  shield, jet := id. 7504 shows SPEZIAL5 and line 2 "Investiert:" + price (no space).
+- **Sell 5165 / 5558**: 5165 (every click in mode 2): nothing at the position → no; jet → SPEZIAL1, no;
+  standard weapon → SPEZIAL12, no; boni → SPEZIAL11 then still yes; shows THEMA/ART (without clearing the box,
+  so old lines can stay) and the header with the refund (price div 2, boni div 4), sound 22 ×2, one highlight
+  frame (slot 31). A click on VERKAUFEN then sells: money += refund, the mount / slot / engine / shield := 0,
+  4BE4 for mounts, boni shift left, SPEZIAL6 + "Rückzahlung: " + refund; afterwards the header and the frame are
+  hidden (50A5 with hide = 1).
+- **Position change 811F**: takes the pod off its mount (Delay 200), pod sprite on the pointer, same window.
+  Left button on a large pod swaps (the other pod goes to the hand, Delay 200), on a free existing large mount
+  places it and ends. The right button only ends with an empty hand, which never happens. Ends with 4BE4.
+- **Money exchange 6A7E**: both records are written back first (player toggled twice). Level-triggered: while
+  the button is held on an arrow, min(money, step) moves every pass (Delay 13), money ≤ 0 → sound 23 +
+  Delay(100); step arrows Delay(200). The loop draws without sprite cycles (2F7C + Animate only). Slot 23 shows
+  837 / 838 for the current player but is centred on P1's amount. On exit SPEZIAL3, slots 61–63, 25, 31 cleared,
+  page and selection reset.
+- **Main loop pass**: pointer; click cooldown 9BE −1; on MouseDown with 9BE = 0: exchange, player switch (then
+  4C75(1), 5909, 6216 in mode 1), mode buttons, then per mode (1: arrows, offers, Kaufen → Delay(130) + buy;
+  2: 5311 / 5373 / 5165 / sell; 3: 5373, swap if a large pod; 4: leave), 9BE := 10; A26 −1; AnimTick; Frame;
+  Delay(15). Mode button rects x 160 + 40(i − 1) .. +28, y 130..148; 5311 = the current mode's button and A26 ≤ 0.
+- **Load 05D9 / Save 0350**: read / write the globals in the SAVE.DAT order (file-formats.md); Load has no other
+  side effects (the hangar's setup follows).
+- **Remake (design)**: the browser can't move or confine the real pointer, so the mouse windows clamp the pointer
+  sprite and the pointer jumps are dropped; the PC-speaker beeps are not reproduced; a bad SAVE.DAT checksum
+  shows the Shutdown(6) message until a key and returns to the main menu.
 
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.

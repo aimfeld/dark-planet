@@ -13,7 +13,7 @@ Status: ✅ decoded and verified · 🟡 understood, decoder not written · ❓ 
 | `.LIB` | `JETS`, `GEG*`, `SHOTS`, `EXPL`, … , `TI1`, `TI2` | AniVGA sprites, concatenated | ✅ `tools/extract_sprites.py` |
 | `.FNT` | `FIRE`, `SUPER`, `_BROADWA`, `DEFAULT` | AniVGA fonts | ✅ `tools/extract_fonts.py` |
 | `.TXT/.UNG/.PAS` | `STORY.TXT`, `ANLEIT.UNG`, `ABOUT.TXT`, `MISSIONS.PAS`, `INFO.PAS` | CP437 German text read by the game (**not source code**) | ✅ |
-| `SAVE.DAT` | 129 bytes | Save game with a checksum ("Saveschutz"), see below | 🟡 (verified on the sample) |
+| `SAVE.DAT` | 129 bytes | Save game with a checksum ("Saveschutz"), see below | ✅ (sample loads in the remake) |
 | `SETTINGS.DAT` | 5 bytes (`01 02 01 01 03`) | Options: controls P1/P2, CD sound, SFX, CPU delay, see below | 🟡 |
 
 ## SMIX sound resource (`.SND`)
@@ -140,6 +140,9 @@ Checksum (1d9e:02CC): 16-bit sum, sign-extended to i32, of level + episode + liv
 engine + shield of P1 and the same five fields of P2. Mounts and bonuses are not covered. On a mismatch the game
 prints "Na du kleines Schlitzohr, so läuft das aber nicht! …Saveschutz…" and exits. The sample file
 (level 2, one player, 6 lives, 600 money, Duallaser) stores 618, which matches the computed sum.
+Session 9: `game/test/shop.test.ts` checks the sample (checksum 618) and loads it. The remake keeps the same 129
+bytes, base64-encoded, in the browser's localStorage key `darkplanet.save` (`game/src/save.ts`), so an original
+SAVE.DAT can be loaded too.
 
 ## CD soundtrack
 See `docs/re-notes.md` → "Soundtrack". Raw 44.1 kHz 16-bit LE stereo PCM

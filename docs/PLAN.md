@@ -81,7 +81,8 @@
 - [x] **User:** the Golem curse turning every jet's standard weapon into the Firestorm's gun is intentional (decision 12).
 - [x] Menus (session 8): main menu, text viewer (story, manual, about, briefings, ending text), hangar with doors, labels, Multiplayer join and the GEDANKE cheat, options (stored in browser storage), CD music (`src/audio/music.ts`, tracks loop like CDRepeat; level, boss and menu tracks). The menus are generator coroutines (`src/screens/`) that yield the milliseconds each step takes, so they keep the original's Delay(15) loop passes and 70 Hz fades while the levels keep the 40 Hz tick. Exporter: `pictures.bin.gz` (HMBILD/UMBILD/OMBILD/RASTER), the menu palettes, all four fonts, `texts.json`. `test/menus.test.ts` (screens dumped to `test-output/menu-*.bmp`).
 - [ ] **User:** try the menus (`cd game && npm run dev`): main menu glow and keys, story/manual/about, hangar doors and labels, briefing slide-in, options, CD music switching (menu → level → boss → menu).
-- [ ] Shop screen (spec in re-notes "Shop screen and load/save"; rules already in spec §10) and save/load (SAVE.DAT → browser storage; the "Save" item and main-menu "Spiel laden").
+- [x] Shop and save/load (session 9): `src/screens/shop.ts` ports 1d9e:84BC with all its helpers (offers, buy with the large-pod placement on the pointer, sell, position change, player switch, money exchange, INFO.PAS texts, shadowed unaffordable offers), `src/save.ts` reads/writes the original 129-byte SAVE.DAT with its checksum (browser storage, base64; the original sample loads). Main menu "Spiel laden" works; a bad checksum shows the "Schlitzohr" message. New RE in re-notes "Shop rules (session 9)" (corrections: 272c:00DC is "button held", empty/unaffordable boxes ignore clicks, info lines are sprites 826+k, the item header has no offset). `test/shop.test.ts` drives it through the hangar; checked live in Chrome (cheat, buy + place a pod, Save, reload, load).
+- [ ] **User:** try the shop (hangar → Shop; GEDANKE for money): buying and placing large pods, selling, Position wechseln, jets, boni, Save + "Spiel laden", and with two players the PLAYER switch and GELD AUSTAUSCH.
 - [ ] Two players: mouse and gamepad steering (spec §2) for the control types chosen in the options; P2 can join already but has no input yet.
 - [ ] Ending video (FLI → WebM, decision 7) after the ending text; for now the remake returns to the main menu.
 
@@ -101,6 +102,15 @@
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
 11. ~~Engine data stays local~~ (a misunderstanding in session 5). **Corrected (user, session 7):** all newly generated assets (sprites, tiles, levels, tables, sounds, soundtrack, videos) are under version control, kept small: compressed browser-friendly formats, no WAV files. Only `original_source/` stays local.
 12. The Golem's curse turns every jet's standard weapon into the Firestorm's basic gun (item 1): intentional, kept (user, session 7).
+
+## Notes (session 9, not yet confirmed by the user)
+- Input is now sampled once per 40 Hz tick, and a key or mouse button pressed and released between two ticks still
+  counts for one tick (`Keyboard.sample`, `Mouse.sample`). Found while browser-testing: Chrome ran the
+  automated window at 1 frame/s, and quick clicks and taps were lost; short touchpad taps would be lost the same way.
+- Shop design choices: the mouse windows clamp the pointer sprite (a browser can't confine or move the real
+  pointer), the PC-speaker beeps are left out, a bad save checksum returns to the main menu instead of quitting.
+- Per decision 8 the remake lists every shop item (§12 #1) and offers Save on level 1 for 4000 (§12 #6); the
+  original doesn't offer it there at all (its price is negative).
 
 ## Notes (session 6, not yet confirmed by the user)
 - Two new original bugs are fixed per decision 8: §12 #13 (two inventory pickups in one tick lose one) and #14 (bonus shots read and unload mount records out of range).

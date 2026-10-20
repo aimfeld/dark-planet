@@ -1,16 +1,22 @@
 // Runs the game's coroutines (screens/proc.ts) on the fixed 40 Hz tick: main menu, text viewer, hangar,
-// options and the levels, as in the original's menu loop (main body @0x1D769, hangar @0x1D095).
+// options, the shop and the levels, as in the original's menu loop (main body @0x1D769, hangar @0x1D095).
 
 import type { Music } from './audio/music';
 import type { Sfx } from './audio/sfx';
 import type { GameData } from './data';
 import { mainMenu } from './screens/mainMenu';
-import { TICK_MS, type Ctx, type MenuInput, type Proc, type Settings } from './screens/proc';
+import { TICK_MS, type Ctx, type MenuInput, type Proc, type SaveSlot, type Settings } from './screens/proc';
 import { Screen } from './screens/screen';
 import type { World } from './sim/state';
 
 /** SETTINGS.DAT defaults without a file: P1 keyboard, P2 mouse, CD sound and sound effects on. */
 export const DEFAULT_SETTINGS: Settings = { control: [1, 2], cdSound: true, soundEffects: true };
+
+/** A save slot in memory (tests, or no browser storage). */
+export function memorySlot(): SaveSlot {
+  let saved: Uint8Array | null = null;
+  return { read: () => saved, write: (b) => (saved = b.slice()) };
+}
 
 export class Game implements Ctx {
   readonly data: GameData;
@@ -28,6 +34,7 @@ export class Game implements Ctx {
     readonly sfx?: Sfx,
     readonly music?: Music,
     private readonly persist: (s: Settings) => void = () => undefined,
+    readonly saves: SaveSlot = memorySlot(),
   ) {
     this.data = world.data;
     this.screen = new Screen(world.data);
