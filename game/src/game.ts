@@ -37,6 +37,7 @@ export class Game implements Ctx {
   quit = false;
   touchKeys: readonly TouchKey[] = [];
   paused = false;
+  atMainMenu = false;
   input: MenuInput;
   private readonly proc: Proc;
   private debt = 0; // ms the last step overran the tick

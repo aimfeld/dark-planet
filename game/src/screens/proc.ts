@@ -71,6 +71,8 @@ export interface Ctx {
   touchKeys: readonly TouchKey[];
   /** A level is paused (P). */
   paused: boolean;
+  /** The main menu waits for input: nothing would be lost if the page reloaded now (main.ts, app updates). */
+  atMainMenu: boolean;
 }
 
 /** Crt.Delay(ms). */

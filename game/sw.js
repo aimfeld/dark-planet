@@ -3,7 +3,8 @@
 // built file (paths relative to this file) and content hashes.
 // Core (app shell, data/, about 2 MB) is cached on install. The music and video (about 26 MB) go in their own
 // cache, best effort, so a code update doesn't download them again; what's missing streams from the network.
-// Cache first: an update installs in the background and takes over at the next start.
+// Cache first: an update installs in the background and takes over; main.ts (registerOffline) looks for one on
+// every start, when the app comes back to the screen and hourly, and reloads where nothing is lost.
 
 const { core, media, coreVersion, mediaVersion } = self.__BUILD__;
 const CORE_CACHE = `dp-core-${coreVersion}`;

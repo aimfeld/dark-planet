@@ -98,15 +98,60 @@ async function fullscreen(): Promise<void> {
   if (TOUCH_DEVICE && document.fullscreenElement) await orientation.lock?.('landscape').catch(() => undefined);
 }
 
+const UPDATE_CHECK_MS = 4000; // how long a start waits for the server's sw.js before going on (offline, slow network)
+const UPDATE_INSTALL_MS = 20000; // how long it waits for a new version to install
+const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+
+const within = <T>(promise: Promise<T>, ms: number) =>
+  Promise.race([promise, new Promise<void>((resolve) => setTimeout(resolve, ms))]);
+
 /**
  * The service worker (sw.js, written by the build) caches the game for the installed app and offline play.
  * Registered after the data has loaded, so its downloads don't slow the first start. Also asks to keep the
  * storage (saves, settings, cache) when the browser runs short of space.
+ *
+ * Updates: browsers look for a new sw.js only when a page is opened, and an installed app on a phone is mostly
+ * resumed rather than restarted; the new version then took over in the background and only showed at the start
+ * after that. So a start that already runs from the cache asks the server first and, if there is a new version,
+ * waits for it and reloads ("Lade Update…"). The app also asks whenever it comes back to the screen and every hour;
+ * `onUpdate` is called when a new version has taken over, and the caller reloads at a moment that loses nothing.
  */
-function registerOffline(base: string): void {
+async function registerOffline(base: string, status: HTMLElement, onUpdate: () => void): Promise<void> {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register(base + 'sw.js').catch((e) => console.warn('no service worker:', e));
   navigator.storage?.persist?.().catch(() => undefined);
+  const sw = navigator.serviceWorker;
+  // The first install also takes over the page (clients.claim); only a change of controller is an update.
+  let controlled = sw.controller !== null;
+  let updated = false;
+  const changed = new Promise<void>((resolve) => {
+    sw.addEventListener('controllerchange', () => {
+      if (controlled) {
+        updated = true;
+        resolve();
+        onUpdate();
+      }
+      controlled = true;
+    });
+  });
+  const reg = await sw.register(base + 'sw.js', { updateViaCache: 'none' }).catch((e) => {
+    console.warn('no service worker:', e);
+  });
+  if (!reg) return;
+  const check = () => reg.update().catch(() => undefined);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void check();
+  });
+  setInterval(() => void check(), UPDATE_INTERVAL_MS);
+  if (!controlled) return; // the first visit: this page is the newest version
+  await within(check(), UPDATE_CHECK_MS);
+  if (!updated && !reg.installing && !reg.waiting) return;
+  status.textContent = 'Lade Update…';
+  await within(changed, UPDATE_INSTALL_MS);
+  if (updated) {
+    location.reload();
+    await new Promise(() => undefined); // the page is going away
+  }
+  status.textContent = 'Lade Daten…';
 }
 
 async function main(): Promise<void> {
@@ -126,7 +171,15 @@ async function main(): Promise<void> {
   });
   const music = new Music(base + 'music/');
   const video = new Video(base + 'video/');
-  registerOffline(base);
+  let game: Game | undefined = undefined;
+  // A new version took over: reload where nothing is lost (the start prompt, the intro, the main menu).
+  let updateReady = false;
+  const canReload = () =>
+    game === undefined || game.atMainMenu || (game.view === 'video' && video.name === 'intro');
+  await registerOffline(base, status, () => {
+    updateReady = true;
+    if (canReload()) location.reload();
+  });
 
   const view = await ClassicView.create(document.getElementById('app')!, data);
   const keys = new Keyboard(window);
@@ -143,7 +196,6 @@ async function main(): Promise<void> {
   for (const type of ['keydown', 'pointerdown', 'pointerup', 'touchend']) window.addEventListener(type, unlock);
   document.addEventListener('gesturestart', (e) => e.preventDefault()); // iOS pinch zoom
 
-  let game: Game | undefined = undefined;
   let pauseTap = false; // the page was hidden during a level: pause it (one P press)
   const input: MenuInput = {
     held: (code) => keys.held(code) || touch.held(code) || (code === 'KeyP' && pauseTap),
@@ -213,6 +265,10 @@ async function main(): Promise<void> {
       game.tick(input);
       pauseTap = false;
       acc -= TICK_MS;
+    }
+    if (updateReady && canReload()) {
+      location.reload();
+      return;
     }
     if (game.quit !== quitting) {
       quitting = game.quit;

@@ -162,6 +162,8 @@ export function* mainMenu(ctx: Ctx): Proc {
       }
       yield* waitMouseUp(ctx);
     }
+    ctx.atMainMenu = true;
     yield* frame(ctx, 15);
+    ctx.atMainMenu = false;
   }
 }
