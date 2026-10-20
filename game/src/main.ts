@@ -12,6 +12,7 @@ import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
+import { REMASTER_METHODS, type RemasterMethod } from './render/hiResView';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
@@ -254,6 +255,33 @@ async function main(): Promise<void> {
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
   };
 
+  // Remaster experiment: G cycles the level graphics (classic, then each upscaling method), remembered.
+  const remasterLabel = document.getElementById('remaster')!;
+  let labelTimer = 0;
+  const showRemaster = (text: string) => {
+    remasterLabel.textContent = text;
+    remasterLabel.hidden = false;
+    clearTimeout(labelTimer);
+    labelTimer = window.setTimeout(() => (remasterLabel.hidden = true), 2500);
+  };
+  const remasterKey = 'dark-planet-remaster';
+  const storedMethod = (() => {
+    try {
+      return localStorage.getItem(remasterKey);
+    } catch {
+      return null;
+    }
+  })();
+  const useMethod = (m: RemasterMethod | null) => {
+    void view.hiRes.use(m);
+    try {
+      localStorage.setItem(remasterKey, m ?? '');
+    } catch {
+      // no storage: the choice lasts until the page reloads
+    }
+  };
+  if (REMASTER_METHODS.includes(storedMethod as RemasterMethod)) useMethod(storedMethod as RemasterMethod);
+
   let acc = 0;
   let last = performance.now();
   let mouseWasPlaying = false;
@@ -262,6 +290,12 @@ async function main(): Promise<void> {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
+    if (keys.takePress('KeyG') && game.view === 'world') {
+      const order = [null, ...REMASTER_METHODS];
+      const next = order[(order.indexOf(view.hiRes.current) + 1) % order.length];
+      useMethod(next);
+      showRemaster(`Grafik: ${next ?? 'classic'}`);
+    }
     while (acc >= TICK_MS) {
       keys.sample();
       mouse.sample();
