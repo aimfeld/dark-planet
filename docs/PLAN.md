@@ -147,8 +147,28 @@
   file on first use in `dp-remaster-<hash>`, so what a player has seen also works offline.
 - [x] Audio remaster tried and **rejected by the user** (decision 19): the CD tracks are mono and band-limited to
   about 10 kHz (aliasing above, so the music was mixed at a low rate before the CD); A/B clips with a higher bitrate,
-  pseudo-stereo, AudioSR (neural bandwidth extension, `~/opt/audiosr`) and, for the 8-bit SFX, denoising +
+  pseudo-stereo, AudioSR (neural bandwidth extension; `~/opt/audiosr` and its model cache deleted in session 18) and, for the 8-bit SFX, denoising +
   resampling. The original sounds best; AudioSR adds annoying treble hiss. No original song files exist.
+- [x] Abandoned upscaling renders (`remaster/esrgan-anime`, `remaster/animevideo`) deleted (session 18). User
+  (session 18): the interpolated motion looks hardly smoother, since the original already moves smoothly; fine.
+- [x] Visual effects (session 18, `src/render/fx.ts`, render only, so the gameplay is unchanged): shots and
+  explosions glow (a blurred additive copy tinted with the sprite's bright colour, plus a soft halo); explosions
+  light the ground around them and start with a flash and sparks; ground explosions leave smoke under the sprites;
+  a new shot gets a muzzle flash, a shot ending inside the playfield (a hit) sparks; shadows are soft (each run
+  of shadow slots in its own blurred container, so the drawing order stays). What glows is chosen by sprite
+  number (shot sprites of players and enemies with their sprite cycles, the explosion animations); events come
+  from comparing the drawn sprite tables of two ticks, so pause and freezes stop the particles. Many explosion
+  parts at once share one budget, and their light is dimmed by 1/sqrt(count), so the 30-part kinds don't blow out
+  to white. Setting `Settings.effects`; R / Options line 5 / the HD button cycle Classic → Remastered →
+  Remastered+Effekte (the longest text that fits the Options line). Checked with A/B screenshots in headless
+  Chrome (levels 1, 2, 5, with forced explosions).
+- [~] **User:** play with the effects (R twice from classic) and say what to keep, tone down or drop: glow,
+  ground light, sparks, muzzle flashes, smoke, soft shadows. First look (session 18): "The effects look cool!",
+  only the very bright lasers looked "a bit epileptic": beams (shot sprites at least 3x longer than wide: the
+  Duallaser, 8 x 200, re-fired every 10 ticks, and the enemy lasers) were sized by their length (a halo about
+  800 px across, a muzzle flash on every re-fire). Now beams get only a dim bloom (alpha 0.35), no halo, light,
+  muzzle flash or hit sparks, and other large shots' halos are capped at 8 px radius. Still open: whether that
+  is calm enough, and whether it runs smoothly on the phone.
 - [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
   is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
 - [ ] Before merging: commit the hq4x assets (or a smaller tile-based level format). Maybe prefetch in the

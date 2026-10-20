@@ -5,12 +5,15 @@
 // Smooth motion: positions are interpolated between the last two ticks (beforeTick keeps the older one), so
 // the 40 Hz simulation moves at the display's refresh rate; a slot that jumps further than SNAP is not
 // interpolated (a reused slot, a new level). Sprites without an upscaled version are nearest-scaled.
+// Effects (fx.ts, `effects`): glow, light and particles, and soft shadows (each run of shadow slots is drawn into
+// its own blurred container, so the drawing order stays the original's).
 
-import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Assets, BlurFilter, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { GameData } from '../data';
 import { cp437, type PaletteName, type Screen } from '../screens/screen';
 import { FADE_STEPS, MODE_SHADOW, SLOTS, SpriteTable, type World } from '../sim/state';
 import { H, W } from './framebuffer';
+import { Fx } from './fx';
 
 export type RemasterMethod = 'hq4x';
 export const REMASTER_METHOD: RemasterMethod = 'hq4x'; // chosen by the user (session 17) over xbr4 and Real-ESRGAN
@@ -46,7 +49,13 @@ export class HiResView {
   readonly root = new Container();
   private readonly level = new Container();
   private readonly background = new Container();
-  private readonly playfield = new Container();
+  private readonly playfield = new Container(); // segments: runs of slots, shadow runs blurred
+  private readonly segments: Container[] = [];
+  private readonly segmentShadow: boolean[] = [];
+  private readonly shadowBlur = new BlurFilter({ strength: 4, quality: 2 });
+  private readonly fx: Fx;
+  /** Glow, light, particles and soft shadows (Settings.effects). */
+  effects = true;
   private readonly hud = new Container();
   private readonly bars = new Graphics();
   private readonly menu = new Container();
@@ -73,7 +82,8 @@ export class HiResView {
   constructor(private readonly data: GameData) {
     const clip = new Graphics().rect(CLIP_X0 * S, 0, (CLIP_X1 - CLIP_X0 + 1) * S, H * S).fill(0xffffff);
     const clipped = new Container();
-    clipped.addChild(this.background, this.playfield);
+    this.fx = new Fx(data);
+    clipped.addChild(this.background, this.fx.ground, this.playfield, this.fx.top);
     clipped.mask = clip;
     this.level.addChild(clip, this.bars, clipped, this.hud);
     this.menu.addChild(this.picture, this.menuSprites);
@@ -114,6 +124,12 @@ export class HiResView {
       p.x.set(sc.x);
       p.y.set(sc.y);
     }
+  }
+
+  /** After each simulation tick: the effects' events (explosions starting, shots appearing and ending). */
+  afterTick(view: 'screen' | 'world' | 'video', w: World): void {
+    if (view !== 'world' || !this.effects || !this.index) return;
+    this.fx.afterTick(w.drawn, this.prevWorldValid ? this.prevWorld : null, w.frame, w.drawnScrollX, w.drawnScrollY);
   }
 
   private base(): string {
@@ -231,6 +247,10 @@ export class HiResView {
     this.drawBars(w);
     const spr = w.drawn, prev = this.prevWorld;
     const used = new Map<Container, number>();
+    const fx = this.effects;
+    if (fx) this.fx.begin(w.drawnScrollX, scrollY, alpha, this.root.scale.x * S);
+    this.shadowBlur.strength = 0.35 * this.root.scale.x * S;
+    let segment = -1;
     for (let slot = SLOTS - 1; slot >= 0; slot--) {
       const n = spr.n[slot];
       if (n === 0) continue;
@@ -245,12 +265,26 @@ export class HiResView {
         }
       }
       x -= w.drawnScrollX;
-      const layer = slot <= FULL_WINDOW_SLOTS ? this.hud : this.playfield;
+      const shadow = spr.mode[slot] === MODE_SHADOW;
+      let layer = this.hud;
+      if (slot > FULL_WINDOW_SLOTS) {
+        const soft = fx && shadow;
+        if (segment < 0 || soft !== this.segmentShadow[segment]) segment = this.segment(segment + 1, soft);
+        layer = this.segments[segment];
+      }
       const text = w.texts.get(n);
-      if (text !== undefined) this.placeText(layer, used, this.text(text, 'FIRE', 0, 'EPIS1'), x, y);
-      else this.placeSprite(layer, used, this.frame(n, 'EPIS1'), x, y, spr.mode[slot] === MODE_SHADOW);
+      if (text !== undefined) {
+        this.placeText(layer, used, this.text(text, 'FIRE', 0, 'EPIS1'), x, y);
+        continue;
+      }
+      const f = this.frame(n, 'EPIS1');
+      this.placeSprite(layer, used, f, x, y, shadow);
+      if (fx && f && !shadow && layer !== this.hud) this.fx.sprite(n, f, x, y);
     }
-    this.finish(used, [this.hud, this.playfield]);
+    for (let i = segment + 1; i < this.segments.length; i++) this.segments[i].visible = false;
+    if (fx) this.fx.end();
+    else this.fx.clear();
+    this.finish(used, [this.hud, ...this.segments]);
     this.fade(w.flash, w.fade);
     return true;
   }
@@ -289,6 +323,23 @@ export class HiResView {
     this.finish(used, [this.menuSprites]);
     this.fade(false, sc.fade);
     return true;
+  }
+
+  /** Playfield segment i, blurred if it holds shadows; returns i. */
+  private segment(i: number, shadow: boolean): number {
+    let c = this.segments[i];
+    if (!c) {
+      c = new Container();
+      this.segments.push(c);
+      this.segmentShadow.push(false);
+      this.playfield.addChild(c);
+    }
+    c.visible = true;
+    if (this.segmentShadow[i] !== shadow) {
+      this.segmentShadow[i] = shadow;
+      c.filters = shadow ? [this.shadowBlur] : [];
+    }
+    return i;
   }
 
   /** The next pooled sprite of `layer`, showing frame f at (x, y) source px. */

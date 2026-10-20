@@ -13,7 +13,7 @@ import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
 import { REMASTER_METHOD } from './render/hiResView';
-import type { MenuInput, SaveSlot, Settings } from './screens/proc';
+import { graphicsName, nextGraphics, type MenuInput, type SaveSlot, type Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
 
@@ -271,9 +271,9 @@ async function main(): Promise<void> {
     labelTimer = window.setTimeout(() => (remasterLabel.hidden = true), 2500);
   };
   toggleRemaster = () => {
-    settings.remastered = !settings.remastered;
+    nextGraphics(settings);
     saveSettings(settings);
-    showRemaster(settings.remastered ? 'Grafik: Remastered' : 'Grafik: Classic');
+    showRemaster('Grafik: ' + graphicsName(settings));
   };
 
   let acc = 0;
@@ -287,6 +287,7 @@ async function main(): Promise<void> {
     if (keys.takePress('KeyR')) toggleRemaster();
     const graphics = settings.remastered ? REMASTER_METHOD : null;
     if (view.hiRes.current !== graphics) void view.hiRes.use(graphics);
+    view.hiRes.effects = settings.effects;
     while (acc >= TICK_MS) {
       keys.sample();
       mouse.sample();
@@ -294,6 +295,7 @@ async function main(): Promise<void> {
       touch.sample();
       view.hiRes.beforeTick(game.view, game.world, game.screen);
       game.tick(input);
+      view.hiRes.afterTick(game.view, game.world);
       pauseTap = false;
       acc -= TICK_MS;
     }
