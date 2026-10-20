@@ -99,8 +99,16 @@ plus a service worker (`game/sw.js`, written to `dist/sw.js` with the file list 
 the whole game (about 28 MB with music and videos), so the installed app also plays offline. On Android Chrome:
 menu → "App installieren"; on iPhone/iPad Safari: Teilen → "Zum Home-Bildschirm". Browsers only allow this over
 HTTPS (or on `localhost`), so a phone needs the build served over HTTPS, e.g. `npx vite preview --host` behind
-`tailscale serve`, or a static host such as GitHub Pages. The dev server (`npm run dev`) doesn't register the
+`tailscale serve`, or the public build on GitHub Pages. The dev server (`npm run dev`) doesn't register the
 service worker.
+
+### Hosting
+The game is published on GitHub Pages: https://aimfeld.github.io/dark-planet/
+
+We develop on `main` and publish the `production` branch. `bin/deploy.sh` checks that `main` is clean and pushed,
+runs the tests and the build, then fast-forwards `production` to `main` and pushes both. The push to
+`production` starts `.github/workflows/deploy.yml`, which builds `game/` and deploys it. The script follows the
+run if the GitHub CLI (`gh`) is installed. Only `production` may deploy to Pages.
 
 ## Docs
 - [docs/PLAN.md](docs/PLAN.md): goals, architecture, phases, open questions

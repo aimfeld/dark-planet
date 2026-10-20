@@ -1,0 +1,50 @@
+# Builds the game (game/) and publishes it to GitHub Pages on every push to the production branch.
+# We develop on main; bin/deploy.sh fast-forwards production to main. The github-pages environment only
+# accepts deploys from production (Settings → Environments → github-pages → Deployment branches).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push cancels a queued (not a running) one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: game/package-lock.json
+      - run: npm ci
+      # Tests are not run here: some need original_source/, which is not in the repo.
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: game/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
