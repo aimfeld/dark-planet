@@ -95,6 +95,13 @@
 - [~] **User:** play on a real phone and tablet (`npm run dev -- --host`, open the LAN address, or serve it over Tailscale): works on the user's Android phone (session 11). Still open: a tablet, an iPhone, and feedback on the steering feel, button sizes and places, autofire double tap, the shop with taps and long press.
 - [ ] Check the intro/ending WebM (VP9) on iPhone/iPad Safari; add an MP4 fallback if it doesn't play.
 - [ ] PWA icons (192/512 px) for `manifest.webmanifest`, and optionally a service worker for offline play.
+- [x] Polish pass, part 1 (session 11, decision 15): compared level 1 frame by frame with the DOSBox-X capture
+  `dp_002.avi` (each frame located on the level map by background matching) and played levels 1–6 through in Chrome
+  with a scripted bot. Fixes: the level tiles were drawn 8 px too low (AniVGA's PutTile snaps to its 16 px grid; now
+  houses, cars, people and the boss stop match the capture exactly), and the level 2 ground core no longer drifts off
+  the top of the screen (original bug, spec §12 #20). Everything else checked matched: spawn timing and positions,
+  enemy paths, HUD, game over, the two-player HUD with P1 out, all boss fights, the level transitions, music and the ending.
+- [ ] **User:** DOSBox-X recordings for the open checks (list in the session-11 notes below).
 
 ### Phase 4: Remastered mode
 - [ ] Interpolated high-refresh renderer, upscaled assets, effects, streamed music, mode switch in the menu.
@@ -114,6 +121,15 @@
 12. The Golem's curse turns every jet's standard weapon into the Firestorm's basic gun (item 1): intentional, kept (user, session 7).
 13. Two players may share one keyboard: a second key set around WASD as an extra control type (user, session 10). The original never let both players use the keyboard.
 14. The game should work well on smartphones (landscape) and tablets with touch controls (user, session 11). Publishing on Steam or in the app stores is optional.
+15. Polish classic mode before starting the remaster: play it through and fix differences from the original (user, session 11).
+
+## Notes (session 11, polish pass)
+- Recordings that would settle open questions (DOSBox-X with `dplanet.conf`, video recording from the Capture menu):
+  1. Level 1 boss flying **high** and firing at the legs the whole time: does the escort (legs, 0x24, 180 energy)
+     break off? In the remake it does after about 7 s of hits; the existing capture never shows it, but there the
+     player may not have hit it at all.
+  2. Any of levels 2–6 (a save from the hangar is fine): the only reference for episode 2 so far are 1998 screenshots.
+  3. Menus: "Die Geschichte" for 30 s (scroll speed of the text viewer), and the shop's "Grosse Pods" list.
 
 ## Notes (session 11, not yet confirmed by the user)
 - Touch steering is a floating stick giving the joystick's direction flags (the same acceleration as keyboard
