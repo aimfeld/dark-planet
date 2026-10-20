@@ -13,6 +13,9 @@ const CLIP_X1 = 311;
 // Animate switches to the full screen at slot 8 (SetFullWindowSlots(8) = 28be:2BDE): slots 0..8 = HUD.
 const FULL_WINDOW_SLOTS = 8;
 
+/** Level y of tile row 0's top edge: BuildLevel's 168 on AniVGA's 16 px tile grid (PutTile 28be:5083). */
+const TILE_Y0 = 160;
+
 export class Framebuffer {
   readonly px = new Uint8Array(W * H);
 
@@ -37,16 +40,19 @@ export class Framebuffer {
     }
   }
 
-  /** The level's 32 x 32 tiles (row 0 at level y 168..199, see docs/file-formats.md LEV). */
+  /**
+   * The level's 32 x 32 tiles: row 0 at level y 160..191 (BuildLevel asks for 168, AniVGA's PutTile snaps to its
+   * 16 px grid; docs/file-formats.md LEV). Level y 192..199 has no tile and stays black.
+   */
   private background(w: World): void {
     const level = this.data.levels[w.level - 1];
     const tiles = this.data.tiles[w.episode - 1];
     const px = this.px;
     for (let y = 0; y < H; y++) {
       const ly = w.drawnScrollY + y;
-      const row = Math.floor((199 - ly) / 32);
+      const row = Math.floor((191 - ly) / 32);
       if (row < 0 || row >= level.tiles.length) continue;
-      const ty = ly - (168 - 32 * row);
+      const ty = ly - (TILE_Y0 - 32 * row);
       const cells = level.tiles[row];
       for (let x = CLIP_X0; x <= CLIP_X1; x++) {
         const lx = w.drawnScrollX + x;

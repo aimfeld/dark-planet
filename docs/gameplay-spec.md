@@ -9,7 +9,7 @@ Nothing in this file has been checked in DOSBox-X yet; §12 lists the checks.
 - **1 tick = 1 frame of the original game loop.** The remake runs a fixed 40 Hz tick (decision, session 3).
   All speeds are px/tick and all durations are ticks unless stated otherwise (40 ticks = 1 s).
 - **Coordinates** are the original AniVGA "virtual" coordinates: a sprite position is its top-left corner;
-  x 0…319, level y from +199 (level start, bottom) down to −6200 (top). `scrollY` is the level y at the top
+  x 0…319, level y from +199 (level start, bottom) down to −6208 (top; tiles cover −6208…191, below is black). `scrollY` is the level y at the top
   of the screen: 0 at the start, −1 per tick while the level scrolls. Screen y = y − scrollY.
   `scrollX` is 0 except while the screen shakes.
 - Players, enemies and pods are **screen-locked**: the scroll subtracts 1 from their y every tick, so their own

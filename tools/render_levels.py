@@ -14,7 +14,9 @@ Evidence (DP.EXE, see docs/re-notes.md "Levels"):
   StartLevel @0x1B582  loads tileset string DS:0xF38 + 0x100 * episode (Ti1.lib, Ti2.lib)
                        with AniVGA LoadTile, so levels 1-3 use TI1 and 4-6 use TI2
   LoadLevel @0x1B3ED   200 rows x 10 bytes into LevMap, then 4200 bytes (600 x 7) to DS:0x4442
-  BuildLevel @0x1B4FF  tile row r (1-based) at level y = 168 - 32 * (r - 1), column c at x = 32 * (c - 1)
+  BuildLevel @0x1B4FF  tile row r (1-based) at level y = 168 - 32 * (r - 1), column c at x = 32 * (c - 1);
+                       AniVGA's PutTile 28be:5083 snaps y to its 16 px grid (origin -6400), so the row
+                       really lands at 160 - 32 * (r - 1) (confirmed against the DOSBox-X capture)
   SpawnFromLevel @0x16653  a record fires when its Y equals the scroll Y (DS:0x25B6, the
                        level y at the top of the screen; 0 at the start, decreasing)
   SpawnEnemy @0x1163A  sprite = word DS:0x19FA[type], SpriteY = Y - sprite height
@@ -36,7 +38,7 @@ from extract_sprites import SPRITE_LIBS, rgba  # noqa: E402
 
 COLS, ROWS, TILE = 10, 200, 32
 RECORDS, RECORD_SIZE = 600, 7
-LEVEL_TOP = 168 - TILE * (ROWS - 1)  # level y of the image's top edge (-6200)
+LEVEL_TOP = 160 - TILE * (ROWS - 1)  # level y of the image's top edge (-6208)
 UNUSED_Y = 100  # never reached by the scroll (it starts at 0 and decreases): an empty slot
 BOSS_TYPES = {0x05, 0x20, 0x23, 0x3C, 0x43, 0x48}  # SpawnFromLevel calls StartBossFight @0x1627E
 MAX_TYPE = 0x4A  # SpawnFromLevel ignores larger types

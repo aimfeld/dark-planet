@@ -55,8 +55,10 @@ No header (unlike the prototype). Read by `LoadLevel` @0x1B3ED (see re-notes "Le
   u8   flag   fires only if flag ≤ DS:0x16C2, a constant 1; every used record has 1
               (0 only in empty slots), so in practice every record fires
 ```
-Level coordinates: tile row r (1-based) covers y = 168 − 32·(r−1) … +31, column c
-covers x = 32·(c−1) … +31, so the level spans y = −6200 … 199 (320 × 6400 px).
+Level coordinates: tile row r (1-based) covers y = 160 − 32·(r−1) … +31, column c
+covers x = 32·(c−1) … +31, so the tiles span y = −6208 … 191 (320 × 6400 px); level y 192…199 (the bottom
+8 rows of the first screen) has no tile and shows black. BuildLevel asks for y = 168 − 32·(r−1), but AniVGA's
+PutTile snaps to its 16 px tile grid (origin −6400), which moves every row up by 8 (re-notes "Levels").
 Tileset: `TI1.LIB` for levels 1–3, `TI2.LIB` for 4–6 (episode = (level−1) div 3 + 1).
 
 ## LIB / COD (AniVGA sprites)
