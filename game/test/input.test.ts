@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Gamepad } from '../src/input/gamepad';
 import { Keyboard } from '../src/input/keyboard';
 import type { Mouse } from '../src/input/mouse';
+import { keyLegend } from '../src/input/keyLegend';
 import { playerInputs } from '../src/input/players';
 import { createWorld, NO_INPUT, type PlayerInput, type World } from '../src/sim/state';
 import { newGame, startLevel, step } from '../src/sim/tick';
@@ -79,9 +80,9 @@ describe.skipIf(!hasData)('control types (spec §2, §3.1)', () => {
 });
 
 describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
-  const setup = () => {
+  const setup = (mac = false) => {
     const target = new EventTarget();
-    const keys = new Keyboard(target as unknown as Window);
+    const keys = new Keyboard(target as unknown as Window, mac);
     const key = (type: string, code: string) => target.dispatchEvent(Object.assign(new Event(type), { code }));
     return { keys, key };
   };
@@ -107,6 +108,14 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
     expect(keys.player(false, true)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
   });
 
+  it('shared keyboard on a Mac: right Option fires, the key left of right Shift switches altitude', () => {
+    const { keys, key } = setup(true);
+    for (const c of ['AltRight', 'Slash', 'ShiftRight']) key('keydown', c);
+    keys.sample();
+    expect(keys.player(false, true)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
+    expect(keys.player(false, false)).toMatchObject({ fire: false, altitude: true, select: true }); // Alt = altitude
+  });
+
   it('playerInputs: WASD in the game makes the arrow set right-handed', () => {
     const { keys, key } = setup();
     key('keydown', 'KeyX');
@@ -115,5 +124,25 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
     const pad = {} as Gamepad;
     expect(playerInputs([1, 4], [true, false], keys, mouse, pad)[0].fire).toBe(true); // P2 not playing
     expect(playerInputs([1, 4], [true, true], keys, mouse, pad)[0].fire).toBe(false);
+  });
+});
+
+describe('key legend', () => {
+  it('one line per player (P2 only in multiplayer), X/C only on a Mac, the right-hand keys while WASD plays', () => {
+    expect(keyLegend([1, 4], [true, false], false)).toEqual([
+      'Player1 — Pfeile: fliegen · Ctrl/X: ballern · Alt/C: hoch/tief · Space: Bonus selektieren · Ctrl+Space: Bonus abfeuern',
+      'P: Pause · Esc: Spiel abbrechen · F: Vollbild',
+    ]);
+    const mac = keyLegend([1, 2], [true, false], true);
+    expect(mac[0]).toContain('X+Space: Bonus abfeuern');
+    expect(mac.join()).not.toContain('Ctrl');
+    expect(keyLegend([1, 4], [true, true], true)[0]).toContain('Option rechts: ballern · -: hoch/tief');
+    const wasd = keyLegend([1, 4], [true, true], false);
+    expect(wasd[0]).toContain('Player1 — Pfeile: fliegen · Ctrl rechts: ballern');
+    expect(wasd[1]).toBe('Player2 — WASD: fliegen · Shift links: ballern · Q: hoch/tief · E: Bonus selektieren · Shift+E: Bonus abfeuern');
+    const pad = keyLegend([2, 3], [true, true], false);
+    expect(pad[0]).toContain('Player1 — Maus: fliegen · links: ballern');
+    expect(pad[1]).toContain('Player2 — Joystick: fliegen · A/RT: ballern');
+    expect(pad).toHaveLength(3);
   });
 });

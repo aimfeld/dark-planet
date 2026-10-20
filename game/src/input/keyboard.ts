@@ -25,6 +25,9 @@ const ARROWS: KeySet = {
 };
 /** The arrow player while another player uses WASD: only the keys right of the space bar. */
 const ARROWS_RIGHT: KeySet = { ...ARROWS, fire: ['ControlRight'], altitude: ['AltRight'], bonus: ['ShiftRight'] };
+/** The same on a Mac, which has no right Ctrl: right Option (left of the arrows) fires, the key left of right Shift
+ * (- on German keyboards, / on US ones) switches the altitude. */
+const ARROWS_RIGHT_MAC: KeySet = { ...ARROWS_RIGHT, fire: ['AltRight'], altitude: ['Slash'] };
 /** Type 4 (remake). No Ctrl: the browser keeps Ctrl+W (close tab) even when the page handles the key. */
 const WASD: KeySet = {
   left: ['KeyA'],
@@ -37,7 +40,7 @@ const WASD: KeySet = {
 };
 // keypad - / + select and use the joystick player's bonus (DS:0x6C31 / 0x6C32)
 const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown', 'NumpadSubtract', 'NumpadAdd'];
-const CAPTURED = new Set([...Object.values(ARROWS).flat(), ...Object.values(WASD).flat(), ...OTHER]);
+const CAPTURED = new Set([ARROWS, ARROWS_RIGHT_MAC, WASD, { OTHER }].flatMap((set) => Object.values(set).flat()));
 
 export class Keyboard {
   private readonly down = new Set<string>();
@@ -45,7 +48,8 @@ export class Keyboard {
   private readonly tapped = new Set<string>(); // pressed since the last sample
   private sampled = new Set<string>(); // what the current tick sees
 
-  constructor(target: Window) {
+  /** `mac`: the shared arrow set without right Ctrl. */
+  constructor(target: Window, private readonly mac = false) {
     target.addEventListener('keydown', (e) => {
       if (CAPTURED.has(e.code)) e.preventDefault();
       if (!e.repeat) this.pressed.add(e.code);
@@ -70,7 +74,7 @@ export class Keyboard {
    * second set; `shared` limits the arrow player to the right-hand keys while the WASD player is in the game.
    */
   player(wasd = false, shared = false): PlayerInput {
-    const set = wasd ? WASD : shared ? ARROWS_RIGHT : ARROWS;
+    const set = wasd ? WASD : shared ? (this.mac ? ARROWS_RIGHT_MAC : ARROWS_RIGHT) : ARROWS;
     const held = (codes: string[]) => codes.some((c) => this.sampled.has(c));
     const fire = held(set.fire), bonus = held(set.bonus);
     return {

@@ -5,8 +5,9 @@ import { Sfx } from './audio/sfx';
 import { loadGameData } from './data';
 import { DEFAULT_SETTINGS, Game } from './game';
 import { Keyboard } from './input/keyboard';
-import { keyboardLockSupported, toggleFullscreen } from './input/fullscreen';
+import { isMac, toggleFullscreen } from './input/fullscreen';
 import { Gamepad } from './input/gamepad';
+import { keyLegend } from './input/keyLegend';
 import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
@@ -124,7 +125,8 @@ async function main(): Promise<void> {
   registerOffline(base);
 
   const view = await ClassicView.create(document.getElementById('app')!, data);
-  const keys = new Keyboard(window);
+  const mac = isMac();
+  const keys = new Keyboard(window, mac);
   const mouse = new Mouse(view.element, (x, y) => view.toScreen(x, y));
   const pad = new Gamepad();
   const touch = new TouchControls(document.body, TOUCH_DEVICE ? () => void fullscreen() : undefined);
@@ -180,7 +182,15 @@ async function main(): Promise<void> {
     if (mousePlays()) mouse.lock();
   });
   if (import.meta.env.DEV) Object.assign(window, { game }); // for debugging in the browser console
-  status.textContent = TOUCH_DEVICE || keyboardLockSupported() ? '' : 'F: Vollbild (ohne Tastatursperre)';
+  // The game keys below the picture (not with touch controls, which fill the window).
+  const legend = document.getElementById('keys')!;
+  const showKeys = () => {
+    legend.hidden = TOUCH_DEVICE || touchUsed();
+    const text = keyLegend(settings.control, game!.world.players.map((p) => p.active), mac).join('\n');
+    if (legend.textContent !== text) legend.textContent = text;
+    view.setBelow(legend.hidden ? 0 : legend.offsetHeight);
+    legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
+  };
 
   let acc = 0;
   let last = performance.now();
@@ -201,6 +211,7 @@ async function main(): Promise<void> {
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
     touch.update(touchPlays, game.touchKeys, layout());
     view.setArea(touchUsed() ? layout().game : null);
+    showKeys();
     if (mousePlays() !== mouseWasPlaying) {
       mouseWasPlaying = !mouseWasPlaying;
       if (mouseWasPlaying) mouse.lock();

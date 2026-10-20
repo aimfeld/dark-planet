@@ -20,6 +20,7 @@ export class ClassicView {
   private readonly texture: Texture;
   private readonly sprite: Sprite;
   private area: Rect | null = null;
+  private below = 0; // CSS pixels kept free under the integer-scaled picture (the key legend)
 
   private constructor(private readonly app: Application, data: GameData) {
     this.fb = new Framebuffer(data);
@@ -56,6 +57,19 @@ export class ClassicView {
     this.layout();
   }
 
+  /** Keep `h` CSS pixels free below the integer-scaled picture. */
+  setBelow(h: number): void {
+    if (h === this.below) return;
+    this.below = h;
+    this.layout();
+  }
+
+  /** Where the picture is (CSS pixels). */
+  get picture(): Rect {
+    const scale = this.sprite.scale.x;
+    return { x: this.sprite.x, y: this.sprite.y, w: W * scale, h: H * scale };
+  }
+
   /** Largest integer scale that fits the window (in device pixels, so every source pixel stays sharp). */
   private layout(): void {
     if (this.area) {
@@ -65,10 +79,11 @@ export class ClassicView {
       return;
     }
     const dpr = window.devicePixelRatio || 1;
-    const scale = Math.max(1, Math.floor(Math.min((window.innerWidth * dpr) / W, (window.innerHeight * dpr) / H)));
+    const height = window.innerHeight - this.below;
+    const scale = Math.max(1, Math.floor(Math.min((window.innerWidth * dpr) / W, (height * dpr) / H)));
     this.sprite.scale.set(scale / dpr);
     this.sprite.x = Math.floor((window.innerWidth - (W * scale) / dpr) / 2);
-    this.sprite.y = Math.floor((window.innerHeight - (H * scale) / dpr) / 2);
+    this.sprite.y = Math.max(0, Math.floor((height - (H * scale) / dpr) / 2));
   }
 
   /** The canvas element (for pointer input). */

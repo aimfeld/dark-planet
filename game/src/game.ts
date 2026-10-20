@@ -12,8 +12,11 @@ import type { World } from './sim/state';
 import type { VideoPlayer } from './video';
 import { playVideo } from './screens/video';
 
-/** SETTINGS.DAT defaults without a file: P1 keyboard, P2 mouse, CD sound and sound effects on. */
-export const DEFAULT_SETTINGS: Settings = { control: [1, 2], cdSound: true, soundEffects: true };
+/**
+ * SETTINGS.DAT defaults without a file: P1 keyboard, CD sound and sound effects on. P2 is WASD (the original:
+ * mouse), so two players can share one keyboard right away (user, session 12).
+ */
+export const DEFAULT_SETTINGS: Settings = { control: [1, 4], cdSound: true, soundEffects: true };
 
 /** A save slot in memory (tests, or no browser storage). */
 export function memorySlot(): SaveSlot {
