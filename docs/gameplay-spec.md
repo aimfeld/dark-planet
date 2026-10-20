@@ -496,7 +496,12 @@ trees, cars) are enemies too: layer 0, mostly sub 1 (fixed to the ground), and s
   → salvos of N shots spaced I + 1 ticks, then a gap of P + I + 1 ticks. At spawn left = N, pause = inter = 0.
 - Kind 0xFF launches an enemy instead of a shot (carrier 0x2E → fighter 0x2F after 12 ticks).
 - 49 enemy-shot slots; the fire sound is played only if fewer than 4 SMIX voices are active (I).
-- Aimed patterns (5, 6) target the centre-top of a player: a given one, or a random living player per shot.
+- Aimed pattern 5 targets the centre-top of a player (the centre while scrolling stops): a given one, or a random
+  living player per shot. "Nearest player" (Nearest(2) @0x11055, used by patterns 6/20, subs 0x1A/0x25 and the
+  turrets): Manhattan distance from the shot's or enemy's centre to each jet's top-left; P2 wins a tie; with one
+  player active it is that one.
+- Fire-time setup (EnemyFire @0x15069): pattern 7 sets its target 50 px from the gun at angle 4·t° (t = the enemy's
+  age), so successive shots turn; pattern 22 stores the turret's facing (sprite − base sprite = Direction8).
 
 ### 7.5 Enemy shots (O, 0x15671)
 Level coordinates (no scroll compensation). s = speed of the shot kind.
@@ -505,15 +510,15 @@ Level coordinates (no scroll compensation). s = speed of the shot kind.
 | 1 / 2 | y += s / y −= s |
 | 3 / 4 | y += s, x += s / y += s, x −= s |
 | 5 | aimed: straight line toward the target fixed at fire time (major axis s px) |
-| 6 | homing: re-aims at the nearest player's centre every tick |
-| 7 | line toward a rotating target: the direction turns 4° per enemy tick (rotating spray) |
+| 6 | homing: every tick a new line from where it is toward the nearest player's jet centre (major axis s px) |
+| 7 | line toward its fire-time target (gun + 50·(cos 4t°, −sin 4t°)): the spray rotates 4° per enemy tick |
 | 8 / 9 / 10 / 11 | (x+s, y + s div 3) / (x+s, y − s div 3) / (x−s, y + s div 3) / (x−s, y − s div 3) |
 | 12 / 13 / 14 / 15 / 16 | x −4 / (−4, +1) / (−3, +2) / (−3, +3) / y +4 |
 | 17 | clockwise arc of radius 200 starting at the gun, 2°/tick |
 | 18 | x += s, y += s + 1 |
-| 19 | falling: y += v, v +1 per tick up to 9 |
+| 19 | falling: y += v, v = 0, 1, 2 … up to 9 (+1 per tick; I: the code tests a tick counter nothing advances, so "+1 every 8th tick" was probably meant; kept as shipped) |
 | 20 | y += s; x ±2 toward the nearest player's centre |
-| 21 | glued to enemy slot 4 at (+13, +37) for 23 ticks (boss beam) |
+| 21 | glued to enemy record 4 (level 4 gun 0x3E) at (+13, +37); removed on its 24th tick (boss beam) |
 | 22 | 8-way along the turret's facing: orthogonal s, diagonal s − 2 per axis |
 Removed when off screen (y > scrollY + 200 or < scrollY, x > 320 or < 1).
 
@@ -575,7 +580,7 @@ tables").
    each), the pause is `Delay(1200)`. The remake freezes the game for 11 + 48 + 11 ticks (I: the 40 Hz mapping is
    ours) with the last frame fading out, then draws the new scene while black.
 2. Hits on a boss core: BossScript(5): level 1 with probability 1/3 plays one of sounds 35–37 twice, level 2 one of
-   17–19 twice (session 6).
+   17–19 twice (session 6); level 6 (Golem older than 210 ticks) with probability 1/6 one of 56–57 twice.
 2. No level spawns and no bonus drops during the fight.
 3. The fight ends when the **core** dies (types 0x23, 0x05, 0x20, 0x3C, 0x43, 0x48 for levels 1–6): its money is
    split between the players, explosion kind 15 (+ shake), its wreck stays and every other enemy is removed.
@@ -617,9 +622,12 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
 ### 8.5 Level 4: tank (core 0x3C, turrets 0x3D ×2, guns 0x3F, 0x3E)
 - Spawn: tank engine sound 51 (looping, I); turrets at (108, s+90) and (151, s+90), 0x3F at (118, s+65),
   0x3E at (128, s+63), core at (80, s+110). Parts follow the core at (+28, +63), (+71, +63), (+38, +24), (+48, +17).
-- Core path by age c: hatch opens/closes (anims, sound 52) and moves in a rectangle: 20–50 x−2, 71–100 y+2,
-  121–150 y−2, 171–200 x+2, 221–250 y+2, 271–320 x+2, 341–370 y−2, 391–440 x−2, c 461 → 3 (net drift −2 px per
-  458-tick loop).
+- Core path by age t (sub 0x22): hatch opens/closes (anims 0x1E/0x1F, sound 52 at t 2, 51, 151, 201, 251, 321,
+  371) and moves in a rectangle: 20–50 x−2, 71–100 y+2, 121–150 y−2, 171–200 x+2, 221–250 y+2, 271–320 x+2,
+  341–370 y−2, 391–440 x−2, t 461 → 3 (net drift −2 px per 458-tick loop; the remake starts the first leg at 21,
+  §12 #9).
+- Turret facing: every tick each living turret 0x3D shows sprite 1233 + Direction8(turret → nearest jet), and
+  its kind-1 shots (pattern 22) fly that way.
 - Turrets aim at the nearest player and fire along their facing; 0x3E fires a large shot (damage 70) every 80
   ticks; 0x3F fires falling salvos.
 - **The core can't be damaged until all four parts are destroyed** (confirmed by the user in the game, session 4). Core death: engine stops, sound 50 ×2.
@@ -633,14 +641,16 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
 ### 8.7 Level 6: the Golem (0x48, always enemy slot 2)
 - Spawn: sound 53 ×3; Golem at (45, s−30), sub 0x27. Immune to shots until 210 ticks old; ramming costs the player
   200 and doesn't hurt it.
-- Intro: c 60 roar (sounds, anim); **c 150 curse: every player's bonus inventory is emptied and every pod except the
-  standard weapon is destroyed**; c 250 → attacks.
+- Intro: c 60 roar (sounds, anim); **c 150 curse: every player's bonus inventory is emptied, every mount is
+  emptied (large and ball pods explode, kind 25) and the standard weapon mount gets item 1, the Firestorm's gun,
+  whatever the jet** (O, BossScript(6, 4) @0x122C3; corrected in session 7; intentional, confirmed by the user); c 250 → attacks.
 - Attacks, chosen at random (state 2 + Random(4)) after each one:
   - Teleport: anims and sounds, at c 200 jump to x = Random(240) − 60, y = s − 50 + Random(70); ends at c 280.
   - Rocks: 60-tick quake, three rocks (0x49) at x = 100(i−1) − 40 + Random(80), y s−40, falling 7 px/tick; ends at c 100.
   - Bounce: velocity (2, 2) inside x −60…180, y s−50…s+90, reversing at the edges, c 25–399 (looping sound 31).
   - Laser: two laser beams (0x4A, 50 ticks each, unshootable, ram damage 25) at c 1 and c 44; ends at c 180.
-- Death: money 30000, the Golem sprite becomes 1333 and drifts off (sub 0x2A). Level 6 complete → game complete.
+- Death: money 30000, the Golem sprite becomes 1333 and drifts off (sub 0x2A) without being an enemy any more
+  (§12 #18). Level 6 complete → game complete.
 
 ## 9. Game flow
 ### 9.1 Level end (O, 0x1A951, 0x1B6D1)
@@ -737,6 +747,9 @@ feel otherwise. "Fix" states the intended behaviour; values marked *design* are 
 | 14 | Bonus shots pass mount −1/−2 (or the Star's shot number 0–4) to SpawnShot, which reads that mount record for the fire sound and unloads it: out-of-range memory for −1/−2 (for P2 that is P1's ball-pod record), and the Star unloads mounts 0–4 and plays their sounds (O, 0x111A4) | bonus shots play only the bonus's own sound and leave the mounts alone |
 | 15 | Aimed shots (patterns 7/8) multiply the interpolation in 16 bits (`MUL` + `CWD`), so at wide angles the product wraps and the shot jumps sideways; a target exactly at the start divides 0 by 0 (runtime error 200) (O, 0x14185) | multiply exactly; x stays at the start in the 0/0 case |
 | 16 | A ball pod destroying an enemy shot takes the explosion's altitude from enemy record k, where k is the enemy shot's number (out of range for k > 29) (O, 0x19100) | use the player's altitude |
+| 17 | EnemyUpdate's snake facing hook runs on a record the despawn has just removed, so snake debris removed at the screen edge can leave its sprite behind (O, 0x16C0E) | face only pieces that still exist |
+| 18 | The dead Golem stays an active enemy (it only changes sprite and sub), so another hit, ramming or ball-pod contact in the same tick destroys it again and pays 30000 again (O, 0x11A08, 0x18978) | the dead Golem drifts off like a wreck and can't be hit |
+| 19 | A destroyed snake body segment is refilled with the one-player energy, without SpawnEnemy's ×1.5 for two players (O, 0x12A1E) | refill to the spawn energy |
 
 ## 13. Open questions and proposed DOSBox-X checks
 Priority order; each needs one short capture (`original_source/capture/`) or a debugger session.

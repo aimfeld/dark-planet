@@ -22,12 +22,18 @@ function addExplosion(w: World, anim: number, delay: number, x: number, y: numbe
   }
 }
 
+/** Quake(ticks) @1d9e:1447: shake the screen for that many ticks, with sound 14. */
+export function quake(w: World, ticks: number): void {
+  w.quake = ticks;
+  playSound(w, 14);
+}
+
 /** Explode(x, y, kind, altitude) @1d9e:157A: kinds 1-25 from tables.json `explosion_kinds`. */
 export function explode(w: World, x: number, y: number, kind: number, high: boolean): void {
   const parts = w.data.tables.explosion_kinds[String(kind)];
   if (!parts) return;
-  const quake = w.data.tables.quake_ticks[String(kind)];
-  if (quake) w.quake = quake;
+  const ticks = w.data.tables.quake_ticks[String(kind)];
+  if (ticks) quake(w, ticks);
   for (const p of parts) {
     let delay = p.delay;
     if (p.delay_rand) delay += w.rng.next(p.delay_rand) * (p.delay_step ?? 1);

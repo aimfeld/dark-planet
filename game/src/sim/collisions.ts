@@ -1,7 +1,8 @@
 // Collisions per player @0x18978: shots vs enemies, enemy shots vs the jet, ramming (spec §3.4, §4.6).
 
+import { bossScript } from './bosses';
 import { explode, startAnim } from './effects';
-import { BOSS_TYPES, bossHit, enemyDestroyed, killEnemyShot, typeOf } from './enemies';
+import { BOSS_TYPES, enemyDestroyed, killEnemyShot, typeOf } from './enemies';
 import { damage } from './player';
 import { hitDetect, spriteH } from './sprites';
 import type { Player, World } from './state';
@@ -53,7 +54,7 @@ export function collisions(w: World, p: Player): void {
         else explode(w, sx - 18, sy - 5, hx[0], high);
       }
       if (e.energy < 1) enemyDestroyed(w, p, c, true, true);
-      if (BOSS_TYPES.has(e.type)) bossHit(w);
+      if (BOSS_TYPES.has(e.type)) bossScript(w, 5);
       if (e.active && e.type === 0x17) startAnim(w, 0x10, e.slot);
       const pierce = s.type === 5 || ((s.type === 11 || s.type === 22) && !BOSS_TYPES.has(e.type));
       if (!pierce) killShot(w, p, a);

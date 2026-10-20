@@ -75,7 +75,9 @@
 - [ ] **User:** play level 1 to the end (bonuses, boss, level end, game over) and report differences; listen to the sounds.
 - [x] Remaining weapons (session 7): Autogun targeting (Nearest(1)), Flamer (flame anim, glued to its pod), G-Destructor scatter, ball pods (orbit, firing, enemy-shot removal, contact damage); all 24 shot patterns are ported. Found on the way: anim 5 belongs to the Flamer, not the Missiles; the ball orbit is k°/tick, not 2k°. New original bugs §12 #15 (aimed-shot 16-bit overflow) and #16 (ball-pod explosion altitude); fixes #2 (Distroyer reload 10) and #3 (P2's ball pod damages) are in. `test/weapons.test.ts`.
 - [ ] **User:** decide whether ball pods (and ramming) may damage the level 4/5 boss cores while their parts live. The original allows it (only shots are blocked); the remake does the same for now.
-- [ ] Enemy subs 7, 8, 0x12–0x2A and enemy-shot patterns 6, 7, 17, 19, 21, 22 (episode 2 and bosses), then levels 2–6.
+- [x] Episode 2 and the bosses (session 7): all 43 enemy subs, all 22 enemy-shot patterns, Direction8 and Nearest(2), the per-type hooks (snake facing and head fire, turret facing, parts riding on the cores), BossScript for levels 2–6 (`src/sim/bosses.ts`: level 2 core dropping to the ground, snake shortening from the back, tank, fortress, Golem intro/curse/teleport/rocks/bounce/lasers/death), Quake's sound 14. Levels 2–6 play through to their bosses (`test/bosses.test.ts`). Fixes per decision 8: §12 #7–9 (session 4 list) and new #17 (snake ghost sprite), #18 (dead Golem paid again), #19 (snake refill without the 2P bonus). Spec correction: the curse also turns the standard weapon into item 1, the Firestorm's gun.
+- [ ] **User:** play levels 2–6 (episode 2 enemies, all five bosses) and report differences.
+- [x] **User:** the Golem curse turning every jet's standard weapon into the Firestorm's gun is intentional (decision 12).
 - [ ] Menus, hangar, shop, saves, options, mission briefings, two players (mouse/joystick/gamepad input).
 
 ### Phase 4: Remastered mode
@@ -93,9 +95,10 @@
 9. No CPU option in the remake; modern machines run the fixed 40 Hz tick (user, session 4).
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
 11. ~~Engine data stays local~~ (a misunderstanding in session 5). **Corrected (user, session 7):** all newly generated assets (sprites, tiles, levels, tables, sounds, soundtrack, videos) are under version control, kept small: compressed browser-friendly formats, no WAV files. Only `original_source/` stays local.
+12. The Golem's curse turns every jet's standard weapon into the Firestorm's basic gun (item 1): intentional, kept (user, session 7).
 
 ## Notes (session 6, not yet confirmed by the user)
 - Two new original bugs are fixed per decision 8: §12 #13 (two inventory pickups in one tick lose one) and #14 (bonus shots read and unload mount records out of range).
 - Spec corrections from the code: bonuses are picked up only while flying high; atom-bomb kills can drop bonuses; the bonus wobble is 7°·frame; shot patterns 11/22 use angle°, not 2·angle.
 - StartBossFight's blocking fades and pause are mapped to 11 + 48 + 11 frozen ticks (our 40 Hz mapping of 20 retraces at 70 Hz and Delay(1200)).
-- Levels 2–6 can be started from the placeholder hangar, but their enemy subs and bosses are not ported yet.
+- ~~Levels 2–6 can be started from the placeholder hangar, but their enemy subs and bosses are not ported yet.~~ Ported in session 7.

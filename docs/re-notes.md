@@ -475,6 +475,67 @@ MoveShots 0x13C37 from the instruction listing. All **Observed** unless marked. 
   2i, int DS:0x190E + 2i) = (−7, −22), (0, 0), (0, 0), (−17, 14), (4, 14), (−35, 16), (22, 16), (0, 0): raw offsets
   without the cx/L/R base (ScrollStep moves the large pods to their mounts before the first draw).
 
+## Enemies of episode 2 and the bosses (session 7)
+Static analysis (REA CLI decompiles + objdump of segment 0x1000). Evidence IDs: `ev_f8520d73…` (EnemyUpdate
+0x16C0E), `ev_a851d347…` (BossScript 0x122C3), `ev_a8554c4f…` (Golem attack chooser 0x16BF1), `ev_451070c9…`
+(Direction8 0x167E5), `ev_1e4fba22…` / `ev_7bf8f444…` (1d9e:09EE / 0A6A), `ev_c2036554…` (EnemyFire 0x15069),
+`ev_220a9938…` (MoveEnemyShots 0x15671), `ev_2517ba09…` (KillEnemy 0x11A08), `ev_623e4e70…` (EnemyDestroyed
+0x12A1E). All **Observed** unless marked. Rules in `docs/gameplay-spec.md` §7.3–7.5, §8, §12 #7–9, #17–19.
+- Ghidra lists Pascal parameters in reverse declaration order (last pushed first): e.g. `FUN_1000_163a(delay, sub,
+  type, y, x)` is SpawnEnemy(x, y, type, sub, delay); `FUN_1000_1a08(drop, explode, i)`; `FUN_1000_4f2c(speed, ty,
+  tx, sy, sx, &y, &x)` = MoveTowards(&x, &y, sx, sy, tx, ty, speed); `FUN_1000_6a11(link, next, a1, a0, step, r, cy,
+  cx, i, slot)` = Arc(slot, i, cx, cy, r, step, a0, a1, next); PlaySound shows as (loop, n).
+- 1d9e:09EE(centre, r, angle) = Round(centre + r·cos(angle·2π/360)); 1d9e:0A6A = Round(centre − r·sin(…)).
+- `Direction8(x, y, tx, ty)` @0x167E5 (nested): dx = tx − x, up = y − ty; dx = 0 → up < 0 ? 4 : 0; else r = up/dx
+  (Real) against the Real constants 2.414 and 0.414 (CX:SI:DI 2382:F9DB:1A7E and 177F:CED9:53F7; ± by the sign
+  bit): dx > 0: r > 2.414 → 0, > 0.414 → 1, > −0.414 → 2, > −2.414 → 3, else 4; dx < 0 the same plus 4 (mod 8).
+- `Nearest(2, y, x)`: one active player → that one; both → Manhattan from (x, y) to each jet's SpriteX/Y, P1 only
+  if strictly nearer; none → 0 (callers then use P2's jet).
+- EnemyUpdate subs (record +0x14 = t, +0x16 = c, +0x18/+0x1A = x0/y0, +0x22 = phase); the full list is in spec §7.3.
+  Details beyond the session 4 summary: sub 7 phase 1 c −= 5, x = 09EE(x0 − 50, 50, c), y = 0A6A(y0, 50, c), c < −360 →
+  phase 2, c := 180; phase 2 c += 5 around x0 + 50, c > 540 → phase Random(2) = 0 ? 3 : 1, c := 0; phase 3 swoop 1–30
+  (−2, +2), 31–60 (+4, 0), 61–90 (−2, −2), 121 → phase 1. Sub 8: c += 1; phase 0 waits for c = 40; phase 1
+  MoveTowards(x0, y0 → 4, scrollY + 4, speed 2) until x < 8 ∧ y < scrollY + 8; phase 2 1–30 (+2, +2), 31–60 (+2, −2),
+  61–100 SpawnEnemy(x + 15, y + 40, 0x0E, 3) when c mod 5 = 0, 101–130, 131–160 as before, 161 → phase 3, c := 10;
+  phase 3 x −= 3, FireAllGuns(0) when c mod 20 = 0, x < 8 → phase 2, c := 1. Sub 0x12 (snake): phase 1 y += 2 until
+  y > scrollY + 50, then the Arc/straight chain of spec §8.4 (Arc steps ±6 at r 30/40/60/100). Sub 0x13:
+  MoveTowards(x0, y0 → energy, c, 9), removed (KillEnemy 0, 0) when y < scrollY. Sub 0x22 and 0x27 as spec §8.5/8.7
+  (0x27 phase 4 clamps the position into the bounce box at c 25, velocity in x0/y0; StopSound(0x1F) twice at c 430).
+- EnemyUpdate hooks after the despawn check (by type, active not checked except where noted): 0x05 → BossScript(2);
+  0x20 every 3rd tick: per active player, if Direction8(head → jet) = Direction8(old → new head position) →
+  FireAllGuns(player, i); t mod 3 = 0: SpriteN := 0x3D8 / 0x3E0 / 0x3D0 + Direction8(movement) for 0x20 / 0x21 /
+  0x22; 0x3C → BossScript(1); active 0x3D / 0x46: SpriteN := 0x4D1 / 0x4FC + Direction8(turret → nearest jet).
+  "Old position" = SpriteX/Y read before the scroll adjustment.
+- BossScript(action) @0x122C3 by level (records: enemy i at DS:0x7C68 + 38·i): level 1 action 5 hit sounds;
+  level 2: 1 = sound 0x12 ×3, Quake(40), core (record 3, if type 5) layer 0, sub 8, phase 0, c 0, x0/y0 := its
+  position, record 1 (if 0x0C) layer 0; 2 = record 2 (if type 0x0D) at core + (−10, 20), record 1 (if 0x0C) at core
+  + (16, 46) (type checks only, so the 0x0C wreck keeps following); 5 = hit sounds. Level 3 action 1: k = last
+  record of the active 0x21 run from record 2; if record 5 is an active 0x22 it takes k's angle and phase; k: x0/y0 :=
+  position, energy := Random(320), c := scrollY + Random(200) (+1 if equal to SpriteX), KillEnemy(k, explode 1,
+  drop 0) (which zeroes the energy: spec §12 #7), sub := 0x13. Level 4 action 1: records 1–4 at core (record 5) +
+  (28, 63), (71, 63), (38, 24), (48, 17). Level 5: nothing. Level 6 (Golem = record 2): 1 anim 0x24, sound 0x36 ×3;
+  2 anim 0x25, sound 0x37 ×3, x := Random(240) − 60, y := scrollY − 50 + Random(70); 3 Quake(60), (6, 7, 0xE) ×3,
+  anim 0x26, rocks SpawnEnemy((i − 1)·100 − 40 + Random(80), scrollY − 40, 0x49, 0x28) i = 1..3; 4 curse (below);
+  5 t > 210 ∧ Random(6) = 0 → sound 0x38 + Random(2) ×2; 6 sound 0x39 ×3, anim 0x28; 7 sound 0x3A ×2,
+  SpawnEnemy(x − 50, y + 215, 0x4A, 0x29); 8 anim 0x2B.
+- Curse (level 6 action 4), per player: inventory bytes (0x550A / 0x550E) := 0 and their HUD slots 9–11 / 12–14,
+  selection frame slot 15 / 16, selection 0x5528 / 0x552A := 0; every mount with +3 set: +3 := 0, and for cat 2 or 6
+  the pod sprite := 0 and Explode(podX + 7, podY + 10, 0x19, high) — P2's branch reads the positions from P1's slot
+  list 0x7542 (spec §12 #8); then mount 2 +3 := 1, +4 := 1 (0x54B9/0x54BA, P2 0x54E9/0x54EA).
+- Quake(n) 1d9e:1447: DS:0x25A5 := n and PlaySound(14). Explode kind 15 calls Quake(40); UseBonus 6 plays 14 and
+  then Quake(50) (two plays).
+- KillEnemy: type 0x0D → BossScript(1); type 0x48 → SpriteN := 0x535, sub 0x2A, t := 0 and nothing else (it stays
+  active: spec §12 #18); every other type clears sprite, shadow, active, wreck and energy. EnemyDestroyed: type 0x21
+  → energy := DS:0x1966[0x21] (no two-player bonus, spec §12 #19), BossScript(1), no KillEnemy.
+- EnemyFire: pattern 7 → +9/+B := start + Round(50·cos/sin(t·8·π/360)) (4t°, (0x86, 0x4800) = 50); pattern 22 → +5
+  := SpriteN − DS:0x19FA[type]; kind 0xFF uses gun 4's offset (class·8 + 0x1E84 / 0x1F8C) whatever gun fired.
+- MoveEnemyShots: 6 → +5/+7 := position, +9/+B := centre of the jet Nearest(2, shot centre) names, then MoveTowards;
+  7 → MoveTowards with the fire-time target; 17 → +9 −= 2, x = 09EE(sx, 200, +9 + 90), y = 0A6A(sy + 200, 200, +9 +
+  90); 19 → `if +9 = 1 then +B := 2`; y += +B; `if +9 mod 8 = 0 ∧ +B < 9 then +B += 1` (+9 is never advanced, so
+  +B grows every tick; I: a counter was intended); 21 → +9 += 1, position = record 4's sprite + (13, 37), KillEnemyShot
+  when +9 > 23; 22 → by +5: 0 (0, −s), 1 (s−2, −(s−2)), 2 (s, 0), 3 (s−2, s−2), 4 (0, s), 5 (−(s−2), s−2), 6 (−s, 0),
+  7 (−(s−2), −(s−2)).
+
 ## Soundtrack
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.

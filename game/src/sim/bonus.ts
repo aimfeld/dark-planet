@@ -2,7 +2,7 @@
 // (docs/gameplay-spec.md §5; DropBonus 1d9e:0F5D/0DC1, wobble 1d9e:0BE2, PickupBonuses 0x1330C,
 // BonusInventory 0x13534, UseBonus 0x12CA2, BombTimer 0x12C03).
 
-import { explode } from './effects';
+import { explode, quake } from './effects';
 import { enemyDestroyed } from './enemies';
 import { addMoney, setLivesText, startInvulnerable } from './player';
 import { hitDetect } from './sprites';
@@ -125,7 +125,7 @@ export function useBonus(w: World, p: Player, kind: number): void {
         if (e.energy < 1) enemyDestroyed(w, p, i, false, true);
       }
       playSound(w, 14);
-      w.quake = 50;
+      quake(w, 50); // (plays sound 14 a second time, as in the original)
       break;
     case 7: // Twin-Laser: two sine shots in opposite phase
       killShot(w, p, 46);
