@@ -88,6 +88,7 @@ describe.skipIf(!hasData)('menus', () => {
     run(40);
     expect(game.screen.picture).toBe('UMBILD');
     input.keys.add('ShiftLeft');
+    run(5); // Shift goes down first; the hangar waits for it to be released (the cheat input)
     press('Digit5', 2, 0);
     input.keys.delete('ShiftLeft');
     run(5);

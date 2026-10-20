@@ -101,17 +101,8 @@ export function* hangar(ctx: Ctx): Proc {
   let cheat = 0;
   for (;;) {
     pointer(ctx);
-    const dev = devLevel(ctx);
-    if (dev) {
-      while (input.anyKey()) yield* frame(ctx, 15); // Shift is a bonus key in the level
-      w.level = dev.level;
-      const result = yield* shootEmAll(ctx, dev);
-      if (result === 'menu') return;
-      yield* setup(ctx);
-      hover = 0;
-      continue;
-    }
-    if (input.anyKey()) {
+    let dev = devLevel(ctx);
+    if (!dev && input.anyKey()) {
       // Each key press must be the next letter, anything else starts over (a G as the first letter again).
       if (input.held(CHEAT[cheat])) cheat += 1;
       else cheat = input.held('KeyG') ? 1 : 0;
@@ -121,10 +112,21 @@ export function* hangar(ctx: Ctx): Proc {
         playSound(ctx, 20); // AIDBONUS, twice
         playSound(ctx, 20);
       }
-      while (input.anyKey() && !input.held('Escape')) {
+      // (the dev keys also count here: Shift goes down before the digit)
+      while (!dev && input.anyKey() && !input.held('Escape')) {
         pointer(ctx);
         yield* frame(ctx, 15);
+        dev = devLevel(ctx);
       }
+    }
+    if (dev) {
+      while (input.anyKey()) yield* frame(ctx, 15); // Shift is a bonus key in the level
+      w.level = dev.level;
+      const result = yield* shootEmAll(ctx, dev);
+      if (result === 'menu') return;
+      yield* setup(ctx);
+      hover = 0;
+      continue;
     }
     yield* frame(ctx, 15);
     const m = input.mouse;
