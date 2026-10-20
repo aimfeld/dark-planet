@@ -69,7 +69,7 @@ mouse ("Shoot em all" starts the next level, "Multiplayer" adds player 2, "Optio
 Tastatur, Maus, Joystick = gamepad, WASD or Touch). Keyboard in a level: arrows move, X fires, C switches
 altitude, V selects a bonus, X+V uses it (the original's Ctrl, Alt and Space work too, but in a window the desktop
 takes some of their combinations). WASD (a second player on the same keyboard; player 2's default):
-W/A/S/D move, left Shift fires, Q switches altitude, E selects, Shift+E uses; meanwhile the arrow player uses
+W/A/S/D move, X fires, C switches altitude, V selects, X+V uses; meanwhile the arrow player uses
 the three keys left of right Shift: , fires, . switches altitude, - selects, , + - uses. Mouse: the jet follows the pointer, left fires,
 right switches altitude, middle selects a bonus, left+middle uses it. Gamepad: stick or d-pad, A fires, B switches
 altitude, X/LB selects, Y/RB uses. Touch (the default on phones and tablets): a stick appears under the left thumb,

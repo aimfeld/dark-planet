@@ -10,7 +10,7 @@ function controls(type: number, shared: boolean): string {
     case 3:
       return 'Joystick: fliegen · A/RT: ballern · B: hoch/tief · X/LB/Ziffernblock −: Bonus selektieren · Y/RB/Ziffernblock +: Bonus abfeuern';
     case 4:
-      return 'WASD: fliegen · Shift links: ballern · Q: hoch/tief · E: Bonus selektieren · Shift+E: Bonus abfeuern';
+      return 'WASD: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern';
     case 5:
       return 'Touch: Steuerknüppel links, Knöpfe rechts';
     default:

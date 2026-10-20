@@ -30,15 +30,18 @@ const ARROWS: KeySet = {
  * , . - on German and Swiss keyboards, , . / on US ones.
  */
 const ARROWS_RIGHT: KeySet = { ...ARROWS, fire: ['Comma'], altitude: ['Period'], bonus: ['Slash'] };
-/** Type 4 (remake). No Ctrl: the browser keeps Ctrl+W (close tab) even when the page handles the key. */
+/**
+ * Type 4 (remake): X/C/V as for the arrow player alone (user, session 13). No Ctrl: the browser keeps Ctrl+W (close
+ * tab) even when the page handles the key. No Shift: Windows offers Sticky Keys after five presses.
+ */
 const WASD: KeySet = {
   left: ['KeyA'],
   right: ['KeyD'],
   up: ['KeyW'],
   down: ['KeyS'],
-  fire: ['ShiftLeft'],
-  altitude: ['KeyQ'],
-  bonus: ['KeyE'],
+  fire: ['KeyX'],
+  altitude: ['KeyC'],
+  bonus: ['KeyV'],
 };
 // keypad - / + select and use the joystick player's bonus (DS:0x6C31 / 0x6C32)
 const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown', 'NumpadSubtract', 'NumpadAdd'];

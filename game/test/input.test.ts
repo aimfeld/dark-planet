@@ -87,13 +87,13 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
     return { keys, key };
   };
 
-  it('WASD moves, left Shift fires, Q switches altitude, E selects and Shift + E uses', () => {
+  it('WASD moves, X fires, C switches altitude, V selects and X + V uses', () => {
     const { keys, key } = setup();
-    for (const c of ['KeyW', 'KeyA', 'ShiftLeft', 'KeyE']) key('keydown', c);
+    for (const c of ['KeyW', 'KeyA', 'KeyX', 'KeyV']) key('keydown', c);
     keys.sample();
     const p = keys.player(true);
     expect([p.device, p.up, p.left, p.right, p.fire, p.select, p.use, p.altitude]).toEqual([4, true, true, false, true, true, true, false]);
-    expect(keys.player().fire).toBe(false); // the arrow player doesn't see them
+    expect(keys.player(false, true).fire).toBe(false); // the arrow player doesn't see them
   });
 
   it('shared keyboard: the arrow player keeps only , . - left of right Shift', () => {
@@ -132,7 +132,7 @@ describe('key legend', () => {
     ]);
     const wasd = keyLegend([1, 4], [true, true]);
     expect(wasd[0]).toBe('Player1 — Pfeile: fliegen · Komma: ballern · Punkt: hoch/tief · Minus: Bonus selektieren · Komma+Minus: Bonus abfeuern');
-    expect(wasd[1]).toBe('Player2 — WASD: fliegen · Shift links: ballern · Q: hoch/tief · E: Bonus selektieren · Shift+E: Bonus abfeuern');
+    expect(wasd[1]).toBe('Player2 — WASD: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern');
     expect(wasd.join()).not.toMatch(/Ctrl|Alt/);
     const pad = keyLegend([2, 3], [true, true]);
     expect(pad[0]).toContain('Player1 — Maus: fliegen · links: ballern');

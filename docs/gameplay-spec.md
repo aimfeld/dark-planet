@@ -66,8 +66,9 @@ Defaults P1 = keyboard, P2 = mouse.
   different device types (O).
 - Joystick: centre sampled once at program start; a direction counts when the axis is more than 15 raw units
   from the centre (remake: use an analog dead zone instead).
-- Remake (decision 13, user, session 10): control type 4 = a second keyboard set: W/A/S/D move, left Shift fires
-  (not Ctrl: browsers keep Ctrl+W), Q altitude, E selects a bonus, Shift + E uses it; handled like the keyboard
+- Remake (decision 13, user, session 10): control type 4 = a second keyboard set: W/A/S/D move, X fires
+  (session 13; not Ctrl: browsers keep Ctrl+W; not left Shift: Windows Sticky Keys; before: left Shift, Q, E),
+  C altitude, V selects a bonus, X + V uses it; handled like the keyboard
   (@0x1A1DD). While a WASD player is in the game, the arrow player only reads Comma (fire), Period (altitude)
   and the key left of right Shift (code `Slash`, - on German keyboards: select; with Comma: use), decision 15.
   The arrow set alone also accepts X (fire), C (altitude), V and right Shift (select); the legend lists X/C/V, not
