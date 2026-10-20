@@ -1,20 +1,43 @@
 // Keyboard -> per-tick player input. The original keys (spec §2) plus alternates, because browsers and
-// desktops grab some Ctrl/Alt combinations. The keyboard player is whichever player chose control type 1.
+// desktops grab some Ctrl/Alt combinations. The keyboard player is whichever player chose control type 1;
+// the remake adds type 4, a second key set around WASD, so two players can share one keyboard.
 
 import { NO_INPUT, type PlayerInput } from '../sim/state';
 
-const BINDINGS = {
+interface KeySet {
+  left: string[];
+  right: string[];
+  up: string[];
+  down: string[];
+  fire: string[];
+  altitude: string[];
+  bonus: string[]; // select; with fire held: use
+}
+
+const ARROWS: KeySet = {
   left: ['ArrowLeft'],
   right: ['ArrowRight'],
   up: ['ArrowUp'],
   down: ['ArrowDown'],
   fire: ['ControlLeft', 'ControlRight', 'KeyX'],
   altitude: ['AltLeft', 'AltRight', 'KeyC'],
-  bonus: ['Space'],
+  bonus: ['Space', 'ShiftRight'],
+};
+/** The arrow player while another player uses WASD: only the keys right of the space bar. */
+const ARROWS_RIGHT: KeySet = { ...ARROWS, fire: ['ControlRight'], altitude: ['AltRight'], bonus: ['ShiftRight'] };
+/** Type 4 (remake). No Ctrl: the browser keeps Ctrl+W (close tab) even when the page handles the key. */
+const WASD: KeySet = {
+  left: ['KeyA'],
+  right: ['KeyD'],
+  up: ['KeyW'],
+  down: ['KeyS'],
+  fire: ['ShiftLeft'],
+  altitude: ['KeyQ'],
+  bonus: ['KeyE'],
 };
 // keypad - / + select and use the joystick player's bonus (DS:0x6C31 / 0x6C32)
 const OTHER = ['KeyP', 'Escape', 'Enter', 'KeyF', 'PageUp', 'PageDown', 'NumpadSubtract', 'NumpadAdd'];
-const CAPTURED = new Set([...Object.values(BINDINGS).flat(), ...OTHER]);
+const CAPTURED = new Set([...Object.values(ARROWS).flat(), ...Object.values(WASD).flat(), ...OTHER]);
 
 export class Keyboard {
   private readonly down = new Set<string>();
@@ -42,14 +65,19 @@ export class Keyboard {
     this.tapped.clear();
   }
 
-  /** The keyboard player's flags (@0x1A1DD): Space selects a bonus, Ctrl + Space uses it. */
-  player(): PlayerInput {
+  /**
+   * A keyboard player's flags (@0x1A1DD): Space selects a bonus, Ctrl + Space uses it. `wasd` is the remake's
+   * second set; `shared` limits the arrow player to the right-hand keys while the WASD player is in the game.
+   */
+  player(wasd = false, shared = false): PlayerInput {
+    const set = wasd ? WASD : shared ? ARROWS_RIGHT : ARROWS;
     const held = (codes: string[]) => codes.some((c) => this.sampled.has(c));
-    const fire = held(BINDINGS.fire), bonus = held(BINDINGS.bonus);
+    const fire = held(set.fire), bonus = held(set.bonus);
     return {
       ...NO_INPUT,
-      left: held(BINDINGS.left), right: held(BINDINGS.right), up: held(BINDINGS.up), down: held(BINDINGS.down),
-      fire, altitude: held(BINDINGS.altitude), select: bonus, use: bonus && fire,
+      device: wasd ? 4 : 1,
+      left: held(set.left), right: held(set.right), up: held(set.up), down: held(set.down),
+      fire, altitude: held(set.altitude), select: bonus, use: bonus && fire,
     };
   }
 

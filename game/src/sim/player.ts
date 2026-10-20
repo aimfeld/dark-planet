@@ -23,7 +23,7 @@ export function playerInput(w: World, p: Player, k: PlayerInput): void {
   else keyboardInput(w, p, k);
 }
 
-/** Keyboard @0x1A1DD and joystick @0x1A58F: altitude toggle on press, velocity decay every 4th tick. */
+/** Keyboard @0x1A1DD (also the remake's WASD set) and joystick @0x1A58F: altitude toggle on press, decay every 4th tick. */
 function keyboardInput(w: World, p: Player, k: PlayerInput): void {
   altitudeButton(p, k);
   if (!k.left && !k.right && mod(w.frame, 4) === 0) p.vx = towardZero(p.vx);

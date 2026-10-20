@@ -85,7 +85,8 @@
 - [ ] **User:** try the shop (hangar → Shop; GEDANKE for money): buying and placing large pods, selling, Position wechseln, jets, boni, Save + "Spiel laden", and with two players the PLAYER switch and GELD AUSTAUSCH.
 - [x] Two players and control types (session 10): the mouse (0x1A34B) and joystick (0x1A58F) handlers are ported (`playerInput` in `src/sim/player.ts`); each player reads the device chosen in the options (`src/input/players.ts`). Gamepad API as the joystick (`src/input/gamepad.ts`), pointer lock for a mouse player during levels with the real pointer as fallback. `test/input.test.ts`; checked in Chrome with P1 mouse + P2 keyboard, then P2 on a mocked gamepad (pointer lock itself can't be granted in the automated tab).
 - [ ] **User:** play with the mouse (Options → Steuerung Player1: Maus): does the pointer get captured on entering a level (or on the first click), does the steering feel right? And with a gamepad as Joystick if you have one.
-- [ ] Decide: allow two players on one keyboard (a second key set, e.g. WASD)? The original can't (both players never share a control type).
+- [x] Two players on one keyboard (decision 13, session 10): control type 4 "WASD" in the options (W/A/S/D move, left Shift fires, Q altitude, E selects a bonus, Shift + E uses it). While a WASD player is in the game, the arrow player uses only the keys right of the space bar (right Ctrl fires, right Alt/AltGr altitude, right Shift selects, right Ctrl + right Shift uses), so neither player can trigger the other. Checked in Chrome with P1 arrows + P2 WASD.
+- [ ] **User:** try two players on one keyboard (Optionen → Steuerung Player2: WASD).
 - [x] Intro and ending videos (session 10): the game starts behind a "Taste oder Klick zum Starten" prompt (browsers need a gesture for sound), then plays the intro with CD track 4 (DPMAX.BAT), then the main menu; after the ending text the ending video plays with track 9, then the main menu. A key or click skips a video. `src/video.ts`, `src/screens/video.ts`, `test/video.test.ts`.
 - [ ] **User:** watch the intro and the ending (`npm run dev`; the ending: finish level 6, or call `game` in the console) and check the white flashes, the logo hold and the music; say whether the intro should play on every start.
 
@@ -105,6 +106,7 @@
 10. The low-memory "reaper" (`MemoryGuard` @0x1B600) is not replicated (user, session 4).
 11. ~~Engine data stays local~~ (a misunderstanding in session 5). **Corrected (user, session 7):** all newly generated assets (sprites, tiles, levels, tables, sounds, soundtrack, videos) are under version control, kept small: compressed browser-friendly formats, no WAV files. Only `original_source/` stays local.
 12. The Golem's curse turns every jet's standard weapon into the Firestorm's basic gun (item 1): intentional, kept (user, session 7).
+13. Two players may share one keyboard: a second key set around WASD as an extra control type (user, session 10). The original never let both players use the keyboard.
 
 ## Notes (session 10, not yet confirmed by the user)
 - Gamepad mapping (a pad has no keypad): A fire, B altitude, X/LB select a bonus, Y/RB use it; left stick

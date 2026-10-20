@@ -24,7 +24,7 @@ export class SpriteTable {
 
 /** Raw per-tick input of one player, as the input handlers' flag bytes (DS:0x6C3B..., spec §2). */
 export interface PlayerInput {
-  device: number; // control type: 1 keyboard, 2 mouse, 3 joystick (handlers @0x1A1DD / 0x1A34B / 0x1A58F)
+  device: number; // control type: 1 keyboard, 2 mouse, 3 joystick (handlers @0x1A1DD / 0x1A34B / 0x1A58F), 4 WASD
   left: boolean; // keyboard and joystick
   right: boolean;
   up: boolean;

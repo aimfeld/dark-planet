@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { Gamepad } from '../src/input/gamepad';
+import { Keyboard } from '../src/input/keyboard';
+import type { Mouse } from '../src/input/mouse';
+import { playerInputs } from '../src/input/players';
 import { createWorld, NO_INPUT, type PlayerInput, type World } from '../src/sim/state';
 import { newGame, startLevel, step } from '../src/sim/tick';
 import { gameData, hasData } from './helpers';
@@ -71,5 +75,45 @@ describe.skipIf(!hasData)('control types (spec §2, §3.1)', () => {
     step(w, [mouse(w.spr.x[s1] - 80, w.spr.y[s1] - w.scrollY), { ...NO_INPUT, right: true }]);
     expect(p1.vx).toBe(-1);
     expect(p2.vx).toBe(1);
+  });
+});
+
+describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
+  const setup = () => {
+    const target = new EventTarget();
+    const keys = new Keyboard(target as unknown as Window);
+    const key = (type: string, code: string) => target.dispatchEvent(Object.assign(new Event(type), { code }));
+    return { keys, key };
+  };
+
+  it('WASD moves, left Shift fires, Q switches altitude, E selects and Shift + E uses', () => {
+    const { keys, key } = setup();
+    for (const c of ['KeyW', 'KeyA', 'ShiftLeft', 'KeyE']) key('keydown', c);
+    keys.sample();
+    const p = keys.player(true);
+    expect([p.device, p.up, p.left, p.right, p.fire, p.select, p.use, p.altitude]).toEqual([4, true, true, false, true, true, true, false]);
+    expect(keys.player().fire).toBe(false); // the arrow player doesn't see them
+  });
+
+  it('shared keyboard: the arrow player keeps only the keys right of the space bar', () => {
+    const { keys, key } = setup();
+    for (const c of ['ControlLeft', 'KeyC', 'Space']) key('keydown', c);
+    keys.sample();
+    expect(keys.player(false, false)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
+    expect(keys.player(false, true)).toMatchObject({ fire: false, altitude: false, select: false });
+    for (const c of ['ControlLeft', 'KeyC', 'Space']) key('keyup', c);
+    for (const c of ['ControlRight', 'AltRight', 'ShiftRight']) key('keydown', c);
+    keys.sample();
+    expect(keys.player(false, true)).toMatchObject({ fire: true, altitude: true, select: true, use: true });
+  });
+
+  it('playerInputs: WASD in the game makes the arrow set right-handed', () => {
+    const { keys, key } = setup();
+    key('keydown', 'KeyX');
+    keys.sample();
+    const mouse = {} as Mouse;
+    const pad = {} as Gamepad;
+    expect(playerInputs([1, 4], [true, false], keys, mouse, pad)[0].fire).toBe(true); // P2 not playing
+    expect(playerInputs([1, 4], [true, true], keys, mouse, pad)[0].fire).toBe(false);
   });
 });

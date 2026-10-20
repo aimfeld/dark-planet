@@ -65,6 +65,11 @@ describe.skipIf(!hasData)('menus', () => {
     press('Enter');
     expect(game.settings.control[0]).toBe(3); // 2 (Maus) belongs to P2
     expect(s.texts.get(818)?.text).toBe('Steuerung Player1:Joystick');
+    press('Enter');
+    expect(s.texts.get(818)?.text).toBe('Steuerung Player1:WASD'); // the remake's second key set
+    press('Enter');
+    press('Enter');
+    expect(game.settings.control[0]).toBe(3);
     press('ArrowDown', 1);
     press('ArrowDown', 1);
     press('Enter');

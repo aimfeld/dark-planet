@@ -66,6 +66,10 @@ Defaults P1 = keyboard, P2 = mouse.
   different device types (O).
 - Joystick: centre sampled once at program start; a direction counts when the axis is more than 15 raw units
   from the centre (remake: use an analog dead zone instead).
+- Remake (decision 13, user, session 10): control type 4 = a second keyboard set: W/A/S/D move, left Shift fires
+  (not Ctrl: browsers keep Ctrl+W), Q altitude, E selects a bonus, Shift + E uses it; handled like the keyboard
+  (@0x1A1DD). While a WASD player is in the game, the arrow player only reads right Ctrl (fire), right Alt
+  (altitude) and right Shift (select; with right Ctrl: use). The arrow set also accepts right Shift as select.
 - Remake (session 10): the gamepad (standard mapping, first connected pad) is the joystick: left stick (dead zone
   0.3) or d-pad, A = button 1, B = button 2, X/LB = select, Y/RB = use (keypad −/+ still work). The mouse player
   captures the pointer during levels (Pointer Lock; relative movement drives a virtual pointer confined to the

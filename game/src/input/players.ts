@@ -1,5 +1,5 @@
-// Per-tick player input by control type (Options, DS:0x259E/0x259F): 1 keyboard, 2 mouse, 3 joystick.
-// P1 and P2 never share a type, so each device drives at most one player.
+// Per-tick player input by control type (Options, DS:0x259E/0x259F): 1 keyboard, 2 mouse, 3 joystick, and
+// the remake's 4 = keyboard WASD. P1 and P2 never share a type, so each device drives at most one player.
 
 import { NO_INPUT, type PlayerInput } from '../sim/state';
 import type { Gamepad } from './gamepad';
@@ -14,10 +14,14 @@ export function mousePlayer(m: Mouse): PlayerInput {
   };
 }
 
-export function playerInputs(control: readonly number[], keys: Keyboard, mouse: Mouse, pad: Gamepad): PlayerInput[] {
+/** `active`: the players in the game (a WASD player only takes keys from the arrow player while playing). */
+export function playerInputs(
+  control: readonly number[], active: readonly boolean[], keys: Keyboard, mouse: Mouse, pad: Gamepad,
+): PlayerInput[] {
+  const shared = control.some((c, i) => c === 4 && active[i]);
   return control.map((c) => {
     if (c === 2) return mousePlayer(mouse);
     if (c === 3) return pad.player({ select: keys.held('NumpadSubtract'), use: keys.held('NumpadAdd') });
-    return keys.player();
+    return keys.player(c === 4, shared);
   });
 }

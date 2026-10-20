@@ -46,7 +46,7 @@ export interface SaveSlot {
 }
 
 export interface Settings {
-  control: [number, number]; // 1 keyboard, 2 mouse, 3 joystick (gamepad); P1 and P2 never equal
+  control: [number, number]; // 1 keyboard, 2 mouse, 3 joystick (gamepad), 4 keyboard WASD (remake); never equal
   cdSound: boolean;
   soundEffects: boolean;
 }

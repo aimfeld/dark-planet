@@ -4,7 +4,7 @@
 
 import { cdPlay, delay, fadeIn, frame, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
 
-const CONTROLS = ['Tastatur', 'Maus', 'Joystick']; // DS:0x502 + 256 ctl
+const CONTROLS = ['Tastatur', 'Maus', 'Joystick', 'WASD']; // DS:0x502 + 256 ctl; WASD: the remake's 2nd key set
 const LINES = 5;
 const CURSOR_SLOT = 12;
 const CURSOR = 556; // global sprite cycle 556..566, rate 4
@@ -73,7 +73,7 @@ export function* options(ctx: Ctx): Proc {
         // Next control type, skipping the other player's (P1 and P2 never share a device type).
         const other = st.control[2 - line];
         let c = st.control[line - 1];
-        do c = (c % 3) + 1;
+        do c = (c % CONTROLS.length) + 1;
         while (c === other);
         st.control[line - 1] = c;
         yield* drawLines(ctx, true);

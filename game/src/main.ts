@@ -90,7 +90,7 @@ async function main(): Promise<void> {
     anyKey: () => keys.anyKey(),
     mouse,
     get players() {
-      return playerInputs(game!.settings.control, keys, mouse, pad);
+      return playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad);
     },
   };
   // Browsers only play sound after a user gesture, so the intro (with its CD track) waits for one.
