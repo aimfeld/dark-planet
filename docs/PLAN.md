@@ -129,6 +129,7 @@ Done (user, session 17): play-tested through, including two players; the open it
   style; only the other button keeps its own (`Screen.classic` per slot for sprites). Checked in Chrome.
   The background too (user, session 20; `Screen.classicPicture`): the 320 x 200 RASTER.PIC nearest-scaled, or the
   hq4x one. Checked in Chrome (renderer state); on RASTER's fine noise the two look nearly the same.
+  The HD button (or R) switching the graphics there moves the cursor to that version (user, session 20).
 - [x] Main menu Exit / Esc (user, session 20): instead of black until a key, the remake starts over at the start
   screen (then the intro, then the main menu). The installed app still closes first where it can (`window.close()`,
   `ctx.quit` until the start screen shows). `boot` in `src/game.ts`, `src/screens/mainMenu.ts`, `test/menus.test.ts`.

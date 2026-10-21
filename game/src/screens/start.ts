@@ -77,8 +77,14 @@ export function* startScreen(ctx: Ctx): Proc {
   yield* fadeIn(ctx);
   let mouseArmed = false; // a click counts once the button was up
   let pointer = [ctx.input.mouse.x, ctx.input.mouse.y]; // a resting pointer leaves the selection alone
+  let setting = st.remastered; // the HD button or R switches it here too: the cursor follows (user, session 20)
   for (;;) {
     yield* frame(ctx, 15);
+    if (st.remastered !== setting) {
+      setting = st.remastered;
+      choice = setting ? 1 : 0;
+      cursor();
+    }
     const m = ctx.input.mouse;
     const at = buttonAt(ctx, m.x, m.y);
     const moved = m.x !== pointer[0] || m.y !== pointer[1];

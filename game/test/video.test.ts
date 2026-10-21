@@ -72,6 +72,25 @@ describe.skipIf(!hasData)('start screen', () => {
     expect(video.played).toEqual(['intro']);
   });
 
+  it('the HD button (or R) switching the graphics moves the cursor to that version', async () => {
+    const input = new Script();
+    const settings = { ...DEFAULT_SETTINGS, control: [5, 4] as [number, number] };
+    const game = new Game(createWorld(await gameData(), 1), input, settings, undefined, undefined, undefined, undefined, new FakeVideo());
+    const run = (n: number) => {
+      for (let i = 0; i < n; i++) game.tick(input);
+    };
+    run(40);
+    expect(game.screen.classic[12]).toBe(0); // on Remastered 2026
+    settings.remastered = false; // main.ts's toggleRemaster
+    run(5);
+    expect(game.screen.classic[12]).toBe(1);
+    expect(game.screen.y[12]).toBe(94 - 10); // beside Classic 1998
+    expect(game.atStart).toBe(true); // switched, not chosen
+    settings.remastered = true;
+    run(5);
+    expect(game.screen.y[12]).toBe(118 - 10);
+  });
+
   it('a click on a button chooses it', async () => {
     const input = new Script();
     const settings = { ...DEFAULT_SETTINGS, control: [1, 4] as [number, number], remastered: false };
