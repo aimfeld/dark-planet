@@ -22,7 +22,7 @@ Update them at the end of each piece of work, not only at session end.
 - Temurin JDK 21 (full JDK; the system Java is a JRE only): `~/opt/jdk-21.0.12.1+1`
 - **REA 6.7.0** (Reverse Engineer Anything, github.com/morluto/rea) is registered as the MCP server `rea` in `~/.claude.json`, with `GHIDRA_INSTALL_DIR` and `JAVA_HOME` set. Use the `reverse-engineer-anything` skill. **Prefer the MCP tools** (`open_binary`, `list_procedures`, `analyze_function`, `read_function_instructions`, `annotate_*`, …). DOS MZ files load as `x86:LE:16:Real Mode` at segment 0x1000, and addresses are linear.
 - CLI fallback: `tools/rea.sh <command> <absolute-path> [args]` (commands: `inspect`, `search --kind procedures --mode regex '.*'`, `decompile <addr>`, `instructions <addr>`, `function <addr>`). Snapshots are cached in `.rea/`.
-- DOSBox-X is installed (`dosbox-x`). Its built-in debugger is useful for dynamic analysis.
+- DOSBox-X 2026.10.01 (Flathub, user install). `dosbox-x` = wrapper `~/.local/bin/dosbox-x`. The Flatpak sandbox only sees `$HOME`; add `--filesystem=<dir>` for the scratchpad. Its built-in debugger is useful for dynamic analysis. The headless capture/save-state recipe is in re-notes "DOSBox-X reference setup".
 
 ### Turbo Pascal 7 RE tips
 - Segment order: main program first, then units, then the System RTL last (in STARTAUD.EXE that's segment 0x1162).
