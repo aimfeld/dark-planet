@@ -26,8 +26,7 @@ repository. The tools expect them at that path in a local checkout.
 | `original_source/Image/` | Disk images of the CD (`DPImage.iso/.bin/.cue/.mdf/.mds`) |
 | `original_source/Image/fixed/` | Generated: CD image rebuilt with proper audio tracks (`tools/build_cd_image.py`) |
 | `original_source/Screenshots/` | Screenshots of the original |
-| `original_source/dplanet.conf` | DOSBox-X config (works on Steam Deck, no music) |
-| `original_source/dplanet-cd.conf` | DOSBox-X config that mounts the rebuilt CD, for music |
+| `original_source/dplanet.conf` | DOSBox-X config: mounts the rebuilt CD for music (without it, the game runs without music) |
 | `tools/` | Asset extraction and reverse-engineering helpers; `tools/dosbox/` holds the XMS workaround for DOSBox-X |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
 | `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
@@ -38,10 +37,9 @@ repository. The tools expect them at that path in a local checkout.
 # once: rebuild the CD image with real audio tracks (~330 MB)
 python3 tools/build_cd_image.py original_source/Image/DPImage.iso original_source/Image/fixed
 # play (from any directory)
-dosbox-x -conf original_source/dplanet-cd.conf
+dosbox-x -conf original_source/dplanet.conf
 ```
-Tested with DOSBox-X 2026.10.01 (Flathub `com.dosbox_x.DOSBox-X`). Both configs (`dplanet.conf`
-without music too) run
+Tested with DOSBox-X 2026.10.01 (Flathub `com.dosbox_x.DOSBox-X`). The config runs
 `tools/dosbox/XMSHOLE.COM` before the game. It works around a DOSBox-X XMS bug that
 otherwise garbles the sound effects (see `tools/dosbox/xmshole.s`).
 The image has 8 audio tracks (2–9). Menu, story, intro, levels, boss and ending each have their own track, and the game loops them. See `docs/re-notes.md`.
