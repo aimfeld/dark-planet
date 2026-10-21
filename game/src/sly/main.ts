@@ -1,6 +1,8 @@
 // The Sly version (sly.html): the 1997 prototype of Dark Planet. A title until a key or tap (browsers play sound
 // only after one), then SLYVERS's main program (sim.ts) in real time; when it ends, Enter plays again and Esc goes
 // back to Dark Planet. Keyboard (arrows, X or Ctrl fires, Esc quits), gamepad, and touch on phones and tablets.
+// Sly laughs once the title shows (user, session 22), or with the key that starts the game where the browser
+// doesn't allow sound before a gesture on this page.
 
 import { Sfx } from '../audio/sfx';
 import { toggleFullscreen } from '../input/fullscreen';
@@ -13,6 +15,14 @@ import { SlyView } from './view';
 
 const TOUCH_DEVICE = window.matchMedia('(pointer: coarse)').matches;
 const MAX_CATCH_UP_MS = 200; // after a stall, don't race through the missed time
+const LAUGH = 38; // FXInit's Sounds[38], LACHEN2: Sly's laugh
+/**
+ * Sly's voice clips during the fight (Sounds[34..37]: MOOMOO, MERVEUX, TOETEN, KUCHEN) and his laugh at the end
+ * (38, LACHEN2) 3 x louder (+9.5 dB), and while one plays the other sounds at a third (-10 dB): at their original
+ * level the two looping GLEITER voices and the boss's shots drown them (user, session 22). KUCKMAL (39) at the boss
+ * start already plays as three voices at once.
+ */
+const VOICES = { gains: { 34: 3, 35: 3, 36: 3, 37: 3, 38: 3 }, duck: 0.32 };
 
 const PLAY_KEYS: TouchKey[] = [{ code: 'Escape', label: 'Esc' }];
 const END_KEYS: TouchKey[] = [{ code: 'Enter', label: 'Nochmal' }, { code: 'Escape', label: 'Zurück' }];
@@ -42,7 +52,7 @@ async function main(): Promise<void> {
     status.textContent = 'Daten konnten nicht geladen werden (game/public/sly/)';
     throw e;
   });
-  const sfx = await Sfx.load(base + 'sly/').catch((e) => {
+  const sfx = await Sfx.load(base + 'sly/', VOICES).catch((e) => {
     console.warn('no sounds:', e);
     return undefined;
   });
@@ -65,8 +75,19 @@ async function main(): Promise<void> {
   let tapped = false; // a tap on the title
   window.addEventListener('pointerup', () => (tapped = true));
 
+  let laughed = false;
+  const laugh = () => {
+    if (sfx === undefined || laughed) return;
+    void sfx.tryStart().then((playing) => {
+      if (!playing || laughed) return;
+      laughed = true;
+      sfx.handle([{ n: LAUGH }]);
+    });
+  };
+
   const start = () => {
-    sfx?.stopAll();
+    if (state === 'end') sfx?.stopAll();
+    else laugh(); // the title's laugh, if the browser held it back
     sly = new Sly(data, () => sfx?.voiceCount() ?? 0);
     program = sly.run();
     wait = 0;
@@ -148,6 +169,7 @@ async function main(): Promise<void> {
   title.innerHTML = 'Dark Planet: die Sly-Version<br>(der Prototyp von 1997)<br><br>' +
     (TOUCH_DEVICE ? 'Zum Starten tippen' : 'Taste drücken');
   requestAnimationFrame(frame);
+  laugh();
 }
 
 main();

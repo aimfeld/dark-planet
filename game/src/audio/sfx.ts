@@ -10,6 +10,15 @@ const SMIX_VOICES = 32;
 // original's balance came from the sound card's mixer, not the game. *design*, gameplay-spec §14.
 const SFX_GAIN = 0.18;
 
+/**
+ * The remake's own mixing (the prototype's voice clips): `gains` gives single sounds extra volume, and while one of
+ * them plays every other sound is turned down to `duck`.
+ */
+export interface SfxOptions {
+  gains?: Readonly<Record<number, number>>;
+  duck?: number;
+}
+
 interface Voice {
   n: number;
   src: AudioBufferSourceNode;
@@ -19,15 +28,22 @@ interface Voice {
 export class Sfx {
   private readonly voices: Voice[] = [];
   private readonly out: GainNode;
+  private readonly rest: GainNode; // the sounds without an own gain (ducked)
+  private readonly gains: Readonly<Record<number, number>>;
+  private readonly duck: number;
 
-  private constructor(private readonly ctx: AudioContext, private readonly buffers: AudioBuffer[]) {
+  private constructor(private readonly ctx: AudioContext, private readonly buffers: AudioBuffer[], options: SfxOptions) {
+    this.gains = options.gains ?? {};
+    this.duck = options.duck ?? 1;
     this.out = ctx.createGain();
     this.out.gain.value = SFX_GAIN;
     this.out.connect(ctx.destination);
+    this.rest = ctx.createGain();
+    this.rest.connect(this.out);
   }
 
   /** sounds.json + sounds.bin.gz from tools/export_engine_data.py (index = PlaySound number). */
-  static async load(base: string): Promise<Sfx> {
+  static async load(base: string, options: SfxOptions = {}): Promise<Sfx> {
     const [index, bin] = await Promise.all([
       fetch(base + 'sounds.json').then((r) => r.json() as Promise<{ rate: number; sounds: { offset: number; length: number }[] }>),
       fetch(base + 'sounds.bin.gz').then((r) => r.arrayBuffer()).then(gunzip),
@@ -40,7 +56,7 @@ export class Sfx {
       for (let i = 0; i < length; i++) ch[i] = pcm[offset + i] / 128;
       return b;
     });
-    return new Sfx(ctx, buffers);
+    return new Sfx(ctx, buffers, options);
   }
 
   /** The page is hidden: hold the mix (loops resume where they were). */
@@ -59,6 +75,17 @@ export class Sfx {
     for (let i = this.voices.length - 1; i >= 0; i--) if (this.voices[i].end <= now) this.voices.splice(i, 1);
   }
 
+  /**
+   * Try to start the sound without waiting for a gesture on this page: browsers may allow it when a click or key on
+   * the same site opened the page (Chrome). True when it plays; otherwise it starts with the next unlock().
+   */
+  async tryStart(ms = 500): Promise<boolean> {
+    if (this.ctx.state !== 'running') {
+      await Promise.race([this.ctx.resume().catch(() => undefined), new Promise((resolve) => setTimeout(resolve, ms))]);
+    }
+    return this.ctx.state === 'running';
+  }
+
   /** VoiceCount: the voices playing now (the prototype waits for 0 before it quits). */
   voiceCount(): number {
     this.prune();
@@ -75,9 +102,27 @@ export class Sfx {
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = loop;
-    src.connect(this.out);
+    const gain = this.gains[n];
+    if (gain === undefined) src.connect(this.rest);
+    else {
+      const g = this.ctx.createGain();
+      g.gain.value = gain;
+      src.connect(g).connect(this.out);
+    }
     src.start();
     this.voices.push({ n, src, end: loop ? Infinity : this.ctx.currentTime + buffer.duration });
+    if (gain !== undefined) this.ducking();
+  }
+
+  /** Turn the other sounds down while a sound with its own gain plays, and back up when the last one ends. */
+  private ducking(): void {
+    if (this.duck === 1) return;
+    const now = this.ctx.currentTime;
+    const until = Math.max(now, ...this.voices.filter((v) => this.gains[v.n] !== undefined).map((v) => v.end));
+    const g = this.rest.gain;
+    g.cancelScheduledValues(now);
+    if (until > now) g.setTargetAtTime(this.duck, now, 0.03);
+    if (until < Infinity) g.setTargetAtTime(1, until, 0.15);
   }
 
   handle(events: SoundEvent[]): void {
@@ -103,6 +148,7 @@ export class Sfx {
       this.voices[i].src.stop();
       this.voices.splice(i, 1);
     }
+    if (this.gains[n] !== undefined) this.ducking();
   }
 
   /** AfterLevel @0x1B6D1 stops every sound except 50 (the level 4 tank's death roar). */

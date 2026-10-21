@@ -276,6 +276,14 @@ boss) playable as TypeScript too, shipped as its own page or launchable from the
   The remake's start screen has a third choice "Prototyp 1997", in the shop's 6 px DEFAULT font (user, session 22,
   after trying the 8 px SUPER) (`ctx.launch`, main.ts opens the page; Esc there
   and Esc again returns). The service worker serves `sly.html` for its own navigations and caches `sly/` on first use.
+- [x] Sly's laugh (LACHEN2, Sounds[38]) when the prototype's black title shows (user, session 22). Chrome lets a page
+  opened by a click or key on the same site play sound at once (checked); where a browser holds the sound back until
+  a gesture on the page, the laugh comes with the key that starts the game.
+- [x] Sly's voice clips (Sounds 34–38: the random ones during the fight and the laugh) 3 × louder (+9.5 dB), and
+  while one plays every other sound at 0.32 (−10 dB) (user, session 22: the laugh was fine at 3 ×, the lines during
+  the fight still too low; `VOICES` in `src/sly/main.ts`, `SfxOptions` in `audio/sfx.ts`). They are full-scale
+  samples (by level the lines at 3 × match the laugh), but the two looping GLEITER voices and the boss's four guns
+  drowned them.
 - Deviations from SLYVERS.EXE: Esc and the end of the boss fight show an end screen (Enter: again, Esc: back to
   Dark Planet) instead of quitting to DOS; an enemy shot whose target is its start point (0/0, RunError 200 in the
   original) stays on its line instead of ending the program; the wait for the last sound at the end gives up after
