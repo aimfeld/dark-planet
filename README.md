@@ -6,7 +6,7 @@ on CD-ROM in October 1998. This project brings it back to life as a
 cross-platform (browser-first) game with two modes:
 
 - **Classic**: a faithful reproduction of the 1998 original (320×200, original palette, sprites and sounds).
-- **Remastered**: the same gameplay with higher-resolution graphics, smooth high-framerate motion and the CD soundtrack.
+- **Remastered**: the same gameplay with higher-resolution graphics, smooth high-framerate motion, and visual effects.
 
 The original source code is lost, so the gameplay is being reconstructed by
 reverse-engineering `DP.EXE`, with the help of an earlier prototype whose
