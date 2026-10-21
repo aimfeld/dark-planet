@@ -23,7 +23,7 @@ repository. The tools expect them at that path in a local checkout.
 |---|---|
 | `original_source/Game/` | The original game files (DP.EXE, assets, videos) |
 | `original_source/CD/` | Contents of the original CD, incl. `Wasndas/` with two earlier games **with source** (`SLY/SLYVERS.PAS` is the Dark Planet prototype) |
-| `original_source/Image/` | Disk images of the CD (`DPImage.iso/.bin/.cue/.mdf/.mds`) |
+| `original_source/Image/` | Disk image of the CD (`DPImage.iso`: data track + all CD audio as one track; the identical `.bin/.cue/.mdf/.mds` copies were deleted) |
 | `original_source/Image/fixed/` | Generated: CD image rebuilt with proper audio tracks (`tools/build_cd_image.py`) |
 | `original_source/Screenshots/` | Screenshots of the original |
 | `original_source/dplanet.conf` | DOSBox-X config: mounts the rebuilt CD for music (without it, the game runs without music) |
