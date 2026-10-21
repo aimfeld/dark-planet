@@ -3,20 +3,26 @@
 // cursor) over the text viewer's RASTER.PIC. "Classic 1998" is drawn in the classic font and "Remastered 2026"
 // in the remastered one, whichever graphics are on (main.ts shows this screen remastered); the other texts take
 // the font of the selected version, and the cursor and the background its style. Choosing a version
-// is also the user gesture that lets the browser play the intro's CD track.
+// is also the user gesture that lets the browser play the intro's CD track. The third choice opens the 1997
+// prototype (sly.html, src/sly/; main.ts follows ctx.launch).
 
-import { delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
+import { delay, fadeIn, fadeOut, frame, playSound, TICK_MS, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
 
 const FIRST_SPRITE = 791; // the text viewer's text sprites
 const TITLE_SLOT = 2;
-const BUTTON_SLOT = 4; // + 0 classic, + 1 remastered
-const LINE_SLOT = 6;
+const BUTTON_SLOT = 4; // + 0 classic, + 1 remastered, + 2 the prototype
+const LINE_SLOT = 7;
 const CURSOR_SLOT = 12;
 const CURSOR = 556; // global sprite cycle 556..566, rate 4, 48 x 28
 const CURSOR_W = 48;
 const BUTTON_X = 118; // the cursor, a 3 px gap and the longer button text centred
-const BUTTON_Y = [94, 118];
-const BUTTONS = ['Classic 1998', 'Remastered 2026'];
+const BUTTON_Y = [94, 118, 142];
+const BUTTONS = ['Classic 1998', 'Remastered 2026', 'Prototyp 1997'];
+const PROTOTYPE = 2;
+// The prototype's line in the shop's 6 px DEFAULT font (user, session 22), moved down 5 px so its middle stays
+// where a BROADWA line's would be (the cursor too).
+const BUTTON_FONT = ['BROADWA', 'BROADWA', 'DEFAULT'];
+const BUTTON_DY = [0, 0, 5];
 const INK = 0x1f; // the options' white
 const TEXT_INK = 0x1e; // the text viewer's near white
 const HINT_INK = 0x16; // grey
@@ -30,14 +36,20 @@ const hint = (touch: boolean) => [
 /** The button under the pointer (its text and the cursor beside it), -1 for none. */
 function buttonAt(ctx: Ctx, x: number, y: number): number {
   const s = ctx.screen;
+  const font = s.font;
   for (let i = 0; i < BUTTONS.length; i++) {
+    s.font = BUTTON_FONT[i];
     const right = BUTTON_X + s.textWidth(BUTTONS[i]);
+    s.font = font;
     if (x >= BUTTON_X - CURSOR_W - 3 && x < right && y >= BUTTON_Y[i] - 4 && y < BUTTON_Y[i] + 20) return i;
   }
   return -1;
 }
 
-/** Shows the start screen until a version is chosen; sets and saves the graphics setting. */
+/**
+ * Shows the start screen until a version is chosen; sets and saves the graphics setting. The prototype leaves
+ * the page (ctx.launch); if the page comes back (the browser's Back), the start screen shows again.
+ */
 export function* startScreen(ctx: Ctx): Proc {
   const s = ctx.screen;
   const st = ctx.settings;
@@ -52,14 +64,16 @@ export function* startScreen(ctx: Ctx): Proc {
     const centred = (slot: number, t: string, y: number) => text(slot, t, 160 - (s.textWidth(t) >> 1), y);
     s.font = 'FIRE';
     centred(TITLE_SLOT, 'DARK PLANET', 12);
-    s.font = 'BROADWA';
     s.ink = INK;
-    BUTTONS.forEach((b, i) => text(BUTTON_SLOT + i, b, BUTTON_X, BUTTON_Y[i], i === 0));
+    BUTTONS.forEach((b, i) => {
+      s.font = BUTTON_FONT[i];
+      text(BUTTON_SLOT + i, b, BUTTON_X, BUTTON_Y[i] + BUTTON_DY[i], i !== 1);
+    });
     s.font = 'SUPER';
     s.ink = TEXT_INK;
     INTRO.forEach((line, i) => centred(LINE_SLOT + i, line, 42 + PITCH * i));
     s.ink = HINT_INK;
-    hint(st.control.includes(5)).forEach((line, i) => centred(LINE_SLOT + INTRO.length + i, line, 160 + PITCH * i));
+    hint(st.control.includes(5)).forEach((line, i) => centred(LINE_SLOT + INTRO.length + i, line, 166 + PITCH * i));
   };
   s.clear();
   s.picture = 'RASTER';
@@ -68,9 +82,9 @@ export function* startScreen(ctx: Ctx): Proc {
   let choice = st.remastered ? 1 : 0;
   const cursor = () => {
     s.set(CURSOR_SLOT, s.n[CURSOR_SLOT] || CURSOR, BUTTON_X - CURSOR_W - 3, BUTTON_Y[choice] - 10);
-    s.classic[CURSOR_SLOT] = choice === 0 ? 1 : 0;
-    s.classicPicture = choice === 0;
-    drawTexts(choice === 0);
+    s.classic[CURSOR_SLOT] = choice !== 1 ? 1 : 0;
+    s.classicPicture = choice !== 1;
+    drawTexts(choice !== 1);
   };
   cursor();
   ctx.atStart = true;
@@ -96,9 +110,10 @@ export function* startScreen(ctx: Ctx): Proc {
     const tap = mouseArmed && m.down && at >= 0;
     mouseArmed = !m.down;
     const held = (code: string) => ctx.input.held(code);
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some(held)) {
+    const back = ['ArrowUp', 'ArrowLeft'].some(held);
+    if (back || ['ArrowDown', 'ArrowRight'].some(held)) {
       playSound(ctx, 12); // GRLASER
-      choice = 1 - choice;
+      choice = (choice + (back ? BUTTONS.length - 1 : 1)) % BUTTONS.length;
       cursor();
       yield* delay(150);
       continue;
@@ -106,6 +121,13 @@ export function* startScreen(ctx: Ctx): Proc {
     if (tap || held('Enter') || held('Space')) break;
   }
   playSound(ctx, 16); // DROHNE3
+  if (choice === PROTOTYPE) {
+    yield* fadeOut(ctx, false);
+    ctx.launch = 'sly.html';
+    while (ctx.launch !== null) yield TICK_MS;
+    yield* waitNoKey(ctx);
+    return yield* startScreen(ctx);
+  }
   st.remastered = choice === 1;
   ctx.saveSettings();
   yield* fadeOut(ctx, false);

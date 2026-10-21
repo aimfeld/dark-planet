@@ -59,6 +59,12 @@ export class Sfx {
     for (let i = this.voices.length - 1; i >= 0; i--) if (this.voices[i].end <= now) this.voices.splice(i, 1);
   }
 
+  /** VoiceCount: the voices playing now (the prototype waits for 0 before it quits). */
+  voiceCount(): number {
+    this.prune();
+    return this.voices.length;
+  }
+
   private playing(n: number): boolean {
     return this.voices.some((v) => v.n === n);
   }

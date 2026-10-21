@@ -76,6 +76,8 @@ export interface Ctx {
   atMainMenu: boolean;
   /** The start screen is shown (main.ts draws it remastered and may reload for an app update). */
   atStart: boolean;
+  /** A page to open instead of the game (the start screen's prototype, sly.html); main.ts opens it and sets null. */
+  launch: string | null;
 }
 
 /** Crt.Delay(ms). */

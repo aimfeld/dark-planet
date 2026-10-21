@@ -57,7 +57,7 @@ describe.skipIf(!hasData)('start screen', () => {
     expect(texts.find((t) => t.text === 'Remastered 2026')).toMatchObject({ font: 'BROADWA', classic: false });
     const fonts = () => [...game.screen.texts.values()].map((t) => `${t.text}:${t.classic}`);
     expect(fonts()).toContain('inspiriert von Raptor und Xenon 2.:false'); // the other texts in the selected version's font
-    press(game, input, 'ArrowDown');
+    press(game, input, 'ArrowUp');
     run(10);
     expect(fonts()).toContain('inspiriert von Raptor und Xenon 2.:true');
     expect(fonts()).toContain('DARK PLANET:true');
@@ -89,6 +89,28 @@ describe.skipIf(!hasData)('start screen', () => {
     settings.remastered = true;
     run(5);
     expect(game.screen.y[12]).toBe(118 - 10);
+  });
+
+  it('Prototyp 1997 asks main.ts to open sly.html; back on the page, the start screen shows again', async () => {
+    const input = new Script();
+    const settings = { ...DEFAULT_SETTINGS, control: [1, 4] as [number, number] };
+    const game = new Game(createWorld(await gameData(), 1), input, settings, undefined, undefined, undefined, undefined, new FakeVideo());
+    const run = (n: number) => {
+      for (let i = 0; i < n; i++) game.tick(input);
+    };
+    run(40);
+    expect([...game.screen.texts.values()].find((t) => t.text === 'Prototyp 1997')).toMatchObject({ font: 'DEFAULT', classic: true });
+    press(game, input, 'ArrowDown'); // Remastered 2026 -> Prototyp 1997
+    run(10);
+    expect(game.screen.y[12]).toBe(142 - 10);
+    press(game, input, 'Enter');
+    run(40);
+    expect(game.launch).toBe('sly.html');
+    expect(settings.remastered).toBe(true); // unchanged
+    game.launch = null; // main.ts opened it
+    run(40);
+    expect(game.atStart).toBe(true);
+    expect(game.screen.fade).toBeGreaterThan(0);
   });
 
   it('a click on a button chooses it', async () => {

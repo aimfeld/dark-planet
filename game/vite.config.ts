@@ -7,6 +7,8 @@ import { defineConfig, type Plugin } from 'vitest/config';
 const MEDIA = /^(music|video)\//;
 /** The remastered graphics: never on install, cached as they are first used (only remastered players need them). */
 const REMASTER = /^remaster\//;
+/** The 1997 prototype's data (sly.html): cached as it is first used, like the remastered graphics. */
+const SLY = /^sly\//;
 
 /** Every file below `dir`, as paths relative to `root` with '/' separators. */
 function walk(dir: string, root = dir): string[] {
@@ -30,12 +32,13 @@ function offlinePlugin(): Plugin {
         for (const f of list) hash.update(f).update(readFileSync(join(outDir, f)));
         return hash.digest('hex').slice(0, 12);
       };
-      const core = files.filter((f) => !MEDIA.test(f) && !REMASTER.test(f));
+      const core = files.filter((f) => !MEDIA.test(f) && !REMASTER.test(f) && !SLY.test(f));
       const media = files.filter((f) => MEDIA.test(f));
       const remaster = files.filter((f) => REMASTER.test(f));
+      const sly = files.filter((f) => SLY.test(f));
       const build = {
-        core, media, remaster,
-        coreVersion: version(core), mediaVersion: version(media), remasterVersion: version(remaster),
+        core, media, remaster, sly,
+        coreVersion: version(core), mediaVersion: version(media), remasterVersion: version(remaster), slyVersion: version(sly),
       };
       const template = readFileSync(new URL('sw.js', import.meta.url), 'utf8');
       writeFileSync(join(outDir, 'sw.js'), `self.__BUILD__ = ${JSON.stringify(build)};\n${template}`);
@@ -46,5 +49,7 @@ function offlinePlugin(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [offlinePlugin()],
+  // the game, and the 1997 prototype (sly.html, src/sly/)
+  build: { rollupOptions: { input: { main: 'index.html', sly: 'sly.html' } } },
   test: { environment: 'node' },
 });

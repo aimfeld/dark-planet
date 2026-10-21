@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <title>Dark Planet: Sly-Version</title>
+    <link rel="icon" href="icons/favicon-32.png" />
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none;
+        touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+      #app { position: fixed; inset: 0; }
+      #status { position: fixed; left: 8px; bottom: 6px; color: #888; font: 12px monospace; }
+      #title { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        text-align: center; color: #ccc; font: 16px/1.5 monospace; padding: 16px; pointer-events: none; }
+      #title[hidden], #keys[hidden] { display: none; }
+      #keys { position: fixed; left: 0; right: 0; padding: 6px 8px; color: #888; font: 12px/1.5 monospace;
+        text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="title"></div>
+    <div id="keys" hidden>Pfeiltasten: steuern · X / Strg: feuern · Esc: beenden · F: Vollbild</div>
+    <div id="status"></div>
+    <script type="module" src="/src/sly/main.ts"></script>
+  </body>
+</html>

@@ -55,6 +55,11 @@ No header (unlike the prototype). Read by `LoadLevel` @0x1B3ED (see re-notes "Le
   u8   flag   fires only if flag ≤ DS:0x16C2, a constant 1; every used record has 1
               (0 only in empty slots), so in practice every record fires
 ```
+The prototype's `LEVEL2.LEV` (`CD/Wasndas/SLY/`, read by SLYVERS.PAS `LevelLaden`) has a header and a
+different record layout: `u16 width` (10), `u16 height` (100), height rows × width tile bytes (row 1 = the
+bottom; tiles from `BACK1-14.LIB`), then 1000 × 6 bytes of spawn records (`i16 y, i16 x, u8 type, u8 sub`, 1118
+non-zero bytes) that SLYVERS doesn't read: its ten enemies come from the `Aktivierung*` constants.
+
 Level coordinates: tile row r (1-based) covers y = 160 − 32·(r−1) … +31, column c
 covers x = 32·(c−1) … +31, so the tiles span y = −6208 … 191 (320 × 6400 px); level y 192…199 (the bottom
 8 rows of the first screen) has no tile and shows black. BuildLevel asks for y = 168 − 32·(r−1), but AniVGA's

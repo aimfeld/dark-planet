@@ -99,7 +99,7 @@ const BUTTONS = [
   { id: 'select', label: 'Bonus<br>wählen', big: false },
   { id: 'use', label: 'Bonus<br>feuern', big: false },
 ] as const;
-type ButtonId = (typeof BUTTONS)[number]['id'];
+export type ButtonId = (typeof BUTTONS)[number]['id'];
 const DOUBLE_TAP_MS = 300; // a double tap on Feuer locks autofire, the next tap releases it
 
 const CSS = `
@@ -147,7 +147,8 @@ export class TouchControls {
   private lastFireTap = -Infinity;
   private radius = 50;
 
-  constructor(parent: HTMLElement, onFullscreen?: () => void, onRemaster?: () => void) {
+  /** `only`: the game buttons to show (all by default; the prototype in src/sly/ has only Feuer). */
+  constructor(parent: HTMLElement, onFullscreen?: () => void, onRemaster?: () => void, private readonly only?: readonly ButtonId[]) {
     const style = document.createElement('style');
     style.textContent = CSS;
     document.head.appendChild(style);
@@ -250,7 +251,7 @@ export class TouchControls {
     let y = r.y + r.h - r.w;
     for (const b of BUTTONS) {
       const el = this.buttons.get(b.id)!;
-      el.hidden = !this.playing;
+      el.hidden = !this.playing || (this.only !== undefined && !this.only.includes(b.id));
       const size = b.big ? r.w : u;
       if (!b.big) y -= u + gap;
       put(el, r.x + (r.w - size) / 2, y, size);
@@ -304,7 +305,9 @@ export class TouchControls {
   private buttonAt(x: number, y: number): ButtonId | undefined {
     const slack = (this.layoutNow?.unit ?? 40) * 0.2;
     for (const b of BUTTONS) {
-      const r = this.buttons.get(b.id)!.getBoundingClientRect();
+      const el = this.buttons.get(b.id)!;
+      if (el.hidden) continue;
+      const r = el.getBoundingClientRect();
       if (x >= r.left - slack && x <= r.right + slack && y >= r.top - slack && y <= r.bottom + slack) return b.id;
     }
     return undefined;

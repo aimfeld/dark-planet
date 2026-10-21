@@ -24,9 +24,9 @@ export function centerY(w: World, slot: number): number {
 }
 
 export interface SlotTable {
-  n: Int32Array;
-  x: Int32Array;
-  y: Int32Array;
+  n: ArrayLike<number>;
+  x: ArrayLike<number>;
+  y: ArrayLike<number>;
 }
 
 /**
@@ -38,8 +38,8 @@ export function hitDetect(w: World, a: number, b: number): boolean {
   return hitDetectIn(w.data, w.spr, a, b);
 }
 
-/** HitDetect on any slot table (the level's or a menu screen's). */
-export function hitDetectIn(data: GameData, t: SlotTable, a: number, b: number): boolean {
+/** HitDetect on any slot table (the level's, a menu screen's, the prototype's in src/sly/). */
+export function hitDetectIn(data: Pick<GameData, 'sprites'>, t: SlotTable, a: number, b: number): boolean {
   if (a === b) return false;
   const sa = t.n[a] > 0 ? data.sprites.get(t.n[a]) : undefined;
   const sb = t.n[b] > 0 ? data.sprites.get(t.n[b]) : undefined;

@@ -35,7 +35,7 @@ disc image `original_source/Image/DPImage.iso` (330 MB) is not committed: `tools
 | `original_source/Image/` | Local only: `DPImage.iso` (data track + all CD audio as one track); `fixed/` = the image rebuilt with proper audio tracks (`tools/build_cd_image.py`) |
 | `tools/` | Asset extraction and reverse-engineering helpers; `tools/dosbox/` holds the XMS workaround for DOSBox-X |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
-| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
+| `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `sly/` (the 1997 prototype's data, `tools/export_sly_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
 | `docs/` | Plan, reverse-engineering notes, file formats |
 
 ## Playing the original in DOSBox-X (with soundtrack)
@@ -95,6 +95,13 @@ The game's assets are generated from `original_source/` and committed, so the ga
 `game/public/data/` (sprites, tiles, menu pictures, fonts, texts, levels, tables and SFX; binaries gzip-compressed) and
 `game/public/music/` (CD tracks 2–9 as mono MP3) and `game/public/video/` (intro and ending as WebM). To regenerate
 them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music`, `npm run video` and `npm run icons`.
+
+### The prototype (Sly version, 1997)
+The start screen's third choice, "Prototyp 1997", opens `sly.html`: the 1997 prototype `SLYVERS.PAS`
+(`original_source/CD/Wasndas/SLY/`, source preserved) ported to TypeScript in `game/src/sly/`, with a friend's
+photo as the boss. One level; arrows move, X or Ctrl fires, Esc ends it (then Enter plays again, Esc returns to
+Dark Planet). Direct link: https://aimfeld.github.io/dark-planet/sly.html. Its data is in `game/public/sly/`
+(`npm run sly`, `tools/export_sly_data.py`).
 
 ### Testing shortcuts
 - **GEDANKE** typed in the hangar sets both players' money to 666666, so the shop can sell anything. This cheat is

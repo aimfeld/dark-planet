@@ -258,6 +258,32 @@ Done (user, session 17): play-tested through, including two players; the open it
 - [ ] **User:** pick the Steam gallery shots from `screenshots/index.html`. Steam asks for at least 1280 x 720,
   16:9 preferred; the 16:10 shots get thin bars in the store's 16:9 viewer (or crop/pad them).
 
+### The prototype in the browser (Sly version, session 22, 2026-10-21)
+The user's request: make the 1997 prototype `CD/Wasndas/SLY/SLYVERS.PAS` (source preserved, a friend's photo as the
+boss) playable as TypeScript too, shipped as its own page or launchable from the game.
+- [x] RE check (REA + objdump, background agent): SLYVERS.EXE (Sep 1997) matches SLYVERS.PAS (Aug 1997) in every
+  procedure and table; AniVGA/SMIX semantics; DOSBox-X: ≈ 66 fps, SFX signed 8-bit 11025 Hz. re-notes "SLYVERS
+  prototype (Sly version)".
+- [x] `tools/export_sly_data.py` (`npm run sly`) → `game/public/sly/` (sprites by file name, tiles, FIRE font,
+  RAUM.PAL + SetShadowTab(50), LEVEL2.LEV grid, RAUM28.SND in FXInit order; 0.5 MB, committed like `data/`).
+- [x] Port `game/src/sly/`: `sim.ts` follows the Pascal procedure by procedure (globals, GoOut, 16-bit Integer
+  wrap, TP Random with seed 0, shared slots), `anivga.ts` the AniVGA parts (slots 0–900, LoadSprite numbers,
+  shadow sprites, SetSpriteCycle, HitDetect from `sim/sprites.ts`, FadeToPalette), `framebuffer.ts` Animate's
+  picture (window x 8–311 / y 1–199, slots 0–8 unclipped, black outer area), `main.ts` the page: title (a key or
+  tap, for the browser's sound), the program in real time (25 ms frames, fades 1/70 s per step, Delay(800)), end
+  screen. Keyboard (arrows, X/Ctrl, Esc), gamepad, touch (stick + Feuer). Tests: `test/sly.test.ts`.
+- [x] Shipping: a second page `game/sly.html` in the same Vite build and GitHub Pages site (`…/dark-planet/sly.html`).
+  The remake's start screen has a third choice "Prototyp 1997", in the shop's 6 px DEFAULT font (user, session 22,
+  after trying the 8 px SUPER) (`ctx.launch`, main.ts opens the page; Esc there
+  and Esc again returns). The service worker serves `sly.html` for its own navigations and caches `sly/` on first use.
+- Deviations from SLYVERS.EXE: Esc and the end of the boss fight show an end screen (Enter: again, Esc: back to
+  Dark Planet) instead of quitting to DOS; an enemy shot whose target is its start point (0/0, RunError 200 in the
+  original) stays on its line instead of ending the program; the wait for the last sound at the end gives up after
+  20 s. Frame rate: the measured ≈ 66 fps on the DOSBox-X reference setting (a real 1997 PC ran at its own speed)
+  felt too fast; **user (session 22): 40 fps** like Dark Planet (after trying 53 fps; `FRAME_MS` in `src/sly/sim.ts`).
+- [ ] **User:** play `sly.html` (`npm run dev`, start screen → Prototyp 1997) and say whether speed and feel are
+  right, and whether the launcher on the start screen is where you want it.
+
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
 2. Language: classic version German only. An English translation can come later in the remastered version (settings switch). The remastered version waits until the classic version is finished.

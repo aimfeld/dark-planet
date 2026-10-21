@@ -283,6 +283,11 @@ async function main(): Promise<void> {
       pauseTap = false;
       acc -= TICK_MS;
     }
+    if (game.launch !== null) {
+      const page = game.launch;
+      game.launch = null; // a page restored with the browser's Back shows the start screen again
+      location.href = base + page;
+    }
     if (updateReady && canReload()) {
       location.reload();
       return;

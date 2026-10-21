@@ -5,17 +5,26 @@
 // cache, best effort, so a code update doesn't download them again; what's missing streams from the network.
 // The remastered graphics (remaster/, about 28 MB) are not downloaded on install: each file goes into its own
 // cache when the game first loads it, so classic players never fetch them and remastered ones keep what they
-// have seen for offline play.
+// have seen for offline play. The same goes for the 1997 prototype's data (sly/, 0.5 MB; its page sly.html is core).
 // Cache first: an update installs in the background and takes over; main.ts (registerOffline) looks for one on
 // every start, when the app comes back to the screen and hourly, and reloads where nothing is lost.
 
-const { core, media, remaster = [], coreVersion, mediaVersion, remasterVersion = 'none' } = self.__BUILD__;
+const {
+  core, media, remaster = [], sly = [], coreVersion, mediaVersion, remasterVersion = 'none', slyVersion = 'none',
+} = self.__BUILD__;
 const CORE_CACHE = `dp-core-${coreVersion}`;
 const MEDIA_CACHE = `dp-media-${mediaVersion}`;
 const REMASTER_CACHE = `dp-remaster-${remasterVersion}`;
+const SLY_CACHE = `dp-sly-${slyVersion}`;
 const INDEX = new URL('index.html', self.location).href;
+/** The pages besides index.html (sly.html); any other navigation in the scope is the game. */
+const PAGES = new Set(core.filter((p) => p.endsWith('.html')).map((p) => new URL(p, self.location).href));
 const MEDIA_URLS = new Set(media.map((p) => new URL(p, self.location).href));
-const REMASTER_URLS = new Set(remaster.map((p) => new URL(p, self.location).href));
+/** Files cached on first use, by cache name. */
+const LAZY = [
+  [REMASTER_CACHE, new Set(remaster.map((p) => new URL(p, self.location).href))],
+  [SLY_CACHE, new Set(sly.map((p) => new URL(p, self.location).href))],
+];
 const filling = new Set(); // media and remaster URLs being cached after a miss
 
 /** Bypass the HTTP cache: index.html and data/ have no hash in their names. */
@@ -43,7 +52,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     for (const name of await caches.keys()) {
-      const keep = [CORE_CACHE, MEDIA_CACHE, REMASTER_CACHE];
+      const keep = [CORE_CACHE, MEDIA_CACHE, REMASTER_CACHE, SLY_CACHE];
       if (name.startsWith('dp-') && !keep.includes(name)) await caches.delete(name);
     }
     await self.clients.claim();
@@ -57,21 +66,22 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function respond(event, request) {
-  // Every page in the scope is the game (start_url "./" and index.html).
-  const key = request.mode === 'navigate' ? INDEX : request.url;
+  const url = new URL(request.url);
+  url.search = '';
+  // Every other page in the scope is the game (start_url "./" and index.html).
+  const key = request.mode === 'navigate' ? (PAGES.has(url.href) ? url.href : INDEX) : request.url;
   const cached = await caches.match(key, { ignoreSearch: true });
   if (cached) {
     const range = request.headers.get('range');
     return range ? partial(cached, range) : cached;
   }
-  const url = new URL(request.url);
-  url.search = '';
-  if (REMASTER_URLS.has(url.href)) {
+  const lazy = LAZY.find(([, urls]) => urls.has(url.href));
+  if (lazy) {
     // Fetch once and keep a copy (the game asks for each file once per session).
     const response = await fetch(request);
     if (response.ok) {
       const copy = response.clone();
-      event.waitUntil(caches.open(REMASTER_CACHE).then((cache) => cache.put(url.href, copy)).catch(() => undefined));
+      event.waitUntil(caches.open(lazy[0]).then((cache) => cache.put(url.href, copy)).catch(() => undefined));
     }
     return response;
   }

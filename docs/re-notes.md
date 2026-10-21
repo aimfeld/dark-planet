@@ -1032,3 +1032,112 @@ The sound effects sounded garbled in DOSBox-X. The cause is a DOSBox-X XMS bug t
 - ~~The cheat~~: typing G-E-D-A-N-K-E in the hangar sets both players' money to 666666 (session 4).
 - ~~`SAVE.DAT` / `SETTINGS.DAT`~~: decoded in session 4 (`docs/file-formats.md`).
 - Still open (need DOSBox-X): see `docs/gameplay-spec.md` §13 (draw order, on-screen shot speeds, shop bugs, boss details). Hit-test precision is answered from the code (session 5, "Engine tables").
+
+## SLYVERS prototype (Sly version)
+`original_source/CD/Wasndas/SLY/SLYVERS.EXE` (56672 bytes, Sep 23 1997) against `SLYVERS.PAS` (Aug 31 1997), for the
+TypeScript port (2026-10-21). MZ header 2304 bytes, so linear = 0x10000 + file offset − 2304; entry CS:IP = 0000:3360.
+Segments (load-relative): 0x1000 main program, 0x136E Detect (GetSettings @0x196), 0x1395 SMIX, 0x14DB XMS,
+0x14E4 AniVGA (smart-linked, 0x4B40 bytes), 0x1998 and 0x1A5F (Dos with GetIntVec @0x1A5F:0x94, MOUSE2; not
+identified further), 0x1A7E Crt (Delay @0x2A8), 0x1AE0 System, DS = 0x1C7B. REA evidence: procedure list `ev_287d825d…`, main body `ev_614ea5d2…`,
+MoveGegner `ev_d7bf2ae0…`, MoveShot `ev_b8265665…`; the comparison itself was done on `objdump -mi8086` of each segment.
+
+Port: `game/src/sly/` keeps all quirks below except the 0/0 RunError 200 (the shot stays on its line) and the
+end of the program (an end screen instead of DOS); see PLAN "The prototype in the browser".
+
+### The EXE matches the source (Observed)
+- Main segment procedures in source order: OurExitProc 0x10000, InitExplosionen 0x10057, ExplDarstellung 0x10144,
+  FXInit 0x10376 (name strings before it), trapCtrlAltDel (interrupt, not listed by Ghidra), installTrap 0x106CB,
+  uninstallTrap 0x106ED, Shutdown 0x10702, Abbruch 0x10757, PScoreUp 0x10770, PEnergieAnzeige 0x107BE, InitSprites
+  0x10A9E, MoveShot 0x10BFA, PanzerSchattenMove 0x116BB, Zusatzanbau 0x117E2, GegnerAktivierung 0x118B6,
+  MoveGegnerSchatten 0x11CFD, MoveGegner 0x11DCB, Kolision 0x1222B, LevelLaden 0x1279C, Kachel 0x1286B, InitLevel
+  0x128E3, WaffenNachladung 0x1299D, PanzerAktionen 0x12F71, main 0x13360.
+- Every procedure was read against the source: **no difference found.** Checked: the main loop order and its constants
+  (Delay(10), scroll every frame with ScrollSpeed starting at 0, HUD slots 5/7/8 moved with the scroll, Levelend:
+  x 152/148 ±3, y −3, end at StartVirtualY − 30, StopSound(10), FadeToPalette(black, 200), wait VoiceCount = 0);
+  PanzerAktionen (anim period 2, ShipSpeed 3, PTraegheit 6 read from DS:0x6, bounds x ≥ 12 / ≤ 280, y ≥ SVY + 10 /
+  ≤ SVY + 168, inertia); PEnergieAnzeige (shield recharge every 10 frames, PShield = shield > 5, Staerke Real48 20.0 / 5.0,
+  bars at x 3–5 from SVY + 79 / + 171 going up 2 px per line, death = 40 × InitExplosionen(x − 10 + Random(30), y − 10 +
+  Random(30), 9, 22, true, Random(10) + 10, true) + sound 1); MoveShot (all player flight types incl. the Real48
+  constants 2π, 320, 2, 50 for type 6 and π, 360, 3, 30, centre +11/+13 for type 7; enemy flight types 1–6, kill
+  bounds); MoveGegner (cases 1–6, sound 34 + Random(5) every 100 counts, 270 → 21, type 6 = Round(Sin(2π·OldY/320·8)·40
+  + 160)); Kolision; WaffenNachladung; GegnerAktivierung (boss: StopSound(10), 3 × sound 39, fade to black 200, Delay(800),
+  2 × looped sound 10, boss y SVY + 5, jet y SVY + 160, Animate, fade in 200); InitSprites (load numbers and shadow copies
+  41, 47, 48, 63–66 with mode byte 3, SetShadowTab(50)); InitLevel (PutTile at x (i−1)·32, y 168 − (i2−1)·32, range
+  (0, −MaxY·32, 320, 200)). The typed-constant tables in DS (0x12–0x18D) are byte-identical to the source.
+- `LoadSprite('Icon3.cod', 1)` names a file that is not on the CD; the failed load is ignored and slot-load 1 is
+  replaced by JetB2 in InitSprites (Observed: string at CS:0x3335; file absent).
+
+### Quirks the port must keep in mind (Observed in the code)
+- **GoOut is one global flag** (DS:0x1410). InitExplosionen and WaffenNachladung leave it True when they found a free
+  slot, and PanzerAktionen's fire loop starts without resetting it. So when an explosion started or an enemy fired
+  this frame (after GegnerAktivierung's reset, which only runs while scrolling), the first occupied, loaded mount
+  (mount 1, a missile) does not fire this frame; GoOut is reset after it and the other mounts fire normally.
+- **Overlapping case ranges** (TP): the ranges are tested in source order and the first match wins. MoveGegner case 2:
+  count 20 runs the 1..20 branch, 40 the 20..40 branch, 41–100 the 40..100 branch. MoveShot types 4/5: counts 13, 14
+  move nothing.
+- **Explosion slots overlap enemy-shot slots**: explosions use slots 11 + i (i = 1..38 → 12–49), enemy shots 31 + i
+  (32–80), so 32–49 are shared.
+- ExplDarstellung shows a frame every 2nd call (Pause := 1 after each step) and clears the sprite in the same step
+  that reaches `Bis`, so the last frame (15 for hits, 22 for kills) is never shown.
+- Enemy shot types 5/6: `(ZielX − StartX) * ABS(SpriteY − StartY)` (and the X-branch counterpart) is a **16-bit
+  multiply** (`mul bx`, then `cwd`): the product wraps to a signed 16-bit value before it is converted to Real48 for
+  `/`. Real `/` by zero (target = start point exactly, so both deltas are 0) calls RunError 200 (System 0x1AE0:0x1216 →
+  0x1244, AX = 0xC8): the original would quit with "Runtime error 200". All Real arithmetic is the 6-byte software Real
+  ({$N-,E-}; System entry points 0x1210 mul, 0x1216 div, 0x11FE add, 0x1224 int→real, 0x1220 compare, 0x1230 Round,
+  0x1349 Sin, 0x1336 Cos); Round overflow is RunError 207.
+- Kolision runs only while PanzerLebt, so after the jet's death nothing can be hit.
+
+### AniVGA in this EXE (Observed; seg 0x14E4 offsets)
+- SetShadowTab 0x106, SetPalette 0x1F6, FadeToPalette 0x27F and HitDetect 0x1BCB are the same code as DP.EXE's
+  (identical instruction streams apart from DS operands), so the DP notes above apply.
+- `SetAnimateWindow(8, 1, 312, 199)` @0x1E11: x1 and the width are rounded down to multiples of 4 → **x 8–311, y 1–199**.
+- `SetSplitIndex(8)` @0x1DF0 (values > 900 → −1): Animate @0x1F01 draws slots **900 down to 0** (SI from 0x708) and,
+  when SI reaches 2·split, switches the clip window to the full screen: slots 0–8 are unclipped, 9–900 clipped to the
+  window. NMAX = 900 (SpriteN/X/Y arrays at DS:0x70F2/0x77FC/0x7F06, 901 words each).
+- **Sprite cycles**: before drawing each slot Animate does `SpriteN[slot] := Next[SpriteN[slot]]` (table DS:0x8610)
+  and writes it back (@0x399A), so cycles advance **one frame per Animate call**, every slot, and the game code sees the
+  new number (HitDetect uses it). `SetSpriteCycle(n, len)` @0xAD3 sets Next[i] = i + 1 for n..n+len−2 and
+  Next[n+len−1] = n: (23, 4) → 23→24→25→26→23, (63, 4) the same for the shadows. The Animate inside the boss start
+  advances them one extra step.
+- `WinClip` (DS:0x19B) is only read by PutPixel @0xBC1: False = clip to the screen 0–319 × 0–199. PutPixel writes
+  straight into the hidden page at (x − StartVirtualX, y − StartVirtualY). Animate restores the background only inside
+  the window, so PutPixel pixels inside the window are overwritten and those outside (the energy bars at x 3–5) stay;
+  the HUD frame sprite (slot 8, Icon5!.cod, 9 opaque columns with a transparent middle 2–6 over 134 rows) is drawn
+  over them.
+- `UpdateOuterArea` (DS:0x19A) is already 2 in the typed constants (the program's assignments of 0/2 are no-ops):
+  Animate copies the whole screen while it is > 0 and decrements it, so only the first two frames (one per page)
+  refresh the area outside the window (x 0–7, 312–319 and row y 0); afterwards row 0 stays as it was drawn then.
+- FadeToPalette(pal, steps): steps − 1 interpolation steps from the current palette (i = 0…steps−2, cur + (target −
+  cur)·i div (steps−1)) plus a final SetPalette(target, TRUE); **every SetPalette waits for the start of a vertical
+  retrace**. So FadeToPalette(…, 200) = 200 retraces ≈ **2.85 s** (70.086 Hz), (…, 10) ≈ 0.14 s. Only the final step
+  rebuilds the shadow table (for the boss start's Animate that is the black palette's table, so shadows in that one
+  frame use colour 0). The boss start blocks ≈ 2.85 + 0.8 + 2.85 s; the level end fade ≈ 2.85 s.
+- Page flip (@0x3D29) waits only for a display-enable edge, no retrace; SetCycleTime is not called. Frame time = game
+  work + Delay(10) + Animate.
+
+### SMIX in this EXE (Observed; seg 0x1395)
+- Output **11025 Hz**: SB16 DSP 0x41 0x2B 0x11 (rate 0x2B11), 0xB6 16-bit auto-init, mode 0x10, 512-sample blocks;
+  older cards 0xD1, 0x40 time constant for 11025, 0x48/0x1C or 0x14. Mixing as in DP: signed 8-bit samples summed
+  sign-extended, ×32 (`shl 5`) for SB16. **32 voices.**
+- StartSound(sound, key, loop) @0x9CB takes the **first free voice**; when all 32 are busy the sound is dropped. It
+  increments VoiceCount (DS:0x27BA, a byte). Two StartSound(…, 10, true) calls play two looping voices (twice as
+  loud). StopSound(key) @0xA64 stops **every** voice whose key matches (finished voices are cleared to key 0 by
+  0x982, so only live voices match).
+- RAUM28.SND: 40 sounds (ALARM … KUCKMAL), same resource format as AREA.SND.
+
+### DOSBox-X run (Observed, 2026.10.01, cycles = 64000, SB16 220/7/1/5, XMSHOLE first)
+- The SLY folder must not be mounted read-only: TP's Reset opens files read/write (FileMode 2), LoadPalette fails,
+  Abbruch runs before InitSB and the program dies with "Runtime error 204 at 0395:0FEE" (ShutdownMixing). Use
+  `mount c <SLY>` + `mount c <scratch> -t overlay` (the game writes nothing).
+- **Frame rate ≈ 65–67 fps** (emulated time: StartVirtualY against the BIOS tick count 0:046C in per-second save
+  states; 1 s windows 57–73 fps; runs: 1002 px in 271 ticks = 67.3 fps without input, 1083 px in 304 ticks = 64.9 fps
+  with firing). The scroll stops at −1100 after ≈ 16.5 s; with the fades the boss appears ≈ 6.5 s later. (DP.EXE, with
+  Delay(12) and more work per frame, ran at ≈ 41 fps on the same settings.)
+- **SFX: signed 8-bit at 11025 Hz confirmed**: the first second of the mixer output (2 × GLEITER) correlates 0.985 with
+  GLEITER read as signed at 11025 Hz (unsigned −0.65, 22050 Hz −0.18). No XMS garbling with XMSHOLE.
+- Without input the jet is shot down at ≈ SVY −300 to −560; the boss (art 2, 3000 energy) spawns at y SVY + 5 and moves
+  down to SVY + 24 (19 frames) before its side-to-side pattern.
+- Screenshots: the save state's `Vga` entry holds planar video memory from offset 0x80000, 4 bytes per address
+  (planes 0–3); the two AniVGA pages start at addresses 4752 and 20752 (16000 apart), 80 addresses per row. Located by
+  the HUD frame sprite (colour 17 at x 0–8 and 311–319 on row 1). Reference PNGs (scratch, not kept in the repo):
+  start, ~10 s, firing ×2, boss.

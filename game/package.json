@@ -7,6 +7,7 @@
     "data": "cd .. && uv run --with numpy --with pillow python tools/export_engine_data.py original_source game/public/data",
     "music": "cd .. && python3 tools/export_music.py original_source game/public/music",
     "video": "cd .. && python3 tools/export_videos.py original_source game/public/video",
+    "sly": "cd .. && uv run --with numpy --with pillow python tools/export_sly_data.py original_source game/public/sly",
     "icons": "cd .. && uv run --with numpy --with pillow python tools/export_icons.py original_source game/public/icons",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
