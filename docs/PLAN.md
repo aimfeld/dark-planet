@@ -241,6 +241,23 @@ Done (user, session 17): play-tested through, including two players; the open it
   music and videos, +16 MB), so a fresh install plays remastered offline; today a file is cached on first use
   and an unseen level shows classic offline.
 
+### Store screenshots (session 21, 2026-10-21)
+- [x] `tools/screenshots.mjs` (Node stdlib, headless Chrome over the DevTools protocol, WebGL via SwiftShader) runs
+  the dev-only page `game/screenshots.html` (`src/screenshots.ts`, not in the build) and writes `screenshots/`
+  (gitignored): `classic/` and `remastered/` with the same names, 1920 x 1200 (6 x 320 x 200, 16:10), plus
+  `index.html` (both side by side) and `captures.json`. About 2 minutes for 89 moments (14 level runs with jets
+  and pods, 6 boss fights, 2 two-player runs, main menu, hangar, shop). A level scenario sets up the loadout
+  directly (mount rules checked against the jet), a bot flies at the nearest enemy and fires, and life and
+  shield are refilled every tick. Pass 1 scores every tick (enemies, explosions and shots on screen), pass 2
+  replays the same seed and draws the chosen ticks remastered and classic. Screenshots only: the boss parts get
+  8 x energy and the bot fires in bursts there, so a fight lasts long enough for several shots. Menus and shop
+  are driven through a `Game` with scripted keys and mouse (GEDANKE, buying, an Alien-Pro 2 fitted out).
+- [x] Found on the way: `bossScrollY` (dev keys Shift+1–6) took level 3's spare boss-type record at y 100, which the
+  scrolling never reaches, so Shift+3 crashed on the padding records there. It now takes the first boss record
+  at y ≤ 0. Test in `test/bosses.test.ts`.
+- [ ] **User:** pick the Steam gallery shots from `screenshots/index.html`. Steam asks for at least 1280 x 720,
+  16:9 preferred; the 16:10 shots get thin bars in the store's 16:9 viewer (or crop/pad them).
+
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
 2. Language: classic version German only. An English translation can come later in the remastered version (settings switch). The remastered version waits until the classic version is finished.

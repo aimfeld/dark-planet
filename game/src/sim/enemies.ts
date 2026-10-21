@@ -97,9 +97,12 @@ export function spawnFromLevel(w: World): void {
   }
 }
 
-/** The scroll position of the level's boss record, where StartBossFight runs (dev testing: start at the boss). */
+/**
+ * The scroll position of the level's boss record, where StartBossFight runs (dev testing: start at the boss): the
+ * first one the scrolling (y 0 down) reaches. Level 3 also keeps spare records at y 100, a boss type among them.
+ */
 export function bossScrollY(w: World, level: number): number {
-  return w.data.levels[level - 1].records.find((r) => BOSS_TYPES.has(r.type))!.y;
+  return Math.max(...w.data.levels[level - 1].records.filter((r) => BOSS_TYPES.has(r.type) && r.y <= 0).map((r) => r.y));
 }
 
 /** StartBossFight's blocking parts in ticks: fade out (20 retraces), Delay(1200), fade in. */

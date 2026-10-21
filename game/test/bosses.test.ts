@@ -62,6 +62,19 @@ describe.skipIf(!hasData)('episode 2 and the bosses (spec §7.3, §7.5, §8)', (
     }
   });
 
+  it('a start at the boss (dev keys) begins the boss fight on the first tick (level 3: not its spare records at y 100)', async () => {
+    const data = await gameData();
+    for (let level = 1; level <= 6; level++) {
+      const w = createWorld(data, 5);
+      newGame(w);
+      startLevel(w, level, true);
+      step(w, [NO_INPUT]);
+      expect(w.scrollY).toBeLessThan(-5000);
+      expect(w.scrolling).toBe(false);
+      expect(w.freeze).toBeGreaterThan(0);
+    }
+  });
+
   it('level 2: the parts ride on the core; killing 0x0D drops the core to the ground (sub 8)', async () => {
     const w = await atBoss(2);
     const [part0c, part0d, core] = [1, 2, 3].map((r) => w.enemies[r]);

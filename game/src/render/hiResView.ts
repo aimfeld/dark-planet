@@ -100,6 +100,12 @@ export class HiResView {
     return this.method;
   }
 
+  /** Textures still loading (what was drawn meanwhile used the nearest-scaled fallback or the classic view). */
+  get loading(): boolean {
+    for (const t of this.textures.values()) if (t === 'loading') return true;
+    return false;
+  }
+
   /**
    * Switch the asset set (null = off). Textures load on demand; until then the draw calls return false. The files
    * are AVIF (Safari 16.4+, Chrome 85+, Firefox 93+); a browser without it keeps the classic graphics.

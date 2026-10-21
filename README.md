@@ -103,6 +103,12 @@ them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music
   fight. These keys work only on the dev server (`npm run dev`), not in the production build. They are not in the
   original game. Finishing a level returns to the hangar with the next level selected, as usual.
 
+### Screenshots
+`node tools/screenshots.mjs [scenario ...]` (needs `google-chrome`) plays scripted levels, boss fights and the menus
+in headless Chrome and writes store screenshots to `screenshots/` (gitignored): every moment as `classic/<name>.png`
+and `remastered/<name>.png` (1920 x 1200), with `index.html` to compare and pick them. The scenarios (levels,
+jets, pods) are in `game/src/screenshots.ts`.
+
 ### Installing as an app (PWA)
 The production build (`npm run build`, output in `game/dist/`) is an installable web app: `manifest.webmanifest`
 plus a service worker (`game/sw.js`, written to `dist/sw.js` with the file list by `vite.config.ts`) that caches
