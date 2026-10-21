@@ -6,7 +6,8 @@
 // the 40 Hz simulation moves at the display's refresh rate; a slot that jumps further than SNAP is not
 // interpolated (a reused slot, a new level). Sprites without an upscaled version are nearest-scaled.
 // Effects (fx.ts): glow, light and particles, and soft shadows (each run of shadow slots is drawn into
-// its own blurred container, so the drawing order stays the original's).
+// its own blurred container, so the drawing order stays the original's). A hit flash is an additive copy of the
+// sprite right after it.
 
 import { Assets, BlurFilter, Container, detectAvif, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { GameData } from '../data';
@@ -145,7 +146,7 @@ export class HiResView {
   /** After each simulation tick: the effects' events (explosions starting, shots appearing and ending). */
   afterTick(view: 'screen' | 'world' | 'video', w: World): void {
     if (view !== 'world' || !this.index) return;
-    this.fx.afterTick(w.drawn, this.prevWorldValid ? this.prevWorld : null, w.frame, w.drawnScrollX, w.drawnScrollY);
+    this.fx.afterTick(w, this.prevWorldValid ? this.prevWorld : null);
   }
 
   private base(): string {
@@ -293,7 +294,16 @@ export class HiResView {
       }
       const f = this.frame(n, 'EPIS1');
       this.placeSprite(layer, used, f, x, y, shadow);
-      if (f && !shadow && layer !== this.hud) this.fx.sprite(n, f, x, y);
+      if (f && !shadow && layer !== this.hud) {
+        this.fx.sprite(n, f, x, y, slot);
+        const flash = this.fx.flash(slot);
+        for (let a = flash?.alpha ?? 0; a > 0.01; a -= 1) {
+          const s = this.placeSprite(layer, used, f, x, y, false)!;
+          s.blendMode = 'add';
+          s.tint = flash!.tint;
+          s.alpha = Math.min(1, a);
+        }
+      }
     }
     for (let i = segment + 1; i < this.segments.length; i++) this.segments[i].visible = false;
     this.fx.end();
@@ -356,15 +366,17 @@ export class HiResView {
   }
 
   /** The next pooled sprite of `layer`, showing frame f at (x, y) source px. */
-  private placeSprite(layer: Container, used: Map<Container, number>, f: Frame | null, x: number, y: number, shadow: boolean): void {
-    if (!f) return;
+  private placeSprite(layer: Container, used: Map<Container, number>, f: Frame | null, x: number, y: number, shadow: boolean): Sprite | null {
+    if (!f) return null;
     const s = this.next(layer, used, 'sprite') as Sprite;
+    s.blendMode = 'normal';
     s.texture = f.texture;
     s.x = Math.round((x + f.ox) * S);
     s.y = Math.round((y + f.oy) * S);
     s.scale.set(S / f.scale);
     s.tint = shadow ? 0x000000 : 0xffffff;
     s.alpha = shadow ? this.shadowAlpha : 1;
+    return s;
   }
 
   private placeText(layer: Container, used: Map<Container, number>, text: Container | null, x: number, y: number): void {

@@ -182,6 +182,22 @@ Done (user, session 17): play-tested through, including two players; the open it
   800 px across, a muzzle flash on every re-fire). Now beams get only a dim bloom (alpha 0.35), no halo, light,
   muzzle flash or hit sparks, and other large shots' halos are capped at 8 px radius. Still open: whether that
   is calm enough, and whether it runs smoothly on the phone.
+- [x] More effects (session 19, user picked these from a list, `src/render/fx.ts`, render only):
+  - **Engine flames** on the jets (Steptokopter excluded: rotors), a cone of soft dots plus an exhaust trail;
+    longer when flying forward (thrust from `p.vy` against the engine's max speed). Nozzles are found in each
+    banking frame's two lowest pixel rows. Firestorm and Navi Spezial burn orange, the Alien-Pros blue.
+  - **Hit feedback:** an enemy whose energy dropped flashes (additive copies of its sprite, drawn right after it,
+    so the drawing order stays); a life hit flashes the jet red and the playfield edge red (strength by damage,
+    max 0.45, 14 ticks); a shield hit shows a blue ring round the jet, and sparks when the shield is gone. Below
+    35 % life the jet trails dark smoke and has a small fire; below about 17 % it also sparks.
+  - Burning wrecks (fires, smoke and embers on the wreck sprites) were tried and removed (user, session 19): the
+    original wrecks already burn, and the extra fire clashed with their style.
+  - **No glow for rockets and bullets** (user, session 19): missiles, the atom bomb, the Rocketlauncher, the
+    enemies' darts, missiles and rockets (sprites 146, 168, 184–189, 240, 246, 247, 262) and the MG/Autogun and
+    MK Pod rounds and the enemies' pellet and bullet (150, 156, 232, 244) get no bloom, halo or ground light;
+    they keep the muzzle flash and hit sparks. Energy shots (balls, lasers, plasma, flames) still glow.
+  - Checked with screenshots in headless Chrome (levels 1 and 4, forced hits, low life and kills).
+- [x] **User** (session 19): engine flames and hit feedback look good.
 - [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
   is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
 - [x] Assets committed (session 18), as AVIF (4:4:4, quality 60): 16 MB instead of 28 MB of WebP (quality 90).
