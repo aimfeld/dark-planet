@@ -1,0 +1,167 @@
+
+        Spielanleitung fr Cyberworms2 Copyright by Wunibald 
+        ***************************************************
+
+Systemanforderungen
+-------------------
+Mind. 286,16 Mhz empfohlen
+
+Starten mit cw2.exe
+-------------------
+
+Was ist neu an Cyberworms2 ?
+----------------------------
+
+-Neue Titelgrafik (H”h”)
+-Neues Optionsmenu mit erweiterten Funktionen
+-Diesmal garantiert Virenfrei
+-Neue Waffen
+-Neue Boni
+-Bessere Anzeigen
+-Fortschritte beim PC Speaker Sound (Wie ich die Tcken von Pascal
+                                     im Bezug auf Mod Soundprogrammierung
+ 				     hasse)
+-Neuerdings FX-Soundblasteruntersttzung (Party on!!!)
+-Backgroundmusik falls Soundkarte vorhanden ("m" drcken)
+-ruckel- und flimmerfreier Spielspass
+-Friesierter Rollstuhl fr Ogis Grossmutter
+-Shield Option
+-Neues Bonussystem (Extraworm)
+
+Das Optionsmenu
+---------------
+
+Jawoll, das ist neu bei Cyberworms2!!! Das Optionsmenu sollte eigentlich
+selbsterkl„rend sein. Fr Begriffstutzige oder Windows-Gurus trotzdem 'ne
+kleine Erkl„rung:
+Zum Rauf- und Runterselektieren benutzt man die Keypad auf und ab Tasten,
+zum Anw„hlen die Space-Taste.
+Und so siehts aus:
+
+1)Opponent     (Pc oder Player2 selektieren)
+2)Speed	       (1 ist schnell, 9 ist langsam, fr Pentium evtl ber 9 w„hlen) 
+3)Name         (Fr beide Spieler einen der vorgegebenen Namen selektieren)
+4)Set Keyboard (Falls die vorgelegte Steuerung ge„ndert werden muss)
+               (NumLock muss hier aktiv sein!!!) 
+5)PcSpeaker:Off(Pc-Speaker aktivieren/deaktivieren)
+6)Start Game   (Wechselt der Oma das Gebiss aus)
+7)Exit to Dos  (Verl„sst das Programm)
+
+Die vorgelegte Tastaturbelegung
+-------------------------------
+
+Achte darauf das die Taste NumLock aktiv ist.
+
+Spieler1: Nach rechts        : 6
+          Nach links         : 4
+          Nach unten         : 2
+          Nach oben          : 8
+          Diag. oben rechts  : 9
+          Diag. oben links   : 7
+          Diag. unten rechts : 3
+          Diag. unten links  : 1
+          Raufselektieren    : +
+          Runterselektieren  : -
+          Feuern             : Spacebar
+
+Spieler2: Nach rechts        : F
+          Nach links         : S
+          Nach unten         : C
+          Nach oben          : E
+          Diag. oben rechts  : R
+          Diag. oben links   : W
+          Diag. unten rechts : V
+          Diag. unten links  : X
+          Raufselektieren    : A
+          Runterselektieren  : Z
+          Feuern             : Q
+
+Das Spielprinzip
+----------------
+
+Schneewitchen zum FBI-Agent ausbilden
+
+Die Spielstandanzeige
+---------------------
+
+Am Anfang sind ein grner und ein blauer Balken zu sehen. Der Grne
+zeigt die brige Lebensenergie, der Blaue die Munition an.
+Ausserdem ist ein K„stchen mit der momentan selektierten Waffe und
+zwei Zahlen zu sehen. Die erste Zahl ist die Nummer der selektierten
+Waffe, die Zweite ist die Nummer der h”chstm”glichen Waffe, die man 
+im Moment w„hlen kann. 
+Die Anzeige links oben steht fr den Cyberworm, der links startet,
+die rechte Anzeige fr denjenigen, der rechts startet.
+In der Mitte wird angezeigt, wieviel mal Player1 bzw. Player2 schon
+gewonnen hat. Wenn man ins Optionsmenu zurckgeht, wird die Anzeige auf
+Null gesetzt. 
+Die Boni, Bonusse, Bonen oder wie die verdammte Mehrzahl von Bonus lautet 
+-------------------------------------------------------------------------
+
+Blauer Bonus  : Aufstocken der Munition um 5.
+Grner Bonus  : Aufstocken der Leben um 3.
+Weisser Bonus : Aufstocken der Kanone um 1.
+Rosa Bonus    : Aufstocken der Kanone um 2.  
+Grauer Bonus  : Entweder Doublespeed oder Minimode.
+Gelber Bonus  : Abrstung der gegnerischen Kanone um 1.
+Wechselbonus  : Hat nach Zufall die Wirkung eines anderen Bonusses.
+
+Und jetzt kommt 'ne neue Sache ins Spiel, n„mlich der Extraworm:
+Nach einiger Zeit wird man aufm Screen einen kleinen, grnen Kreis,
+der ziellos umhertrudelt, entdecken. (Falls die blonde Schwester nicht
+versucht hat, ihr Windows-Dokument mit Tippex zu korrigieren)
+Jetzt gibts 2 M”glichkeiten:
+  1:Man schiesst das Teil einfach gnadenlos ab und bekommt dafr
+    fr eine Weile ein Schild, das einem unverwundbar macht.
+  2:Man versucht ihn zu erwischen, indem man ihn einfach mit dem
+    Cyberworm berwalzt. So wird sich der kleine Bonus in einen
+    Extraworm verwandeln, der den Gegner pausenlos attackiert mit
+    einer Waffe, die er durch Zufall zugeordnet bekommt.
+    In diesem Moment erscheint beim glcklichen Eigentmer vom
+    E-Worm ein kleiner Kreis mit der Zahl 3 in der Mitte auf seiner
+    Anzeige. Die Farbe des Kreises gibt Auskunft ber Waffe vom 
+    E-Worm (Gelb=Waffe1, Weiss=Waffe2). Die Zahl betrifft die Leben
+    vom E-Worm. Sollte sie auf Null sinken, verabschiedet sich
+    Bruder E-Worm mit einer Explosion.
+
+Nasty Cheat
+-----------
+
+Oh ja, sogar einen Cheat hat Wunibald einprogrammiert. (Lieber Wuni)
+Um ihn zu aktivieren, muss man nur einen bestimmten Namen ausw„hlen
+(Welchen wohl??) Und eine Shift-C Kombination eingeben.
+
+Wunibald stellt sich vor
+------------------------
+
+Das bin also ich, ca 1,78 cm, 16 Jahre alt, blonde Haare usw. 
+Aber das drfte wohl die Wenigsten interessieren. Ausserdem bin ich:
+
+-Programmierer
+-Psychopath 
+-Chemiker (Man streue eine Prise Salz ber eine Schnecke ohne Haus
+           und geniesse das Experiment)
+-Girattist
+-Anti Windows m”chtegern Guru
+-In 80 Jahren der Grnder einer eigenen Religion
+-(Zensur)
+-usw
+
+Wer mir irgendeinen Tip zur Programmierung eines Spiels geben will oder
+sonstige Grsse loswerden will, der soll mir ne Briefbombe oder
+eine Postkarte schicken. Meine Adresse:
+
+         Adrian Imfeld
+         T”distr.22
+         8634 Hombrechtikon
+         Schweiz
+
+Grsse gehen an:
+Axel (Zoltan), Iron Raver, Aglibir, Bill Gatesno, s„mtliche Cyberworms
+und alle die sich die Mhe gemacht haben, diesen Text zu lesen.
+
+Ich danke A. Weiss**** (Bleiben wir Anonym) fr seine guten Tips
+und seine Mithilfe.
+
+
+M”ge das Brot mit euch Leim!!!

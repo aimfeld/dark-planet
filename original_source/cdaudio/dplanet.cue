@@ -1,0 +1,29 @@
+REM Dark Planet CD for DOSBox-X: placeholder data track + the soundtrack MP3s of the remake.
+REM DP.EXE never reads the data track (dp.exe cd skips the CD check). See docs/re-notes.md.
+FILE "DATA.ISO" BINARY
+  TRACK 01 MODE1/2048
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track02.mp3" MP3
+  TRACK 02 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track03.mp3" MP3
+  TRACK 03 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track04.mp3" MP3
+  TRACK 04 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track05.mp3" MP3
+  TRACK 05 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track06.mp3" MP3
+  TRACK 06 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track07.mp3" MP3
+  TRACK 07 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track08.mp3" MP3
+  TRACK 08 AUDIO
+    INDEX 01 00:00:00
+FILE "../../game/public/music/track09.mp3" MP3
+  TRACK 09 AUDIO
+    INDEX 01 00:00:00

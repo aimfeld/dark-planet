@@ -19,7 +19,7 @@ if git rev-parse --quiet --verify origin/production >/dev/null; then
   git log --oneline origin/production..main
 fi
 
-# The CI build only type-checks; the tests run here because some need original_source/ (local only).
+# The CI build only type-checks; the tests run here (shop.test.ts reads original_source/Game/SAVE.DAT, committed since 2026-10-21).
 (cd game && npm test && npm run build)
 
 git push origin main main:production

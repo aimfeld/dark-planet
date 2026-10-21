@@ -1,0 +1,20 @@
+lojan.fli -T FADEout
+lojan2.fli -L 60
+hors2561.fli -T FADEin
+hors2563.fli 
+anf1u2.fli -T FADEin
+anf2nu2.fli
+anf3u.fli
+anf51u.fli
+anf52u.fli
+anf7u.fli -T FADEout
+anf4u.fli -T FADEout
+pre265.fli -T FADEin
+Test.fli -T FADEin
+test21.fli
+test22.fli
+test23.fli
+test24.fli
+test25.fli
+test26.fli
+test27.fli

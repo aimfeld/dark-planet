@@ -16,17 +16,19 @@ source survived.
 Gameplay reverse-engineered (`docs/gameplay-spec.md`); classic mode done, remastered mode (4x hq4x graphics, smooth motion, effects; the default) in `game/`. See [docs/PLAN.md](docs/PLAN.md) for the roadmap and progress.
 
 ## Repository layout
-The original game files (`original_source/`) are **not included** in this
-repository. The tools expect them at that path in a local checkout.
+The original game is included (`original_source/`, about 75 MB; `Game/` and `CD/` share their files), so a clone plays it in DOSBox-X. Only the
+disc image `original_source/Image/DPImage.iso` (330 MB) is not committed: `tools/build_cd_image.py`,
+`tools/export_music.py` and `extract_assets.py`'s soundtrack need it.
 
 | Path | Contents |
 |---|---|
-| `original_source/Game/` | The original game files (DP.EXE, assets, videos) |
-| `original_source/CD/` | Contents of the original CD, incl. `Wasndas/` with two earlier games **with source** (`SLY/SLYVERS.PAS` is the Dark Planet prototype) |
-| `original_source/Image/` | Disk image of the CD (`DPImage.iso`: data track + all CD audio as one track; the identical `.bin/.cue/.mdf/.mds` copies were deleted) |
-| `original_source/Image/fixed/` | Generated: CD image rebuilt with proper audio tracks (`tools/build_cd_image.py`) |
+| `original_source/Game/` | The installed original game (DP.EXE, assets, videos; the CD's `DPlanet/` and `Video/` plus SAVE.DAT and SETTINGS.DAT) |
+| `original_source/CD/` | Contents of the original CD (its data track), incl. `Wasndas/` with two earlier games **with source** (`SLY/SLYVERS.PAS` is the Dark Planet prototype) |
 | `original_source/Screenshots/` | Screenshots of the original |
-| `original_source/dplanet.conf` | DOSBox-X config: mounts the rebuilt CD for music (without it, the game runs without music) |
+| `original_source/dplanet.conf` | DOSBox-X config (see below) |
+| `original_source/cdaudio/` | The CD for DOSBox-X: `dplanet.cue` = a placeholder data track + the soundtrack MP3s from `game/public/music/` |
+| `original_source/save/` | Created by playing: what the game writes (settings, saves), a DOSBox-X overlay over `Game/` (not committed) |
+| `original_source/Image/` | Local only: `DPImage.iso` (data track + all CD audio as one track); `fixed/` = the image rebuilt with proper audio tracks (`tools/build_cd_image.py`) |
 | `tools/` | Asset extraction and reverse-engineering helpers; `tools/dosbox/` holds the XMS workaround for DOSBox-X |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
 | `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
@@ -34,15 +36,17 @@ repository. The tools expect them at that path in a local checkout.
 
 ## Playing the original in DOSBox-X (with soundtrack)
 ```sh
-# once: rebuild the CD image with real audio tracks (~330 MB)
-python3 tools/build_cd_image.py original_source/Image/DPImage.iso original_source/Image/fixed
-# play (from any directory)
-dosbox-x -conf original_source/dplanet.conf
+dosbox-x -conf original_source/dplanet.conf      # from any directory
+# DOSBox-X from Flathub: its launcher changes to $HOME, so start the binary directly
+flatpak run --command=/app/bin/dosbox-x com.dosbox_x.DOSBox-X -nopromptfolder -conf original_source/dplanet.conf
 ```
-Tested with DOSBox-X 2026.10.01 (Flathub `com.dosbox_x.DOSBox-X`). The config runs
-`tools/dosbox/XMSHOLE.COM` before the game. It works around a DOSBox-X XMS bug that
-otherwise garbles the sound effects (see `tools/dosbox/xmshole.s`).
-The image has 8 audio tracks (2–9). Menu, story, intro, levels, boss and ending each have their own track, and the game loops them. See `docs/re-notes.md`.
+Tested with DOSBox-X 2026.10.01 (Flathub `com.dosbox_x.DOSBox-X`; the Flatpak sees only your home folder, so a
+clone elsewhere needs `--filesystem=<path>`). The config mounts `Game/` as C: with `save/` as overlay (the
+committed files stay unchanged), mounts `cdaudio/dplanet.cue` as D: and runs `DPMAX.BAT`'s steps (CD track 4,
+intro video, game, ending). It also runs `tools/dosbox/XMSHOLE.COM` before the game, a workaround for a DOSBox-X
+XMS bug that otherwise garbles the sound effects (see `tools/dosbox/xmshole.s`).
+The CD has 8 audio tracks (2–9). Menu, story, intro, levels, boss and ending each have their own track, and the
+game loops them. See `docs/re-notes.md`.
 
 ## Extracting assets
 ```sh
@@ -51,7 +55,7 @@ uv run --with numpy --with pillow python tools/extract_assets.py original_source
 This produces SFX WAVs, the full-screen pictures as PNG, and the soundtrack tracks.
 
 ```sh
-out=original_source/extracted   # local only, like the rest of original_source/
+out=original_source/extracted   # local only (gitignored)
 uv run --with numpy --with pillow python tools/extract_sprites.py original_source $out  # sprite sheets + sprites.json
 uv run --with numpy --with pillow python tools/extract_fonts.py original_source $out    # fonts
 uv run --with numpy --with pillow python tools/render_levels.py original_source $out    # full levels, spawn maps, levels.json

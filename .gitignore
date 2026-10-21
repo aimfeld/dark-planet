@@ -1,5 +1,12 @@
-# Original game files are kept locally only (not published)
-original_source/
+# Original game: Game/, CD/, Screenshots/, dplanet.conf and cdaudio/ are committed (playable
+# in DOSBox-X from a clone). The disc image (330 MB), DOSBox-X captures and the tool output
+# stay local; save/ is DOSBox-X's overlay for C: (own .gitignore). fastseek.lut: DOSBox-X's
+# MP3 seek table.
+original_source/Image/
+original_source/capture/
+original_source/extracted/
+Thumbs.db
+fastseek.lut
 
 # Local tool/IDE state
 .claude/settings.local.json
