@@ -332,11 +332,17 @@ export class HiResView {
   /** A menu screen (main menu, hangar, options, shop, text viewer); false while its picture loads. */
   drawScreen(sc: Screen, alpha: number): boolean {
     if (!this.index) return false;
-    if (sc.picture) {
+    if (sc.picture && sc.classicPicture) {
+      const px = this.data.pictures[sc.picture];
+      this.picture.texture = this.indexed(`p${sc.palette}/${sc.picture}`, sc.palette, () => ({ w: W, h: H, px }))!.texture;
+      this.picture.scale.set(S);
+      this.picture.visible = true;
+    } else if (sc.picture) {
       const file = this.index.pictures[`${sc.picture}_${sc.palette}`];
       const t = file ? this.texture(file) : null;
       if (!t) return false;
       this.picture.texture = t;
+      this.picture.scale.set(1);
       this.picture.visible = true;
     } else {
       this.picture.visible = false;

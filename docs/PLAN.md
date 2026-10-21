@@ -127,6 +127,8 @@ Done (user, session 17): play-tested through, including two players; the open it
   Checked in Chrome: both fonts as intended, a click on Classic starts the intro with track 4 and classic graphics.
   Then (user, session 20): the other texts (title, intro, hint) and the star cursor take the selected version's
   style; only the other button keeps its own (`Screen.classic` per slot for sprites). Checked in Chrome.
+  The background too (user, session 20; `Screen.classicPicture`): the 320 x 200 RASTER.PIC nearest-scaled, or the
+  hq4x one. Checked in Chrome (renderer state); on RASTER's fine noise the two look nearly the same.
 - [ ] **User:** look at the start screen (layout, texts, the "DARK PLANET" title, which wasn't asked for).
 - [x] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still. Fine at 0.18 (user, session 17).
 - [x] **User:** decide whether the ending text should also show MISSIONS.PAS 123–124 ("übrigens: Hast du den Cheat schon entdeckt?"), which the original leaves out. No, left as in the original (decision 22).

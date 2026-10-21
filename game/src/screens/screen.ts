@@ -18,6 +18,7 @@ export interface TextSprite {
 
 export class Screen {
   picture: Picture | null = null;
+  classicPicture = false; // the remake: the picture as the 320 x 200 one in the remastered view too (the start screen)
   palette: PaletteName = 'EPIS1';
   fade = 0; // 0 = black .. FADE_STEPS = full palette
   readonly n = new Int32Array(SLOTS); // SpriteN
@@ -36,6 +37,7 @@ export class Screen {
   clear(): void {
     this.n.fill(0);
     this.classic.fill(0);
+    this.classicPicture = false;
   }
 
   set(slot: number, n: number, x: number, y: number): void {

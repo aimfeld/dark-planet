@@ -63,6 +63,7 @@ describe.skipIf(!hasData)('start screen', () => {
     expect(fonts()).toContain('DARK PLANET:true');
     expect(fonts()).toContain('Remastered 2026:false');
     expect(game.screen.classic[12]).toBe(1); // the cursor
+    expect(game.screen.classicPicture).toBe(true);
     press(game, input, 'Enter');
     run(40);
     expect(game.atStart).toBe(false);

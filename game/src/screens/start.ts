@@ -2,7 +2,7 @@
 // the classic and the remastered graphics. Laid out like the options (BROADWA lines, the REST star as the
 // cursor) over the text viewer's RASTER.PIC. "Classic 1998" is drawn in the classic font and "Remastered 2026"
 // in the remastered one, whichever graphics are on (main.ts shows this screen remastered); the other texts take
-// the font of the selected version, and the cursor its style. Choosing a version
+// the font of the selected version, and the cursor and the background its style. Choosing a version
 // is also the user gesture that lets the browser play the intro's CD track.
 
 import { delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
@@ -41,7 +41,8 @@ function buttonAt(ctx: Ctx, x: number, y: number): number {
 export function* startScreen(ctx: Ctx): Proc {
   const s = ctx.screen;
   const st = ctx.settings;
-  // The selected version's font for all texts but the other button, and its style for the cursor (user, session 20).
+  // The selected version's font for all texts but the other button, and its style for the cursor and the background
+  // (user, session 20).
   const drawTexts = (classic: boolean) => {
     let sprite = FIRST_SPRITE;
     const text = (slot: number, t: string, x: number, y: number, cl = classic) => {
@@ -68,6 +69,7 @@ export function* startScreen(ctx: Ctx): Proc {
   const cursor = () => {
     s.set(CURSOR_SLOT, s.n[CURSOR_SLOT] || CURSOR, BUTTON_X - CURSOR_W - 3, BUTTON_Y[choice] - 10);
     s.classic[CURSOR_SLOT] = choice === 0 ? 1 : 0;
+    s.classicPicture = choice === 0;
     drawTexts(choice === 0);
   };
   cursor();
