@@ -47,6 +47,16 @@ describe('touch layout', () => {
     }
   });
 
+  it('top right: a single button (no fullscreen) centred over the button column', () => {
+    for (const [vw, vh, inset] of [[852, 393, { l: 47, r: 47, t: 0, b: 21 }], [393, 852, NONE], [1180, 820, NONE]] as const) {
+      const l = touchLayout(vw, vh, inset, 1);
+      expect(l.corner.x + l.corner.size / 2).toBeCloseTo(l.right.x + l.right.w / 2, 0);
+      expect(l.corner.size).toBe(l.unit);
+      const b = { x: l.corner.x, y: l.corner.y, w: l.corner.size, h: l.corner.size };
+      expect(overlaps(b, l.game) || overlaps(b, l.right)).toBe(false);
+    }
+  });
+
   it('stick: 8 directions past 35 % of the radius', () => {
     expect(stickDirections(10, -10, 50)).toEqual({ left: false, right: false, up: false, down: false });
     expect(stickDirections(40, -5, 50)).toEqual({ left: false, right: true, up: false, down: false });

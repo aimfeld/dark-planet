@@ -34,7 +34,7 @@ export interface TouchLayout {
   right: Rect;
   /** First key button (top left in landscape, below the game in portrait) and the direction they stack in. */
   keys: { x: number; y: number; dx: number; dy: number };
-  /** Top right: the fullscreen button, then the remaster switch to its left (`size` px each). */
+  /** Top right: the fullscreen button, then the remaster switch to its left (`size` px each, `cornerButtons`). */
   corner: { x: number; y: number; dx: number; size: number };
   unit: number; // a small button's size in CSS pixels
 }
@@ -46,7 +46,7 @@ const H = 200;
  * The controls go into the bottom corners, the game into the rest: beside them in landscape (phones have
  * room left and right of a 16:10 picture), above them in portrait, whichever gives the larger picture.
  */
-export function touchLayout(vw: number, vh: number, inset: Insets): TouchLayout {
+export function touchLayout(vw: number, vh: number, inset: Insets, cornerButtons = 2): TouchLayout {
   const unit = Math.round(Math.max(36, Math.min(60, Math.min(vw, vh) * 0.12)));
   const m = Math.round(unit * 0.25);
   const cw = Math.round(unit * 1.5); // the fire button's size
@@ -63,13 +63,17 @@ export function touchLayout(vw: number, vh: number, inset: Insets): TouchLayout 
   const y = vh - inset.b - m - ch;
   // landscape: key buttons down the left column, fullscreen top right; portrait: a row below the game
   const row = game.y + game.h + m;
-  // Landscape: two buttons side by side in the strip right of the picture, smaller where it is narrow (the
-  // fire column below leaves no room to stack them).
+  // The corner buttons stand centred over the button column where there is room (a single one always fits).
+  // Landscape: side by side in the strip right of the picture, smaller where it is narrow (the fire column
+  // below leaves no room to stack them).
+  const column = vw - inset.r - m - cw / 2;
   const sideCorner = () => {
     const g = Math.round(m / 2);
     const strip = vw - inset.r - (game.x + game.w);
-    const size = Math.max(24, Math.min(unit, Math.floor((strip - 3 * g) / 2)));
-    return { x: vw - inset.r - g - size, y: inset.t + m, dx: -(size + g), size };
+    const size = Math.max(24, Math.min(unit, Math.floor((strip - (cornerButtons + 1) * g) / cornerButtons)));
+    const min = game.x + game.w + g + (cornerButtons - 1) * (size + g);
+    const x = Math.max(min, Math.min(vw - inset.r - g - size, Math.round(column - size / 2)));
+    return { x, y: inset.t + m, dx: -(size + g), size };
   };
   return {
     game,
@@ -78,7 +82,7 @@ export function touchLayout(vw: number, vh: number, inset: Insets): TouchLayout 
     keys: landscape
       ? { x: inset.l + m + (cw - unit) / 2, y: inset.t + m, dx: 0, dy: unit + m }
       : { x: inset.l + m, y: row, dx: unit + m, dy: 0 },
-    corner: landscape ? sideCorner() : { x: vw - inset.r - m - unit, y: row, dx: -(unit + m), size: unit },
+    corner: landscape ? sideCorner() : { x: Math.round(column - unit / 2), y: row, dx: -(unit + m), size: unit },
     unit,
   };
 }
@@ -130,6 +134,8 @@ export class TouchControls {
   private readonly fullscreen = document.createElement('div');
   private readonly remaster = document.createElement('div');
   private remastered = false;
+  /** How many of the top right buttons (fullscreen, remaster switch) there are, for touchLayout. */
+  readonly cornerButtons: number;
   private readonly holds = new Map<number, Hold>(); // by pointerId
   private dirs = { left: false, right: false, up: false, down: false };
   private down = new Set<string>(); // buttons and keys held now
@@ -176,6 +182,7 @@ export class TouchControls {
       });
       this.root.appendChild(this.remaster);
     }
+    this.cornerButtons = [this.fullscreen, this.remaster].filter((el) => el.parentElement).length;
     parent.appendChild(this.root);
     // In a level the overlay takes every touch (stick anywhere on the left, the buttons by position, so a
     // finger can slide from one button to the next); in the menus only the buttons themselves.

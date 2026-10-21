@@ -10,7 +10,7 @@ import { Gamepad } from './input/gamepad';
 import { keyLegend } from './input/keyLegend';
 import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
-import { TouchControls, touchLayout, type Insets, type TouchLayout } from './input/touch';
+import { TouchControls, touchLayout, type Insets, type TouchKey, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
 import { REMASTER_METHOD } from './render/hiResView';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
@@ -23,6 +23,7 @@ const SETTINGS_KEY = 'darkplanet.settings'; // SETTINGS.DAT
 const SAVE_KEY = 'darkplanet.save'; // SAVE.DAT, base64
 /** A phone or tablet: the primary pointer is a finger. */
 const TOUCH_DEVICE = window.matchMedia('(pointer: coarse)').matches;
+const NO_KEYS: readonly TouchKey[] = [];
 const displayMode = (mode: string) => window.matchMedia(`(display-mode: ${mode})`).matches;
 /** Started as the installed app (PWA), not in a browser tab; iOS reports it as navigator.standalone. */
 const INSTALLED =
@@ -79,14 +80,14 @@ function safeInsets(): Insets {
 }
 
 /** The touch layout for the window, recomputed when its size changes. */
-function layoutCache(): () => TouchLayout {
+function layoutCache(cornerButtons: number): () => TouchLayout {
   let key = '';
   let layout: TouchLayout;
   return () => {
     const k = `${window.innerWidth}x${window.innerHeight}`;
     if (k !== key) {
       key = k;
-      layout = touchLayout(window.innerWidth, window.innerHeight, safeInsets());
+      layout = touchLayout(window.innerWidth, window.innerHeight, safeInsets(), cornerButtons);
     }
     return layout;
   };
@@ -193,7 +194,7 @@ async function main(): Promise<void> {
     TOUCH_DEVICE && !displayMode('fullscreen') ? () => void fullscreen() : undefined,
     TOUCH_DEVICE ? () => toggleRemaster() : undefined,
   );
-  const layout = layoutCache();
+  const layout = layoutCache(touch.cornerButtons);
   // For a touch (pointerup or touchend, not pointerdown, counts as the gesture that allows sound) or a key.
   const unlock = () => {
     sfx?.unlock();
@@ -293,7 +294,10 @@ async function main(): Promise<void> {
       if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
-    touch.update(touchPlays, game.touchKeys, layout(), settings.remastered);
+    // Without touch the level's buttons (pause, abort) stay hidden: a mouse player's pointer is captured, and
+    // the keyboard has P and Esc.
+    const touchKeys = game.view !== 'world' || TOUCH_DEVICE || touchUsed() ? game.touchKeys : NO_KEYS;
+    touch.update(touchPlays, touchKeys, layout(), settings.remastered);
     view.setArea(touchUsed() ? layout().game : null);
     showKeys();
     if (mousePlays() !== mouseWasPlaying) {
