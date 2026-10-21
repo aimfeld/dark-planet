@@ -1,5 +1,5 @@
 # Original game: Game/, CD/, Screenshots/, dplanet.conf and cdaudio/ are committed (playable
-# in DOSBox-X from a clone). The disc image (330 MB), DOSBox-X captures and the tool output
+# in DOSBox-X from a clone). The disc image (330 MB; GitHub release `disc-image`), DOSBox-X captures and the tool output
 # stay local; save/ is DOSBox-X's overlay for C: (own .gitignore). fastseek.lut: DOSBox-X's
 # MP3 seek table.
 original_source/Image/

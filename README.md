@@ -1,5 +1,7 @@
 # Dark Planet Remastered
 
+**▶ Play it in your browser: https://aimfeld.github.io/dark-planet/**
+
 *Dark Planet* is a vertical-scrolling arcade shooter in the spirit of Xenon 2 and
 Raptor, written in Turbo Pascal around 1997–1998 by three friends and released
 on CD-ROM in October 1998. This project brings it back to life as a
@@ -18,7 +20,9 @@ Gameplay reverse-engineered (`docs/gameplay-spec.md`); classic mode done, remast
 ## Repository layout
 The original game is included (`original_source/`, about 75 MB; `Game/` and `CD/` share their files), so a clone plays it in DOSBox-X. Only the
 disc image `original_source/Image/DPImage.iso` (330 MB) is not committed: `tools/build_cd_image.py`,
-`tools/export_music.py` and `extract_assets.py`'s soundtrack need it.
+`tools/export_music.py` and `extract_assets.py`'s soundtrack need it. Download it from the
+[`disc-image` release](https://github.com/aimfeld/dark-planet/releases/tag/disc-image) (77 MB) and unpack it:
+`xz -dc DPImage.iso.xz > original_source/Image/DPImage.iso`.
 
 | Path | Contents |
 |---|---|
@@ -109,7 +113,7 @@ HTTPS (or on `localhost`), so a phone needs the build served over HTTPS, e.g. `n
 service worker.
 
 ### Hosting
-The game is published on GitHub Pages: https://aimfeld.github.io/dark-planet/
+The game is published on GitHub Pages (link at the top).
 
 We develop on `main` and publish the `production` branch. `bin/deploy.sh` checks that `main` is clean and pushed,
 runs the tests and the build, then fast-forwards `production` to `main` and pushes both. The push to
