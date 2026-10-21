@@ -71,6 +71,28 @@ describe.skipIf(!hasData)('menus', () => {
     expect(s.picture).toBe('HMBILD');
   });
 
+  it('main menu Exit (and Esc) -> the start screen -> the intro -> the main menu', async () => {
+    const { game, run, press } = await setup(true);
+    run(40);
+    expect(game.atStart).toBe(true);
+    press('Enter', 2, 80);
+    expect(game.atStart).toBe(false);
+    run(40);
+    const s = game.screen;
+    expect(s.picture).toBe('HMBILD');
+    for (let i = 0; i < 5; i++) press('ArrowDown', 1, 10); // item 6: Exit
+    press('Enter', 2, 60);
+    expect(game.atStart).toBe(true);
+    expect(game.quit).toBe(true);
+    expect(s.picture).toBe('RASTER');
+    press('Enter', 2, 80);
+    expect(game.quit).toBe(false);
+    run(40);
+    expect(s.picture).toBe('HMBILD');
+    press('Escape', 2, 60);
+    expect(game.atStart).toBe(true);
+  });
+
   it('dev keys in the hangar: 3 starts level 3, Shift+5 starts level 5 at its boss', async () => {
     const { game, input, run, press } = await setup();
     run(40);

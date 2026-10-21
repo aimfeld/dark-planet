@@ -27,10 +27,11 @@ export class Script implements MenuInput {
   }
 }
 
-export async function setup() {
+/** Without `start`, the game begins at the intro (no start screen). */
+export async function setup(start = false) {
   const data = await gameData();
   const input = new Script();
-  const game = new Game(createWorld(data, 1), input, undefined, undefined, undefined, undefined, undefined, undefined, false);
+  const game = new Game(createWorld(data, 1), input, undefined, undefined, undefined, undefined, undefined, undefined, start);
   const run = (ticks: number) => {
     for (let i = 0; i < ticks; i++) game.tick(input);
   };

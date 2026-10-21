@@ -705,8 +705,8 @@ Positions below: s = scrollY at the boss start, coordinates are top-left; "c" = 
   jet other than the Steptokopter and 49 if one flies the Steptokopter (both can run). The level appears at full
   brightness (no fade-in).
 - Remake choices (design, session 8): screens that the original ends while a key is held need a fresh key press
-  (the confirm key could skip them); Exit (no program to quit in a browser) shows black until a key and returns
-  to the main menu; after a hangar item the remake waits for the mouse button to be released.
+  (the confirm key could skip them); Exit (no program to quit in a browser) returns to the start screen
+  (session 20); after a hangar item the remake waits for the mouse button to be released.
 
 ### 9.3 Sprite cycles (O, 1d9e:3105)
 Many sprites animate by themselves: every tick, any sprite whose number lies in a cycle range [first, last)
@@ -819,7 +819,7 @@ remastered mode.
 | Start | starts at once | a start screen first (user, session 20): a short introduction, "Classic 1998" or "Remastered 2026" (arrows + Enter, or a click or tap) and the hint that R / HD / Options switch later; the choice is the graphics setting. It is also the gesture browsers want before they play sound, so the intro's CD track starts with the intro |
 | Intro / ending video | (FLI player, see re-notes) | any key or click skips the whole video |
 | Main menu | keyboard only | the pointer selects the item it moves onto (sound 12, like Up/Down; a resting pointer doesn't take the selection back from the keys), a click or tap opens it |
-| Main menu Exit / Esc | quits to DOS | closes the installed app (PWA); in a browser tab, or where closing is refused (iOS), black and silent until a key, then the main menu again; Esc needs a fresh press (one still held from the hangar doesn't quit) |
+| Main menu Exit / Esc | quits to DOS | closes the installed app (PWA); in a browser tab, or where closing is refused (iOS), the start screen again, then the intro and the main menu (session 20); Esc needs a fresh press (one still held from the hangar doesn't quit) |
 | Bad SAVE.DAT checksum | message, then quits to DOS | message until a key, then the main menu |
 | Screens ended by a key | end while a key is still held | need a fresh press, so the confirm key doesn't skip them (§9.2) |
 | Text viewer, briefings, ending text | keyboard only | a click or tap ends them; the manual offers its keys as touch buttons |

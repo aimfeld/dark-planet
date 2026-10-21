@@ -129,6 +129,12 @@ Done (user, session 17): play-tested through, including two players; the open it
   style; only the other button keeps its own (`Screen.classic` per slot for sprites). Checked in Chrome.
   The background too (user, session 20; `Screen.classicPicture`): the 320 x 200 RASTER.PIC nearest-scaled, or the
   hq4x one. Checked in Chrome (renderer state); on RASTER's fine noise the two look nearly the same.
+- [x] Main menu Exit / Esc (user, session 20): instead of black until a key, the remake starts over at the start
+  screen (then the intro, then the main menu). The installed app still closes first where it can (`window.close()`,
+  `ctx.quit` until the start screen shows). `boot` in `src/game.ts`, `src/screens/mainMenu.ts`, `test/menus.test.ts`.
+- [x] Touch layout (user, session 20): the HD button stands centred over the fire/bonus column (where it fits, always
+  when it is alone, e.g. without the ⛶ button); the level's ❚❚ and ✕ key buttons are hidden without touch (the mouse
+  player's pointer is captured; P and Esc on the keyboard). `src/input/touch.ts`, `src/main.ts`.
 - [ ] **User:** look at the start screen (layout, texts, the "DARK PLANET" title, which wasn't asked for).
 - [x] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still. Fine at 0.18 (user, session 17).
 - [x] **User:** decide whether the ending text should also show MISSIONS.PAS 123–124 ("übrigens: Hast du den Cheat schon entdeckt?"), which the original leaves out. No, left as in the original (decision 22).

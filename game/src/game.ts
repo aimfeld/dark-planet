@@ -29,11 +29,17 @@ export function memorySlot(): SaveSlot {
 /** DPMAX.BAT's CD track (STARTAUD with 4 arguments). */
 export const INTRO_TRACK = 4;
 
-/** The remake's start screen (without `start`: tests), then DPMAX.BAT: the intro video with CD track 4, then DP.EXE's main menu. */
+/**
+ * The remake's start screen (without `start`: tests), then DPMAX.BAT: the intro video with CD track 4, then
+ * DP.EXE's main menu. Its Exit starts over at the start screen (where the installed app doesn't close).
+ */
 function* boot(ctx: Ctx, start: boolean): Proc {
-  if (start) yield* startScreen(ctx);
-  yield* playVideo(ctx, 'intro', INTRO_TRACK);
-  yield* mainMenu(ctx);
+  for (;;) {
+    if (start) yield* startScreen(ctx);
+    ctx.quit = false;
+    yield* playVideo(ctx, 'intro', INTRO_TRACK);
+    yield* mainMenu(ctx);
+  }
 }
 
 export class Game implements Ctx {

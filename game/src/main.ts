@@ -290,7 +290,7 @@ async function main(): Promise<void> {
     if (game.quit !== quitting) {
       quitting = game.quit;
       // Exit in the main menu closes the installed app, as the original quit to DOS. A page may close its window
-      // when it is the window's only history entry; where the browser refuses (iOS), the game waits for a key.
+      // when it is the window's only history entry; where the browser refuses (iOS), the start screen follows.
       if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);

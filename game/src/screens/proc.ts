@@ -66,7 +66,7 @@ export interface Ctx {
   readonly saves: SaveSlot;
   /** What the renderer shows: the menu screen, the level or a video. */
   view: 'screen' | 'world' | 'video';
-  /** Set by the main menu's Exit until the next key; main.ts then closes the installed app (a browser tab can't quit). */
+  /** Set by the main menu's Exit until the start screen shows again; main.ts then closes the installed app (a browser tab can't quit). */
   quit: boolean;
   /** Keys the current screen offers as touch buttons (none: the screen takes taps as clicks). */
   touchKeys: readonly TouchKey[];

@@ -7,7 +7,7 @@ import { decodeSave } from '../save';
 import { hangar } from './hangar';
 import { newGameState } from '../sim/tick';
 import { FADE_STEPS } from '../sim/state';
-import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, type Ctx, type Proc } from './proc';
+import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
 import { textViewer } from './textViewer';
 
 const ITEMS = 6; // Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions (about), Exit
@@ -50,15 +50,15 @@ function* waitAnyInput(ctx: Ctx): Proc {
 
 /**
  * Exit (item 6 or Esc): FadeOut(0, 10, 0) and the program ends. The remake sets ctx.quit, which closes the
- * installed app (main.ts). A browser tab can't exit, so it stays black and silent until a key is pressed, then
- * shows the menu again (design).
+ * installed app (main.ts); the main menu then returns, and a browser tab (or an app that can't close, iOS) shows
+ * the start screen again (user, session 20).
  */
 function* quit(ctx: Ctx): Proc {
   yield* fadeOut(ctx, false, 10);
   ctx.music?.stop();
   ctx.quit = true;
-  yield* waitAnyInput(ctx);
-  ctx.quit = false;
+  yield* waitNoKey(ctx);
+  yield* waitMouseUp(ctx);
 }
 
 /**
@@ -84,6 +84,7 @@ function* cheated(ctx: Ctx): Proc {
   s.clear();
 }
 
+/** The main menu until Exit. */
 export function* mainMenu(ctx: Ctx): Proc {
   const s = ctx.screen;
   const held = (code: string) => ctx.input.held(code);
@@ -121,8 +122,7 @@ export function* mainMenu(ctx: Ctx): Proc {
     if (!held('Escape')) escArmed = true;
     if (escArmed && held('Escape')) {
       yield* quit(ctx);
-      escArmed = false;
-      yield* drawMainMenu(ctx, selected);
+      return;
     }
     if (tap !== 0 || held('Enter') || held('Space')) {
       playSound(ctx, 16); // DROHNE3
@@ -157,8 +157,7 @@ export function* mainMenu(ctx: Ctx): Proc {
           break;
         case 6:
           yield* quit(ctx);
-          yield* drawMainMenu(ctx, selected);
-          break;
+          return;
       }
       yield* waitMouseUp(ctx);
     }
