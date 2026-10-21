@@ -115,6 +115,19 @@ Done (user, session 17): play-tested through, including two players; the open it
 - [x] **User:** check where the prompt still shows: installed app on Android (Chrome allows sound for home-screen apps, so expected: no prompt), iOS (expected: prompt), desktop Chrome on a first visit (prompt) and later visits (depends on Chrome's media engagement). User (session 17): it always shows on their devices, and that's fine.
 - [x] Screen stays on during the videos (user, session 16): on a phone the screen dimmed or turned off during the intro, since nobody touches it and the hidden, muted `<video>` doesn't keep the screen awake. `Video` now holds a Screen Wake Lock while a video plays (`src/video.ts`), requests it again when the page becomes visible mid-video (the browser drops it when the page is hidden), and releases it on stop (skip or end). Unsupported or refused: the screen may dim as before. Checked in desktop Chrome: lock held during the intro, released after skipping.
 - [x] **User:** the screen stays on during the intro on the user's phone (session 16).
+- [x] Start screen (user, session 20), replacing the start prompt: always shown before the intro, over RASTER.PIC
+  with the EPIS1 palette. Title "DARK PLANET" (FIRE), the intro sentence ("Dark Planet ist ein Shoot 'em up für DOS
+  aus dem Jahr 1998, inspiriert von Raptor und Xenon 2.", user, session 20: the genre's name instead of "Retro DOS Game", SUPER), two buttons in the options' BROADWA white with the
+  options' star cursor: "Classic 1998" in the 320 x 200 font (nearest-scaled in the remastered view,
+  `TextSprite.classic`) and "Remastered 2026" in the remastered font, and a grey hint that the version can be
+  switched any time (R, or HD on touch, or Options). main.ts draws the screen remastered whatever the setting and
+  shows the system pointer there. Arrows switch, Enter/Space or a click/tap chooses; the pointer selects the button
+  it moves onto. The choice sets and saves `settings.remastered`, then the intro plays. Choosing is the user
+  gesture, so `Music.refused()` and the `#start` prompt are gone. `src/screens/start.ts`, `test/video.test.ts`.
+  Checked in Chrome: both fonts as intended, a click on Classic starts the intro with track 4 and classic graphics.
+  Then (user, session 20): the other texts (title, intro, hint) and the star cursor take the selected version's
+  style; only the other button keeps its own (`Screen.classic` per slot for sprites). Checked in Chrome.
+- [ ] **User:** look at the start screen (layout, texts, the "DARK PLANET" title, which wasn't asked for).
 - [x] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still. Fine at 0.18 (user, session 17).
 - [x] **User:** decide whether the ending text should also show MISSIONS.PAS 123–124 ("übrigens: Hast du den Cheat schon entdeckt?"), which the original leaves out. No, left as in the original (decision 22).
 - [ ] Later: also publish on itch.io (HTML5 upload of a `dist/` zip); offline/install is unreliable in its iframe, so GitHub Pages stays the main home.

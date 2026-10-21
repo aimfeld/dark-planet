@@ -74,6 +74,8 @@ export interface Ctx {
   paused: boolean;
   /** The main menu waits for input: nothing would be lost if the page reloaded now (main.ts, app updates). */
   atMainMenu: boolean;
+  /** The start screen is shown (main.ts draws it remastered and may reload for an app update). */
+  atStart: boolean;
 }
 
 /** Crt.Delay(ms). */

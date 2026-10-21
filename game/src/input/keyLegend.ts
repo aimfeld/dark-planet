@@ -21,9 +21,10 @@ function controls(type: number, shared: boolean): string {
 
 /**
  * `control` and `active` as for playerInputs: the arrow player only has the right-hand keys while WASD plays.
- * While a video plays (`video`: intro, ending) only how to skip it.
+ * While a video plays (`video`: intro, ending) only how to skip it; on the start screen (`video`: start) how to choose.
  */
 export function keyLegend(control: readonly number[], active: readonly boolean[], video = ''): string[] {
+  if (video === 'start') return ['Pfeile: Version wählen · Enter oder Klick: starten · F: Vollbild'];
   if (video) return [`Beliebige Taste oder Klick: ${video === 'intro' ? 'Intro' : 'Video'} überspringen`];
   const shared = control.some((c, i) => c === 4 && active[i]);
   const lines = control

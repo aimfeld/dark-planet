@@ -13,6 +13,7 @@ export interface TextSprite {
   text: string;
   font: string; // key of GameData.fonts
   ink: number; // FontColor (DS:0x25B9) for mono fonts; FontBack equals it or is 0 everywhere, so the background is clear
+  classic: boolean; // drawn in the 320 x 200 font in the remastered view too (the start screen)
 }
 
 export class Screen {
@@ -23,6 +24,7 @@ export class Screen {
   readonly x = new Int32Array(SLOTS); // SpriteX (screen coordinates)
   readonly y = new Int32Array(SLOTS); // SpriteY
   readonly mode = new Uint8Array(SLOTS); // draw mode byte (DS:0xB820 + slot): MODE_SHADOW darkens what is behind
+  readonly classic = new Uint8Array(SLOTS); // the remake: 1 = drawn as the 320 x 200 sprite in the remastered view too (the start screen)
   readonly texts = new Map<number, TextSprite>(); // text sprites by sprite number (MakeTextSprite 1d9e:2E58)
   font = 'FIRE'; // the current font (LoadFont 28be:1B75)
   ink = 0;
@@ -33,6 +35,7 @@ export class Screen {
   /** ClearScreen 0x1C0A9 / the menus' "SpriteN[1..920] := 0". */
   clear(): void {
     this.n.fill(0);
+    this.classic.fill(0);
   }
 
   set(slot: number, n: number, x: number, y: number): void {
@@ -42,8 +45,8 @@ export class Screen {
   }
 
   /** MakeTextSprite(n, s) in the current font and colour; an empty string draws nothing. */
-  makeText(n: number, text: string): void {
-    this.texts.set(n, { text, font: this.font, ink: this.ink });
+  makeText(n: number, text: string, classic = false): void {
+    this.texts.set(n, { text, font: this.font, ink: this.ink, classic });
   }
 
   /** Pixel width of `text` in the current font. */

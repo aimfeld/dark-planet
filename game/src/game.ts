@@ -10,6 +10,7 @@ import { TICK_MS, type Ctx, type MenuInput, type Proc, type SaveSlot, type Setti
 import { Screen } from './screens/screen';
 import type { World } from './sim/state';
 import type { VideoPlayer } from './video';
+import { startScreen } from './screens/start';
 import { playVideo } from './screens/video';
 
 /**
@@ -28,8 +29,9 @@ export function memorySlot(): SaveSlot {
 /** DPMAX.BAT's CD track (STARTAUD with 4 arguments). */
 export const INTRO_TRACK = 4;
 
-/** DPMAX.BAT: the intro video with CD track 4, then DP.EXE's main menu. */
-function* boot(ctx: Ctx): Proc {
+/** The remake's start screen (without `start`: tests), then DPMAX.BAT: the intro video with CD track 4, then DP.EXE's main menu. */
+function* boot(ctx: Ctx, start: boolean): Proc {
+  if (start) yield* startScreen(ctx);
   yield* playVideo(ctx, 'intro', INTRO_TRACK);
   yield* mainMenu(ctx);
 }
@@ -42,6 +44,7 @@ export class Game implements Ctx {
   touchKeys: readonly TouchKey[] = [];
   paused = false;
   atMainMenu = false;
+  atStart = false;
   input: MenuInput;
   private readonly proc: Proc;
   private debt = 0; // ms the last step overran the tick
@@ -55,12 +58,13 @@ export class Game implements Ctx {
     private readonly persist: (s: Settings) => void = () => undefined,
     readonly saves: SaveSlot = memorySlot(),
     readonly video?: VideoPlayer,
+    start = true,
   ) {
     this.data = world.data;
     this.screen = new Screen(world.data);
     this.input = input;
     music?.setEnabled(settings.cdSound);
-    this.proc = boot(this);
+    this.proc = boot(this, start);
   }
 
   saveSettings(): void {

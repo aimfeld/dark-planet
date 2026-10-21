@@ -10,7 +10,7 @@
 // sprite right after it.
 
 import { Assets, BlurFilter, Container, detectAvif, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
-import type { GameData } from '../data';
+import type { Font, GameData } from '../data';
 import { cp437, type PaletteName, type Screen } from '../screens/screen';
 import { FADE_STEPS, MODE_SHADOW, SLOTS, SpriteTable, type World } from '../sim/state';
 import { H, W } from './framebuffer';
@@ -174,16 +174,19 @@ export class HiResView {
     if (known) return known;
     const entry = this.index!.sprites[palette]?.[n];
     const page = entry && this.texture(`${entry[0]}_${entry[1]}.avif`);
-    if (!entry || !page) {
-      return this.indexed(`s${key}`, palette, () => {
-        const s = this.data.sprites.get(n);
-        return s ? { w: s.w, h: s.h, px: s.px } : null;
-      });
-    }
+    if (!entry || !page) return this.indexedSprite(n, palette);
     const [, , x, y, w, h, ox, oy] = entry;
     const f = { texture: new Texture({ source: page.source, frame: new Rectangle(x, y, w, h) }), ox, oy, scale: S };
     this.frames.set(key, f);
     return f;
+  }
+
+  /** Sprite n as the 320 x 200 picture, nearest-scaled. */
+  private indexedSprite(n: number, palette: PaletteName): Frame | null {
+    return this.indexed(`s${palette}/${n}`, palette, () => {
+      const s = this.data.sprites.get(n);
+      return s ? { w: s.w, h: s.h, px: s.px } : null;
+    });
   }
 
   private rgb(palette: PaletteName): number[][] {
@@ -215,11 +218,21 @@ export class HiResView {
     return f;
   }
 
-  /** A text sprite from upscaled glyphs (Framebuffer.text), mono fonts tinted with the ink colour; null while the font loads. */
-  private text(text: string, font: string, ink: number, palette: PaletteName): Container | null {
-    const key = `${font}|${ink}|${palette}|${text}`;
+  /**
+   * A text sprite from upscaled glyphs (Framebuffer.text), mono fonts tinted with the ink colour; null while the
+   * font loads. `classic`: the 320 x 200 glyphs, nearest-scaled.
+   */
+  private text(text: string, font: string, ink: number, palette: PaletteName, classic = false): Container | null {
+    const key = `${font}|${ink}|${palette}|${classic}|${text}`;
     const known = this.texts.get(key);
     if (known) return known;
+    if (classic) {
+      const f = this.indexed(`t${key}`, palette, () => textPixels(this.data.fonts[font], text, ink));
+      if (!f) return null;
+      const c = new Container();
+      c.addChild(new Sprite(f.texture)).scale.set(S);
+      return this.cacheText(key, c);
+    }
     const fi = this.index!.fonts[font];
     const page = fi && this.texture(fi.file, false);
     if (!page) return null;
@@ -241,6 +254,10 @@ export class HiResView {
       c.addChild(s);
       x += f.widths[code];
     }
+    return this.cacheText(key, c);
+  }
+
+  private cacheText(key: string, c: Container): Container {
     if (this.texts.size >= TEXT_CACHE) {
       for (const old of this.texts.values()) {
         old.removeFromParent();
@@ -340,8 +357,11 @@ export class HiResView {
         }
       }
       const t = sc.texts.get(n);
-      if (t) this.placeText(this.menuSprites, used, this.text(t.text, t.font, t.ink, sc.palette), x, y);
-      else this.placeSprite(this.menuSprites, used, this.frame(n, sc.palette), x, y, sc.mode[slot] === MODE_SHADOW);
+      if (t) this.placeText(this.menuSprites, used, this.text(t.text, t.font, t.ink, sc.palette, t.classic), x, y);
+      else {
+        const f = sc.classic[slot] ? this.indexedSprite(n, sc.palette) : this.frame(n, sc.palette);
+        this.placeSprite(this.menuSprites, used, f, x, y, sc.mode[slot] === MODE_SHADOW);
+      }
     }
     this.finish(used, [this.menuSprites]);
     this.fade(false, sc.fade);
@@ -500,4 +520,23 @@ function shadowRatio(data: GameData): number {
     n++;
   }
   return n ? sum / n : 0.6;
+}
+
+/** A text in the 320 x 200 font as palette indices (Framebuffer.text). */
+function textPixels(f: Font, text: string, ink: number): { w: number; h: number; px: Uint8Array } {
+  const codes = [...text].map(cp437);
+  const w = codes.reduce((sum, code) => sum + f.widths[code], 0);
+  const px = new Uint8Array(w * f.height);
+  let x = 0;
+  for (const code of codes) {
+    const g = code * f.width * f.height;
+    for (let j = 0; j < f.height; j++) {
+      for (let i = 0; i < f.widths[code]; i++) {
+        const c = f.glyphs[g + j * f.width + i];
+        if (c !== 0) px[j * w + x + i] = f.multicolor ? c : ink;
+      }
+    }
+    x += f.widths[code];
+  }
+  return { w, h: f.height, px };
 }

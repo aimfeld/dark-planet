@@ -7,7 +7,6 @@ export class Music {
   private readonly audio = new Audio();
   private track = 0;
   private enabled = true;
-  private started: Promise<void> = Promise.resolve(); // the last audio.play()
 
   constructor(private readonly base: string) {
     this.audio.loop = true;
@@ -19,26 +18,13 @@ export class Music {
     this.track = track;
     if (!this.enabled || track === 0) {
       this.audio.pause();
-      this.started = Promise.resolve();
       return;
     }
     const src = `${this.base}track${String(track).padStart(2, '0')}.mp3`;
     if (!this.audio.src.endsWith(src)) this.audio.src = src;
     this.audio.currentTime = 0;
     // Browsers refuse playback before the first user gesture; unlock() retries then.
-    this.started = this.audio.play();
-    this.started.catch(() => undefined);
-  }
-
-  /** Whether the browser refused the last play() for want of a user gesture. The refusal comes at once, so a
-   *  track still loading after `ms` counts as allowed. */
-  refused(ms = 1000): Promise<boolean> {
-    const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms));
-    const result = this.started.then(
-      () => false,
-      (e: unknown) => e instanceof DOMException && e.name === 'NotAllowedError',
-    );
-    return Promise.race([result, timeout]);
+    this.audio.play().catch(() => undefined);
   }
 
   /** The track the game asked for last (DS:0x3E03). */

@@ -30,7 +30,7 @@ export class Script implements MenuInput {
 export async function setup() {
   const data = await gameData();
   const input = new Script();
-  const game = new Game(createWorld(data, 1), input);
+  const game = new Game(createWorld(data, 1), input, undefined, undefined, undefined, undefined, undefined, undefined, false);
   const run = (ticks: number) => {
     for (let i = 0; i < ticks; i++) game.tick(input);
   };

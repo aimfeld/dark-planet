@@ -3,7 +3,7 @@
 import { Music } from './audio/music';
 import { Sfx } from './audio/sfx';
 import { loadGameData } from './data';
-import { DEFAULT_SETTINGS, Game, INTRO_TRACK } from './game';
+import { DEFAULT_SETTINGS, Game } from './game';
 import { Keyboard } from './input/keyboard';
 import { toggleFullscreen } from './input/fullscreen';
 import { Gamepad } from './input/gamepad';
@@ -173,10 +173,10 @@ async function main(): Promise<void> {
   const music = new Music(base + 'music/');
   const video = new Video(base + 'video/');
   let game: Game | undefined = undefined;
-  // A new version took over: reload where nothing is lost (the start prompt, the intro, the main menu).
+  // A new version took over: reload where nothing is lost (the start screen, the intro, the main menu).
   let updateReady = false;
   const canReload = () =>
-    game === undefined || game.atMainMenu || (game.view === 'video' && video.name === 'intro');
+    game === undefined || game.atStart || game.atMainMenu || (game.view === 'video' && video.name === 'intro');
   await registerOffline(base, status, () => {
     updateReady = true;
     if (canReload()) location.reload();
@@ -216,25 +216,8 @@ async function main(): Promise<void> {
   status.textContent = '';
   view.setArea(touchUsed() ? layout().game : null);
   touch.update(false, [], layout());
-  // Browsers may refuse sound before a user gesture. Where they allow it, the intro starts at once, as with
-  // DPMAX.BAT; otherwise it waits for a key or tap, since the first key would both start its CD track and skip it.
-  music.setEnabled(settings.cdSound);
-  music.play(INTRO_TRACK);
-  if (await music.refused()) {
-    const prompt = document.getElementById('start')!;
-    if (TOUCH_DEVICE) prompt.textContent = 'Dark Planet: Tippen zum Starten';
-    prompt.hidden = false;
-    await new Promise<void>((resolve) => {
-      const start = () => {
-        window.removeEventListener('keydown', start);
-        window.removeEventListener('pointerup', start);
-        resolve();
-      };
-      window.addEventListener('keydown', start);
-      window.addEventListener('pointerup', start);
-    });
-    prompt.hidden = true;
-  }
+  // The start screen comes first (screens/start.ts); choosing a version there is the user gesture browsers want
+  // before they play sound, so the intro's CD track starts with the intro.
   game = new Game(createWorld(data, Date.now() >>> 0), input, settings, sfx, music, saveSettings, saveSlot, video);
   document.addEventListener('visibilitychange', () => {
     sfx?.setHidden(document.hidden);
@@ -253,7 +236,7 @@ async function main(): Promise<void> {
   const legend = document.getElementById('keys')!;
   const showKeys = () => {
     legend.hidden = TOUCH_DEVICE || touchUsed();
-    const playing = game!.view === 'video' ? video.name : '';
+    const playing = game!.atStart ? 'start' : game!.view === 'video' ? video.name : '';
     const text = keyLegend(settings.control, game!.world.players.map((p) => p.active), playing).join('\n');
     if (legend.textContent !== text) legend.textContent = text;
     view.setBelow(legend.hidden ? 0 : legend.offsetHeight);
@@ -285,7 +268,8 @@ async function main(): Promise<void> {
     last = now;
     if (keys.takePress('KeyF')) void toggleFullscreen();
     if (keys.takePress('KeyR')) toggleRemaster();
-    const graphics = settings.remastered ? REMASTER_METHOD : null;
+    const graphics = settings.remastered || game.atStart ? REMASTER_METHOD : null; // the start screen shows both
+    view.element.style.cursor = game.atStart ? 'default' : 'none'; // the menus with a pointer draw their own
     if (view.hiRes.current !== graphics) void view.hiRes.use(graphics);
     while (acc >= TICK_MS) {
       keys.sample();
