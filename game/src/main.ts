@@ -237,7 +237,8 @@ async function main(): Promise<void> {
   const legend = document.getElementById('keys')!;
   const showKeys = () => {
     legend.hidden = TOUCH_DEVICE || touchUsed();
-    const playing = game!.atStart ? 'start' : game!.view === 'video' ? video.name : '';
+    const playing = game!.atStart ? 'start' : game!.view === 'video' ? video.name
+      : game!.view === 'screen' && game!.screen.picture === 'UMBILD' ? 'hangar' : '';
     const text = keyLegend(settings.control, game!.world.players.map((p) => p.active), playing).join('\n');
     if (legend.textContent !== text) legend.textContent = text;
     view.setBelow(legend.hidden ? 0 : legend.offsetHeight);

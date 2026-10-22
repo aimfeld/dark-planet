@@ -1,6 +1,6 @@
 // The controls, shown below the picture: one line per player (P2 only in multiplayer) in the manual's words
-// (ANLEIT.UNG), then the general keys; during a video how to skip it. X/C/V instead of the original Ctrl/Alt/Space,
-// whose combinations the desktop partly takes in a window (see keyboard.ts).
+// (ANLEIT.UNG), then the general keys (in the hangar also the cheat); during a video how to skip it. X/C/V
+// instead of the original Ctrl/Alt/Space, whose combinations the desktop partly takes in a window (see keyboard.ts).
 
 /** One player's controls by control type (Options); `shared`: the arrow player while a WASD player plays. */
 function controls(type: number, shared: boolean): string {
@@ -21,14 +21,16 @@ function controls(type: number, shared: boolean): string {
 
 /**
  * `control` and `active` as for playerInputs: the arrow player only has the right-hand keys while WASD plays.
- * While a video plays (`video`: intro, ending) only how to skip it; on the start screen (`video`: start) how to choose.
+ * While a video plays (`video`: intro, ending) only how to skip it; on the start screen (`video`: start) how to choose;
+ * in the hangar (`video`: hangar) the cheat as well.
  */
 export function keyLegend(control: readonly number[], active: readonly boolean[], video = ''): string[] {
   if (video === 'start') return ['Pfeile: Version wählen · Enter oder Klick: starten · F: Vollbild'];
-  if (video) return [`Beliebige Taste oder Klick: ${video === 'intro' ? 'Intro' : 'Video'} überspringen`];
+  if (video && video !== 'hangar') return [`Beliebige Taste oder Klick: ${video === 'intro' ? 'Intro' : 'Video'} überspringen`];
   const shared = control.some((c, i) => c === 4 && active[i]);
   const lines = control
     .map((c, i) => `Player${i + 1} — ${controls(c, shared)}`)
     .filter((_, i) => i === 0 || active[i]);
-  return [...lines, 'P: Pause · Esc: Spiel abbrechen · F: Vollbild · R: Grafik classic/remastered'];
+  const keys = [...lines, 'P: Pause · Esc: Spiel abbrechen · F: Vollbild · R: Grafik classic/remastered'];
+  return video === 'hangar' ? [...keys, 'Cheat Code: gedanke'] : keys;
 }

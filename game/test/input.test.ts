@@ -172,6 +172,8 @@ describe('key legend', () => {
     expect(pad[0]).toContain('Player1 — Maus: fliegen · links: ballern');
     expect(pad[1]).toContain('Player2 — Joystick: fliegen · A/RT: ballern');
     expect(pad).toHaveLength(3);
+    expect(keyLegend([1, 4], [true, false], 'hangar')).toHaveLength(3);
+    expect(keyLegend([1, 4], [true, false], 'hangar')[2]).toBe('Cheat Code: gedanke');
     expect(keyLegend([1, 4], [true, false], 'intro')).toEqual(['Beliebige Taste oder Klick: Intro überspringen']);
   });
 });
