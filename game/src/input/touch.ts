@@ -135,6 +135,7 @@ export class TouchControls {
   private readonly fullscreen = document.createElement('div');
   private readonly remaster = document.createElement('div');
   private remastered = false;
+  private remasterShown = true;
   /** How many of the top right buttons (fullscreen, remaster switch) there are, for touchLayout. */
   readonly cornerButtons: number;
   private readonly holds = new Map<number, Hold>(); // by pointerId
@@ -195,9 +196,13 @@ export class TouchControls {
     window.addEventListener('blur', () => this.releaseAll());
   }
 
-  /** Per frame: whether a touch player is in a level, the keys the screen offers, and the layout. */
-  update(playing: boolean, keys: readonly TouchKey[], layout: TouchLayout, remastered = false): void {
+  /**
+   * Per frame: whether a touch player is in a level, the keys the screen offers, the layout, the graphics
+   * setting and whether the remaster switch shows.
+   */
+  update(playing: boolean, keys: readonly TouchKey[], layout: TouchLayout, remastered = false, remasterShown = true): void {
     this.remastered = remastered;
+    this.remasterShown = remasterShown;
     if (playing !== this.playing) {
       this.playing = playing;
       this.root.classList.toggle('play', playing);
@@ -286,6 +291,7 @@ export class TouchControls {
     this.fullscreen.style.fontSize = `${Math.round(l.corner.size * 0.45)}px`;
     this.remaster.style.fontSize = `${Math.round(l.corner.size * 0.34)}px`;
     this.remaster.classList.toggle('on', this.remastered);
+    this.remaster.hidden = !this.remasterShown;
     // The stick: where the thumb holds it, else a faint resting place in the left corner.
     this.radius = Math.round(l.left.w * 0.6);
     const hold = [...this.holds.values()].find((h) => h.role === 'stick');
