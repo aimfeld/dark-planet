@@ -823,7 +823,7 @@ remastered mode.
 | Bad SAVE.DAT checksum | message, then quits to DOS | message until a key, then the main menu |
 | Screens ended by a key | end while a key is still held | need a fresh press, so the confirm key doesn't skip them (§9.2) |
 | Text viewer, briefings, ending text | keyboard only | a click or tap ends them; the manual offers its keys as touch buttons |
-| Hangar | returns to its loop with the button possibly held | waits for the mouse button to be released after an item |
+| Hangar | returns to its loop with the button possibly held; the cheat only by typing GEDANKE | waits for the mouse button to be released after an item; with touch controls a round "Cheat" button (where the level's pause button is) does what GEDANKE does (user, session 23) |
 | Options | keyboard | a click or tap on a line selects and switches it; settings live in browser storage |
 | Shop | mouse windows confine the pointer; PC-speaker beeps | the pointer sprite is clamped to the window (a browser can't confine the real pointer); no beeps |
 | Level pause | P resumes | also Esc while paused ends the level; a hidden page pauses the level |

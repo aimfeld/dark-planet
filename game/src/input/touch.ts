@@ -2,7 +2,8 @@
 // view. A floating stick on the left gives the joystick's direction flags (handled like the keyboard and
 // joystick @0x1A1DD / 0x1A58F: accelerate while held, slow down every 4th tick), buttons on the right fire,
 // toggle the altitude, select and use a bonus. Screens offer extra buttons that act as keys (pause, Esc,
-// paging, Ja/Nein) through Ctx.touchKeys. The menus themselves take taps on the canvas as mouse clicks.
+// paging, Ja/Nein, the hangar's cheat) through Ctx.touchKeys. The menus themselves take taps on the canvas as
+// mouse clicks.
 
 import { NO_INPUT, type PlayerInput } from '../sim/state';
 

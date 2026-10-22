@@ -36,6 +36,8 @@ const JOIN_KEYS = [
 ];
 // The cheat (0x1CF34): typing G-E-D-A-N-K-E sets both players' money to 666666.
 const CHEAT = ['KeyG', 'KeyE', 'KeyD', 'KeyA', 'KeyN', 'KeyK', 'KeyE'];
+/** Touch has no letters: the remake offers the cheat as a button (main.ts shows it only with touch). */
+export const CHEAT_KEYS = [{ code: 'Cheat', label: 'Cheat' }];
 
 /** Dev build only (testing, not in the original): 1-6 start that level without the briefing, Shift+1-6 at its boss. */
 function devLevel(ctx: Ctx): { level: number; atBoss: boolean } | null {
@@ -100,11 +102,13 @@ export function* hangar(ctx: Ctx): Proc {
   let passes = 0; // DS:0x552E
   let cheat = 0;
   for (;;) {
+    ctx.touchKeys = CHEAT_KEYS;
     pointer(ctx);
     let dev = devLevel(ctx);
     if (!dev && input.anyKey()) {
       // Each key press must be the next letter, anything else starts over (a G as the first letter again).
-      if (input.held(CHEAT[cheat])) cheat += 1;
+      if (input.held('Cheat')) cheat = CHEAT.length;
+      else if (input.held(CHEAT[cheat])) cheat += 1;
       else cheat = input.held('KeyG') ? 1 : 0;
       if (cheat === CHEAT.length) {
         cheat = 0;
@@ -120,6 +124,7 @@ export function* hangar(ctx: Ctx): Proc {
       }
     }
     if (dev) {
+      ctx.touchKeys = [];
       while (input.anyKey()) yield* frame(ctx, 15); // Shift is a bonus key in the level
       w.level = dev.level;
       const result = yield* shootEmAll(ctx, dev);
@@ -146,6 +151,7 @@ export function* hangar(ctx: Ctx): Proc {
     }
     let leave = input.held('Escape');
     if (now !== 0 && m.down) {
+      ctx.touchKeys = [];
       playSound(ctx, 21); // LRM003B
       switch (now) {
         case 1: {
@@ -177,6 +183,7 @@ export function* hangar(ctx: Ctx): Proc {
       yield* waitMouseUp(ctx); // (I: the original returns to the loop with the button possibly still held)
     }
     if (leave) {
+      ctx.touchKeys = [];
       yield* fadeOut(ctx);
       return;
     }
