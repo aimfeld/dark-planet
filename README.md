@@ -1,5 +1,7 @@
 # Dark Planet Remastered
 
+![Dark Planet Remastered: the title picture, level 2, level 5 and the level 4 boss](docs/images/screenshots.jpg)
+
 **▶ Play it in your browser: https://aimfeld.github.io/dark-planet/**
 
 *Dark Planet* is a vertical-scrolling arcade shooter in the spirit of Xenon 2 and
@@ -36,7 +38,7 @@ disc image `original_source/Image/DPImage.iso` (330 MB) is not committed: `tools
 | `tools/` | Asset extraction and reverse-engineering helpers; `tools/dosbox/` holds the XMS workaround for DOSBox-X |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic renderer |
 | `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `sly/` (the 1997 prototype's data, `tools/export_sly_data.py`), `music/` (soundtrack, `tools/export_music.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
-| `docs/` | Plan, reverse-engineering notes, file formats |
+| `docs/` | Plan, reverse-engineering notes, file formats; `images/` = README pictures (from `tools/screenshots.mjs`) |
 
 ## Playing the original in DOSBox-X (with soundtrack)
 ```sh
@@ -97,7 +99,7 @@ The game's assets are generated from `original_source/` and committed, so the ga
 them (needs `original_source/`, `uv` and ffmpeg): `npm run data`, `npm run music`, `npm run video` and `npm run icons`.
 
 ### The prototype (Sly version, 1997)
-The start screen's third choice, "Prototyp 1997", opens `sly.html`: the 1997 prototype `SLYVERS.PAS`
+A hidden extra, not listed in the game's menus (and not in the Steam release): `sly.html`, the 1997 prototype `SLYVERS.PAS`
 (`original_source/CD/Wasndas/SLY/`, source preserved) ported to TypeScript in `game/src/sly/`, with a friend's
 photo as the boss. One level; arrows move, X or Ctrl fires, Esc ends it (then Enter plays again, Esc returns to
 Dark Planet). Direct link: https://aimfeld.github.io/dark-planet/sly.html. Its data is in `game/public/sly/`
@@ -115,6 +117,15 @@ Dark Planet). Direct link: https://aimfeld.github.io/dark-planet/sly.html. Its d
 in headless Chrome and writes store screenshots to `screenshots/` (gitignored): every moment as `classic/<name>.png`
 and `remastered/<name>.png` (1920 x 1200), with `index.html` to compare and pick them. The scenarios (levels,
 jets, pods) are in `game/src/screenshots.ts`.
+
+### Gameplay videos
+On the dev server every level you play is recorded: the world at the level start plus each tick's input, saved to
+`recordings/level<N>-<time>.json` (gitignored; the browser console says when). A pause isn't recorded.
+`node tools/trailer.mjs recordings/<file>.json [--from s] [--to s]` replays it in headless Chrome and writes
+`videos/<file>-remastered.mp4` and `-classic.mp4` (gitignored): 1920 x 1080 at 60 fps, H.264 + AAC, the picture
+5.4x with black bars, the sound effects from the game's mixer and the CD track lossless from the disc image (needs
+`original_source/Image/DPImage.iso`). Both modes show the same moment at the same frame, so they can be cut
+together. `--lang`, `--mode`, `--jobs` (parallel browsers), `--music-db`/`--sfx-db` and the rest: see the tool's header.
 
 ### Installing as an app (PWA)
 The production build (`npm run build`, output in `game/dist/`) is an installable web app: `manifest.webmanifest`

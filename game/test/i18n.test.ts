@@ -60,7 +60,7 @@ describe.skipIf(!hasData)('every string fits', () => {
     const fits = (font: string, text: string, x: number, right = 320) => expect(x + width(font, text), `${lang} ${text}`).toBeLessThanOrEqual(right);
     const centred = (font: string, text: string) => fits(font, text, 160 - (width(font, text) >> 1));
     // Start screen (start.ts: buttons at x 118, the texts centred in SUPER)
-    t.versions.forEach((v, i) => fits(i === 2 ? 'DEFAULT' : 'BROADWA', v, 118));
+    t.versions.forEach((v) => fits('BROADWA', v, 118));
     fits('DEFAULT', t.languageLine, 118);
     [...t.intro, ...t.versionHint('HD'), ...t.versionHint('R')].forEach((l) => centred('SUPER', l));
     // Options (BROADWA lines at x 70)

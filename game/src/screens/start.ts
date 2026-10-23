@@ -3,28 +3,27 @@
 // cursor) over the text viewer's RASTER.PIC. "Classic 1998" is drawn in the classic font and "Remastered 2026"
 // in the remastered one, whichever graphics are on (main.ts shows this screen remastered); the other texts take
 // the font of the selected version, and the cursor and the background its style. Choosing a version
-// is also the user gesture that lets the browser play the intro's CD track. The third choice opens the 1997
-// prototype (sly.html, src/sly/; main.ts follows ctx.launch). The fourth switches the language (Phase 5) and
-// stays on the screen; its default comes from the system language.
+// is also the user gesture that lets the browser play the intro's CD track. The third choice switches the language
+// (Phase 5) and stays on the screen; its default comes from the system language. The 1997 prototype (sly.html,
+// src/sly/) is no longer listed here (user, session 25): only its direct link opens it.
 
 import { strings } from '../i18n';
-import { delay, fadeIn, fadeOut, frame, playSound, TICK_MS, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
+import { delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
 
 const FIRST_SPRITE = 791; // the text viewer's text sprites
 const TITLE_SLOT = 2;
-const BUTTON_SLOT = 3; // + 0 classic, + 1 remastered, + 2 the prototype, + 3 the language
+const BUTTON_SLOT = 3; // + 0 classic, + 1 remastered, + 2 the language
 const LINE_SLOT = 7;
 const CURSOR_SLOT = 12;
 const CURSOR = 556; // global sprite cycle 556..566, rate 4, 48 x 28
 const CURSOR_W = 48;
 const BUTTON_X = 118; // the cursor, a 3 px gap and the longer button text centred
-const BUTTON_Y = [86, 110, 134, 154];
-const PROTOTYPE = 2;
-const LANGUAGE = 3;
-// The prototype's and the language's lines in the shop's 6 px DEFAULT font (user, session 22), moved down 5 px so
-// their middle stays where a BROADWA line's would be (the cursor too).
-const BUTTON_FONT = ['BROADWA', 'BROADWA', 'DEFAULT', 'DEFAULT'];
-const BUTTON_DY = [0, 0, 5, 5];
+const BUTTON_Y = [86, 110, 134];
+const LANGUAGE = 2;
+// The language's line in the shop's 6 px DEFAULT font (user, session 22), moved down 5 px so its middle stays
+// where a BROADWA line's would be (the cursor too).
+const BUTTON_FONT = ['BROADWA', 'BROADWA', 'DEFAULT'];
+const BUTTON_DY = [0, 0, 5];
 const INK = 0x1f; // the options' white
 const TEXT_INK = 0x1e; // the text viewer's near white
 const HINT_INK = 0x16; // grey
@@ -52,8 +51,7 @@ function buttonAt(ctx: Ctx, x: number, y: number): number {
 }
 
 /**
- * Shows the start screen until a version is chosen; sets and saves the graphics setting. The prototype leaves
- * the page (ctx.launch); if the page comes back (the browser's Back), the start screen shows again.
+ * Shows the start screen until a version is chosen; sets and saves the graphics setting.
  */
 export function* startScreen(ctx: Ctx): Proc {
   const s = ctx.screen;
@@ -136,13 +134,6 @@ export function* startScreen(ctx: Ctx): Proc {
     yield* waitMouseUp(ctx);
   }
   playSound(ctx, 16); // DROHNE3
-  if (choice === PROTOTYPE) {
-    yield* fadeOut(ctx, false);
-    ctx.launch = 'sly.html';
-    while (ctx.launch !== null) yield TICK_MS;
-    yield* waitNoKey(ctx);
-    return yield* startScreen(ctx);
-  }
   st.remastered = choice === 1;
   ctx.saveSettings();
   yield* fadeOut(ctx, false);

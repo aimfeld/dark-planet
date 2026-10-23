@@ -272,9 +272,10 @@ boss) playable as TypeScript too, shipped as its own page or launchable from the
   tap, for the browser's sound), the program in real time (25 ms frames, fades 1/70 s per step, Delay(800)), end
   screen. Keyboard (arrows, X/Ctrl, Esc), gamepad, touch (stick + Feuer). Tests: `test/sly.test.ts`.
 - [x] Shipping: a second page `game/sly.html` in the same Vite build and GitHub Pages site (`…/dark-planet/sly.html`).
-  The remake's start screen has a third choice "Prototyp 1997", in the shop's 6 px DEFAULT font (user, session 22,
-  after trying the 8 px SUPER) (`ctx.launch`, main.ts opens the page; Esc there
-  and Esc again returns). The service worker serves `sly.html` for its own navigations and caches `sly/` on first use.
+  The remake's start screen had a third choice "Prototyp 1997", in the shop's 6 px DEFAULT font (user, session 22,
+  after trying the 8 px SUPER); **removed in session 25 (user, decision 32)**: only the direct link opens it now
+  (Esc there and Esc again goes to Dark Planet). The service worker serves `sly.html` for its own navigations and
+  caches `sly/` on first use.
 - [x] Sly's laugh (LACHEN2, Sounds[38]) when the prototype's black title shows (user, session 22). Chrome lets a page
   opened by a click or key on the same site play sound at once (checked); where a browser holds the sound back until
   a gesture on the page, the laugh comes with the key that starts the game.
@@ -348,7 +349,8 @@ in general. The store page should tell that story, not only sell a shooter.
    same for the videos.* Alternative: integer 5× (1600 × 1000) with bars all round.
    Stretching to 16:9 (asked by the user, session 24) is worse: the pixels stop being square (10 % squashed, against
    decision 20), rows end up 5 or 6 px tall, which shimmers in a scrolling trailer, and Steam wants the game as it is
-   played. The 96 px bars are 5 % of the width and hardly show on the store's dark background. Not yet decided.
+   played. The 96 px bars are 5 % of the width and hardly show on the store's dark background.
+   **Decided (user, session 26): 5.4× with side bars**, for screenshots and videos (decision 33).
 6. **AI content disclosure.** Since January 2026 Steam only asks about AI-generated content that players see
    (in-game and marketing). Code assistants (Claude Code) don't need to be disclosed. hq4x is a classic algorithm,
    not AI. *Keep all store art and new sprites AI-free, so the page needs no AI label.* (The Real-ESRGAN renders
@@ -365,8 +367,8 @@ in general. The store page should tell that story, not only sell a shooter.
      few weeks. If that fails, the user takes the risk: release anyway, credited as in 1998, and take it down if he
      objects (very unlikely).
    - Soundtrack: **the user produced all the music, guitar included** (session 23), so no further consent is needed.
-   - Sly prototype: **the user asks Sly** whether it goes into the Steam release or stays browser-only. Until then
-     the Steam build hides "Prototyp 1997" (a build flag).
+   - ~~Sly prototype~~ **Decided (user, session 25): not in the Steam release** (decision 32). It stays in the
+     browser version, reachable only by its direct link (`…/dark-planet/sly.html`); the start screen no longer lists it.
    - [ ] Check the texts for real people (classmates, teachers) named in the insider jokes.
 9. ~~Title~~ **Decided (user, session 24): "Dark Planet Remastered".** Other games share the name (Ubisoft's *Dark Planet: Battle for Natrolis*, 2002, and itch.io games
    called *The Dark Planet*). **The user (session 23): "Dark Planet Remastered" or "Dark Planet 1998".** No Steam
@@ -382,7 +384,7 @@ in general. The store page should tell that story, not only sell a shooter.
    in the name of a real person.
 10. **Extras for the commemoration angle (optional).** An "About this game" section with the story of the game and
     1998 material (photos, the CD, the manual), a link to the browser version and the GitHub repo, achievements
-    (each boss, the GEDANKE cheat, the prototype; needs steamworks.js), and the Sly prototype as a bonus (see 8).
+    (each boss, the GEDANKE cheat; needs steamworks.js). ~~The Sly prototype as a bonus~~: not on Steam (see 8).
     Bundling the original DP.EXE with DOSBox would be possible (DOSBox is GPL: ship its source), but classic mode
     already covers it. *Keep it out at first.*
 
@@ -424,6 +426,8 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
   (or Forge) builds win-x64 and linux-x64 (no macOS, see 7).
 - [ ] Desktop differences from the web build: no service worker, manifest or install hints; starts fullscreen
   (F or Alt+Enter toggles); Exit quits the app; no ⛶ button.
+- [ ] Leave the Sly prototype out of the desktop package (decision 32): no `sly.html`, `sly/` data or `src/sly/`
+  chunk (a Vite mode without the `sly` input and `public/sly/`, and the service worker's `sly` list empty).
 - [ ] Saves and settings as files in the user data folder (through the preload script), so Steam Auto-Cloud can sync
   them without the SDK. localStorage in Electron is a LevelDB folder, which doesn't work well with cloud sync.
 - [ ] Steam Deck: 1280 × 800 is exactly 4× 320 × 200, so classic fills the screen pixel-perfect (hide the key legend
@@ -445,7 +449,31 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
 - [ ] At least 5 screenshots, 1920 × 1080 (16:9, see 5), gameplay only; mark at least 4 as suitable for all ages.
   Pick from `screenshots/index.html` (still open in "Store screenshots"; needs a 16:9 output in
   `tools/screenshots.mjs`).
-- [ ] Input recorder plus a replay-to-video renderer (see 3); the user records one or two runs.
+- [x] Input recorder plus a replay-to-video renderer (see 3), session 26:
+  - The dev build records every level played (`src/recording.ts`): a snapshot of the world after StartLevel
+    (`src/sim/snapshot.ts`, generic JSON of every World field) plus each tick's packed player input and the RNG seed
+    every 8 ticks; `vite.config.ts` saves it to `recordings/` (gitignored). The snapshot is taken at the level's
+    first input read (main.ts `players` getter), so no sim code changed; playLevel now leaves StartLevel's engine
+    loops in `w.sounds` (step clears them), so the snapshot has them. Tests `test/recording.test.ts`: a replay from
+    the level start and from mid-level reaches the identical state; a changed input is noticed.
+  - `tools/trailer.mjs` + dev page `game/trailer.html` (`src/trailer.ts`): replays in headless Chrome (shared
+    helper `tools/headless.mjs`, also used by screenshots.mjs), 60 fps; remastered interpolated between ticks,
+    classic shows the nearest tick, so both modes match frame for frame. Frames go as PNG blobs by HTTP POST to the
+    tool (base64 through the DevTools protocol was the bottleneck), several browsers take 5 s chunks from a queue
+    and draw them into lossless files in `videos/.work/`, then one x264 encode (CRF 12, about 15–20 Mbit/s) with
+    fades. A browser that hangs (seen once: SwiftShader stopped answering) is replaced after 5 minutes and its chunk
+    drawn again; a stopped run resumes from the finished chunks. The tools' dev server has its own Vite cache
+    (`DP_VITE_CACHE`), so it can't break a running `npm run dev`. Sound: `Sfx` can schedule on an
+    OfflineAudioContext (`sfx.at`), so the effects use the game's voice rules and gain; the music is the CD track
+    from the disc image (`export_music.py --wav`), restarted at each track change as CDPlay does. Speed with
+    SwiftShader (no GPU in headless Chrome here): about 20–30 s per second of remastered video, 6 s for classic.
+  - Found on the way: the remastered level background was drawn 8 px too high (hiResView `LEVEL_TOP` −6200; the
+    level image starts at −6208: 200 rows, row 0 at y 160), so ground enemies sat off their spots and R shifted the
+    ground. Fixed; the store screenshots need a new run.
+- [x] **User:** recorded runs (session 26): level 5 (Alien-Pro), level 5 with its boss, levels 2 and 3 with their
+  bosses (Navi Spezial). Rendered: level 5 0–61 s, level 5 boss 140 s–end, levels 2 and 3 complete, each classic
+  and remastered (`videos/`, gitignored; the recordings in `recordings/`, also gitignored).
+- [ ] Decide one or two trailers (see 3).
 - [ ] Trailer(s) cut and encoded (H.264, high bitrate; Steam transcodes it anyway).
 - [ ] Descriptions (short and long, EN + DE), tags (Shoot 'Em Up, Retro, Pixel Graphics, Local Co-Op, Free to
   Play?), system requirements, supported languages, controller support.
@@ -470,6 +498,25 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
 6. **Release:** press the button (not possible while a trailer is still converting). Later updates: a new build
    through SteamPipe, news as Steam events.
 - Rough timeline: at least 5–6 weeks from paying the fee, more realistically 2–3 months including the translation.
+- [x] Project email and Steam account (user, session 26, 2026-10-23): a new Google account
+  `horse.productions@gmail.com` ("Horse Productions", also the store page's support address) and a dedicated Steam
+  account on it, separate from the user's gaming account. Steamworks only links Steam logins to the partner entity,
+  so the other two can be added later.
+- [ ] Steam Guard mobile authenticator on the new Steam account (if not done yet).
+- [x] Steam Direct fee paid (user, 2026-10-23). Earliest release by the 30-day rule: **2026-11-22**.
+- [x] Steamworks paperwork submitted (user, 2026-10-23): company form (individual), bank (PostFinance), tax and
+  identity. Status "Identity Verification Pending": up to 30 business days (third-party service, can't be sped up).
+- [ ] Verification done → create the app (Valve: "Once your bank, tax, and company information is verified, you can
+  add users and create your first application"). Realistic release: verification (≤ early December) + store
+  review (1–5 days) + 2 weeks Coming Soon, so mid to late December 2026 at the latest-case pace.
+- [ ] Written rights grant from the two co-creators to the user (publishing the remake, including the 1998
+  graphics, texts and story). Steamworks' company form says co-owned content needs a legal entity; with the grant
+  the user is the sole rights holder and can sign as a "Sole Proprietorship". The co-creators stay credited.
+  Status (session 26): one co-author has given written consent to upload the game to Steam (nothing about rights);
+  there is no contact with the third. Being free doesn't remove the co-authors' rights; the realistic risk is a
+  takedown request. This already applies to the browser version. Open: what the third author contributed, and
+  whether the user accepts the risk as with the musician (credit, document the attempts to reach him, take it down
+  on request).
 - [ ] Decide who owns the Steamworks account in the long run, and add the other two as team members.
 
 ## Decisions (user)
@@ -504,6 +551,8 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
 29. Language is a setting of its own, independent of the graphics mode: Classic 1998 can be played in English too. German is labelled as the original; the default comes from the system language (user, session 24). This replaces decision 2.
 30. Steam title: "Dark Planet Remastered" (user, session 24). Neither it nor "Dark Planet 1998" exists on Steam or itch.io (checked 2026-10-23); with other Dark Planets from 1982, 1997 and 2002, a year wouldn't set the game apart.
 31. The cheat stays GEDANKE in English too; the English riddle must still lead to the German word (user, session 24).
+32. The Sly prototype leaves the start screen (now Classic 1998, Remastered 2026 and the language) and stays out of the Steam release; in the browser version only its direct link `sly.html` opens it (user, session 25).
+33. 16:9 store media: the 320 × 200 picture at 5.4× (1728 × 1080) with 96 px black bars left and right, for screenshots and videos (user, session 26).
 
 
 ## Notes (session 11, polish pass)

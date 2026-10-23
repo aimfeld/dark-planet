@@ -14,6 +14,7 @@ import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchKey, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
 import { REMASTER_METHOD } from './render/hiResView';
+import { Recorder, type Recording } from './recording';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
@@ -100,6 +101,16 @@ async function fullscreen(): Promise<void> {
   await toggleFullscreen().catch(() => undefined);
   const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
   if (TOUCH_DEVICE && document.fullscreenElement) await orientation.lock?.('landscape').catch(() => undefined);
+}
+
+/** Dev build: every level played is recorded (recording.ts) and saved to recordings/ by the dev server (vite.config.ts). */
+const RECORD_FLUSH_MS = 10000;
+
+function saveRecording(r: Recording): void {
+  const name = `level${r.level}-${r.created.replace(/[:.]/g, '-')}`;
+  fetch(`/__recording?name=${name}`, { method: 'POST', body: JSON.stringify(r) })
+    .then((res) => console.log(res.ok ? `recorded recordings/${name}.json (${r.inputs.length} ticks)` : `recording not saved: ${res.status}`))
+    .catch((e) => console.warn('recording not saved:', e));
 }
 
 const UPDATE_CHECK_MS = 4000; // how long a start waits for the server's sw.js before going on (offline, slow network)
@@ -210,12 +221,16 @@ async function main(): Promise<void> {
   document.addEventListener('gesturestart', (e) => e.preventDefault()); // iOS pinch zoom
 
   let pauseTap = false; // the page was hidden during a level: pause it (one P press)
+  const recorder = import.meta.env.DEV ? new Recorder(saveRecording) : null;
   const input: MenuInput = {
     held: (code) => keys.held(code) || touch.held(code) || (code === 'KeyP' && pauseTap),
     anyKey: () => keys.anyKey() || touch.anyKey(),
     mouse,
     get players() {
-      return playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad, touch);
+      const players = playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad, touch);
+      // asked once per simulation tick, by the level only
+      if (recorder && game!.view === 'world') recorder.input(game!.world, players, game!.settings.language);
+      return players;
     },
   };
   const touchUsed = () => settings.control.includes(5);
@@ -270,6 +285,7 @@ async function main(): Promise<void> {
   let last = performance.now();
   let mouseWasPlaying = false;
   let quitting = false;
+  let flushed = 0;
   const frame = (now: number) => {
     acc += Math.min(now - last, TICK_MS * MAX_TICKS_PER_FRAME);
     last = now;
@@ -289,10 +305,10 @@ async function main(): Promise<void> {
       pauseTap = false;
       acc -= TICK_MS;
     }
-    if (game.launch !== null) {
-      const page = game.launch;
-      game.launch = null; // a page restored with the browser's Back shows the start screen again
-      location.href = base + page;
+    if (recorder && game.view !== 'world') recorder.end();
+    else if (recorder && now - flushed > RECORD_FLUSH_MS) {
+      flushed = now;
+      recorder.flush();
     }
     if (updateReady && canReload()) {
       location.reload();

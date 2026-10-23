@@ -21,3 +21,9 @@ dist/
 
 # Store screenshots (tools/screenshots.mjs)
 screenshots/
+
+# Input recordings of levels played in the dev build (game/src/recording.ts)
+recordings/
+
+# Gameplay videos (tools/trailer.mjs)
+videos/

@@ -26,7 +26,7 @@ the ranges become per-language data. Briefings have at most 20 lines on screen. 
 ### 2. UI strings in the code (the original's and the remake's)
 | Where | Strings |
 |---|---|
-| `screens/start.ts` (remake) | the intro (3 lines), the hint (2 lines), the buttons "Classic 1998", "Remastered 2026", "Prototyp 1997" |
+| `screens/start.ts` (remake) | the intro (3 lines), the hint (2 lines), the buttons "Classic 1998", "Remastered 2026" |
 | `screens/options.ts` | "Steuerung Player1:" + Tastatur/Maus/Joystick/WASD/Touch, "CDSound:", "SoundEffekte:", " an"/" aus", "Grafik: Classic/Remastered", "Menu verlassen" |
 | `screens/hangar.ts` | labels "Shoot em all", "Shop", "Multiplayer", "Optionen", "Zurück zu Hauptmenu"; "Verstärkung? Enter=Ja, Rest=Nein"; "Zurückschalten nicht möglich!"; touch keys "Ja", "Nein", "Cheat" |
 | `screens/shop.ts` | categories "Kleine Pods", "Grosse Pods", "Boni", "Antriebe", "Schilde", "Kugel Pods", "Jets"; "1 Leben", "Save"; "Investiert:", "Rückzahlung: "; "Noch kein Text!" |

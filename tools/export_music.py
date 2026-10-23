@@ -6,10 +6,14 @@ MP3 because every browser decodes it (Ogg/WebM Opus is still unreliable in Safar
 keeps the whole soundtrack at about 12 MB. Needs ffmpeg with libmp3lame.
 
 Usage: python3 tools/export_music.py original_source game/public/music
+       python3 tools/export_music.py original_source <dir> --wav [track ...]
+--wav writes lossless mono trackNN.wav instead (all tracks, or the ones given), for the gameplay videos
+(tools/trailer.mjs).
 """
 import os
 import subprocess
 import sys
+import wave
 
 sys.path.insert(0, os.path.dirname(__file__))
 from build_cd_image import DATA_BYTES, FRAME_BYTES, TRACK_STARTS, sector_aligned_frame  # noqa: E402
@@ -17,7 +21,17 @@ from build_cd_image import DATA_BYTES, FRAME_BYTES, TRACK_STARTS, sector_aligned
 LAME_VBR_QUALITY = 5  # -V5: about 68 kbps for this mono music
 
 
-def main(src, out):
+def write_wav(path, stereo):
+    """The left channel (both are the same) as 16-bit mono WAV."""
+    frames = memoryview(stereo).cast('h')[0::2].tobytes()
+    with wave.open(path, 'wb') as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(44100)
+        f.writeframes(frames)
+
+
+def main(src, out, wav=None):
     os.makedirs(out, exist_ok=True)
     with open(os.path.join(src, 'Image', 'DPImage.iso'), 'rb') as f:
         f.seek(DATA_BYTES)
@@ -25,6 +39,13 @@ def main(src, out):
     total = len(audio) // FRAME_BYTES
     starts = [sector_aligned_frame(s) for s in TRACK_STARTS] + [total]
     for n, (a, b) in enumerate(zip(starts, starts[1:]), start=2):
+        if wav is not None:
+            if wav and n not in wav:
+                continue
+            path = os.path.join(out, 'track%02d.wav' % n)
+            write_wav(path, audio[a * FRAME_BYTES:b * FRAME_BYTES])
+            print('%s: %.2f min' % (path, (b - a) / 44100 / 60))
+            continue
         path = os.path.join(out, 'track%02d.mp3' % n)
         # bitexact + no metadata: the same input gives the same bytes (no encoder version tag)
         subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 's16le', '-ar', '44100', '-ac', '2', '-i', 'pipe:',
@@ -35,4 +56,8 @@ def main(src, out):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    if '--wav' in sys.argv:
+        i = sys.argv.index('--wav')
+        main(sys.argv[1], sys.argv[2], [int(t) for t in sys.argv[i + 1:]])
+    else:
+        main(sys.argv[1], sys.argv[2])

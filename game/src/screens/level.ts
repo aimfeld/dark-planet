@@ -25,7 +25,9 @@ export function* playLevel(ctx: Ctx, level: number, atBoss = false): Proc<LevelR
   startLevel(w, level, atBoss); // the level appears at full brightness (Epis1.pal set without a fade-in)
   ctx.view = 'world';
   cdPlay(ctx, w.track);
-  worldSounds(ctx); // the engine loops LevelStart started
+  // the engine loops StartLevel started; left in w.sounds (the first tick clears them), so an input recording's
+  // snapshot (recording.ts) has them
+  if (ctx.settings.soundEffects) ctx.sfx?.handle(w.sounds);
   let result: LevelResult | null = null;
   ctx.touchKeys = TOUCH_PLAYING;
   while (result === null) {

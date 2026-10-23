@@ -2,7 +2,7 @@
 
 Reads the engine data (game/public/data/, tools/export_engine_data.py) and writes, per method:
   <out>/<method>/level<N>/<i>.avif      level N's background in chunks of 256 source rows (1024 px), chunk i
-                                        covering level y -6200 + 256 i ...; 1280 px wide (the 10 tile columns)
+                                        covering level y -6208 + 256 i ...; 1280 px wide (the 10 tile columns)
   <out>/<method>/<group>_<p>.avif       sprite atlas pages, 4096 x 4096 at most
   <out>/<method>/picture_<PIC>_<PAL>.avif  the full-screen PIC backgrounds in the palette their screen uses
   <out>/<method>/font_<NAME>.avif       glyph atlases: mono fonts white (the renderer tints them with the ink
@@ -46,7 +46,7 @@ from PIL import Image
 
 SCALE = 4
 CHUNK = 256  # source rows per background chunk
-LEVEL_ROWS = 200  # tile rows of 32 px: level y -6200 .. 199
+LEVEL_ROWS = 200  # tile rows of 32 px: level y -6208 .. 191 (row 0 at 160, Framebuffer.background)
 PAGE = 1024  # atlas page size in source px (4096 upscaled)
 PAD = 4  # source px around each sprite or glyph (keeps neighbours out of the filters)
 REST = range(544, 850)
@@ -85,7 +85,7 @@ def load(data):
 
 
 def level_image(level, tiles, palette):
-    """The whole level as RGB, top row = level y -6200 (file row 0 is at the bottom, see Framebuffer.background)."""
+    """The whole level as RGB, top row = level y -6208 (file row 0 is at the bottom, see Framebuffer.background)."""
     img = np.zeros((32 * LEVEL_ROWS, 320), np.uint8)
     for r, cells in enumerate(level['tiles']):
         y = 32 * (LEVEL_ROWS - 1 - r)

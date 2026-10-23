@@ -5,16 +5,13 @@
 //
 //   node tools/screenshots.mjs [--out screenshots] [--port 5192] [scenario ...]
 //
-// Node stdlib only (Chrome DevTools Protocol over the built-in WebSocket); needs google-chrome. Chrome renders
-// WebGL with SwiftShader here (CPU), so a full run takes a while.
+// Node stdlib only (tools/headless.mjs); needs google-chrome. Chrome renders WebGL with SwiftShader here (CPU), so
+// a full run takes a while.
 
-import { spawn } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { openPage, ROOT } from './headless.mjs';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const W = 1920, H = 1200;
 
 const args = process.argv.slice(2);
@@ -26,57 +23,7 @@ const opt = (name, fallback) => {
 };
 const out = resolve(opt('--out', join(ROOT, 'screenshots')));
 const port = Number(opt('--port', '5192'));
-const debugPort = port + 1000;
 const only = args;
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function waitFor(url, ms = 30000) {
-  for (const t0 = Date.now(); Date.now() - t0 < ms; await sleep(250)) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return res;
-    } catch {
-      // not up yet
-    }
-  }
-  throw new Error(`timeout waiting for ${url}`);
-}
-
-const vite = spawn('npx', ['vite', '--port', String(port), '--strictPort'], { cwd: join(ROOT, 'game'), stdio: 'ignore' });
-const profile = mkdtempSync(join(tmpdir(), 'dp-shots-'));
-const chrome = spawn('google-chrome', ['--headless=new', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`,
-  `--window-size=${W},${H}`, '--force-device-scale-factor=1', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: 'ignore' });
-const cleanup = () => {
-  chrome.kill();
-  vite.kill();
-  try {
-    rmSync(profile, { recursive: true, force: true });
-  } catch {
-    // Chrome may still hold files
-  }
-};
-process.on('SIGINT', () => {
-  cleanup();
-  process.exit(130);
-});
-
-let ws, nextId = 0;
-const pending = new Map();
-function send(method, params = {}) {
-  return new Promise((res, rej) => {
-    const id = ++nextId;
-    pending.set(id, { res, rej });
-    ws.send(JSON.stringify({ id, method, params }));
-  });
-}
-
-/** Evaluate an expression in the page (awaiting promises) and return its value. */
-async function evaluate(expression) {
-  const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-  if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
-  return r.result.value;
-}
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
@@ -90,28 +37,8 @@ img{width:calc(50% - 6px);margin-right:6px;image-rendering:pixelated}figcaption{
 ${rows.join('\n')}`;
 }
 
+const { evaluate, close } = await openPage({ page: 'screenshots.html', global: 'shots', width: W, height: H, port });
 try {
-  await waitFor(`http://127.0.0.1:${debugPort}/json/version`);
-  await waitFor(`http://localhost:${port}/screenshots.html`);
-  const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' })).json();
-  ws = new WebSocket(target.webSocketDebuggerUrl);
-  ws.onmessage = (m) => {
-    const d = JSON.parse(m.data);
-    if (d.method === 'Runtime.consoleAPICalled' && ['warning', 'error'].includes(d.params.type)) {
-      console.log(`  [page ${d.params.type}]`, d.params.args.map((a) => a.value ?? a.description).join(' '));
-    }
-    const p = d.id && pending.get(d.id);
-    if (!p) return;
-    pending.delete(d.id);
-    if (d.error) p.rej(new Error(`${d.error.message}`));
-    else p.res(d.result);
-  };
-  await new Promise((r) => (ws.onopen = r));
-  await send('Runtime.enable');
-  await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false });
-  await send('Page.navigate', { url: `http://localhost:${port}/screenshots.html` });
-  for (let i = 0; i < 240 && !(await evaluate('typeof window.shots').catch(() => 'undefined') === 'object'); i++) await sleep(250);
-  await evaluate('window.shots.then(() => true)');
   const names = await evaluate('window.shots.then((s) => s.scenarios())');
   const todo = only.length ? names.filter((n) => only.includes(n)) : names;
   if (only.length && todo.length !== only.length) throw new Error(`unknown scenario; known: ${names.join(' ')}`);
@@ -141,7 +68,6 @@ try {
   }
   console.log(`done: ${out}/index.html`);
 } finally {
-  ws?.close();
-  cleanup();
+  close();
 }
 process.exit(0);

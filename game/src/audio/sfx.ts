@@ -26,13 +26,15 @@ interface Voice {
 }
 
 export class Sfx {
+  /** Offline rendering (tools/trailer.mjs): the context time the next sounds play at; null = now. */
+  at: number | null = null;
   private readonly voices: Voice[] = [];
   private readonly out: GainNode;
   private readonly rest: GainNode; // the sounds without an own gain (ducked)
   private readonly gains: Readonly<Record<number, number>>;
   private readonly duck: number;
 
-  private constructor(private readonly ctx: AudioContext, private readonly buffers: AudioBuffer[], options: SfxOptions) {
+  private constructor(private readonly ctx: AudioContext | OfflineAudioContext, private readonly buffers: AudioBuffer[], options: SfxOptions) {
     this.gains = options.gains ?? {};
     this.duck = options.duck ?? 1;
     this.out = ctx.createGain();
@@ -43,12 +45,11 @@ export class Sfx {
   }
 
   /** sounds.json + sounds.bin.gz from tools/export_engine_data.py (index = PlaySound number). */
-  static async load(base: string, options: SfxOptions = {}): Promise<Sfx> {
+  static async load(base: string, options: SfxOptions = {}, ctx: AudioContext | OfflineAudioContext = new AudioContext()): Promise<Sfx> {
     const [index, bin] = await Promise.all([
       fetch(base + 'sounds.json').then((r) => r.json() as Promise<{ rate: number; sounds: { offset: number; length: number }[] }>),
       fetch(base + 'sounds.bin.gz').then((r) => r.arrayBuffer()).then(gunzip),
     ]);
-    const ctx = new AudioContext();
     const pcm = new Int8Array(bin);
     const buffers = index.sounds.map(({ offset, length }) => {
       const b = ctx.createBuffer(1, Math.max(1, length), index.rate);
@@ -61,6 +62,7 @@ export class Sfx {
 
   /** The page is hidden: hold the mix (loops resume where they were). */
   setHidden(hidden: boolean): void {
+    if (!(this.ctx instanceof AudioContext)) return;
     if (hidden) void this.ctx.suspend();
     else this.unlock();
   }
@@ -70,8 +72,12 @@ export class Sfx {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
 
+  private now(): number {
+    return this.at ?? this.ctx.currentTime;
+  }
+
   private prune(): void {
-    const now = this.ctx.currentTime;
+    const now = this.now();
     for (let i = this.voices.length - 1; i >= 0; i--) if (this.voices[i].end <= now) this.voices.splice(i, 1);
   }
 
@@ -109,15 +115,15 @@ export class Sfx {
       g.gain.value = gain;
       src.connect(g).connect(this.out);
     }
-    src.start();
-    this.voices.push({ n, src, end: loop ? Infinity : this.ctx.currentTime + buffer.duration });
+    src.start(this.now());
+    this.voices.push({ n, src, end: loop ? Infinity : this.now() + buffer.duration });
     if (gain !== undefined) this.ducking();
   }
 
   /** Turn the other sounds down while a sound with its own gain plays, and back up when the last one ends. */
   private ducking(): void {
     if (this.duck === 1) return;
-    const now = this.ctx.currentTime;
+    const now = this.now();
     const until = Math.max(now, ...this.voices.filter((v) => this.gains[v.n] !== undefined).map((v) => v.end));
     const g = this.rest.gain;
     g.cancelScheduledValues(now);
@@ -127,7 +133,7 @@ export class Sfx {
 
   handle(events: SoundEvent[]): void {
     this.prune();
-    const running = this.ctx.state === 'running';
+    const running = this.at !== null || this.ctx.state === 'running';
     for (const e of events) {
       if (e.stop) {
         this.stop(e.n);
@@ -145,7 +151,7 @@ export class Sfx {
   stop(n: number): void {
     for (let i = this.voices.length - 1; i >= 0; i--) {
       if (this.voices[i].n !== n) continue;
-      this.voices[i].src.stop();
+      this.voices[i].src.stop(this.now());
       this.voices.splice(i, 1);
     }
     if (this.gains[n] !== undefined) this.ducking();

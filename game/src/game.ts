@@ -51,7 +51,6 @@ export class Game implements Ctx {
   paused = false;
   atMainMenu = false;
   atStart = false;
-  launch: string | null = null;
   input: MenuInput;
   private readonly proc: Proc;
   private debt = 0; // ms the last step overran the tick

@@ -91,28 +91,6 @@ describe.skipIf(!hasData)('start screen', () => {
     expect(game.screen.y[12]).toBe(110 - 10);
   });
 
-  it('Prototyp 1997 asks main.ts to open sly.html; back on the page, the start screen shows again', async () => {
-    const input = new Script();
-    const settings = { ...DEFAULT_SETTINGS, control: [1, 4] as [number, number] };
-    const game = new Game(createWorld(await gameData(), 1), input, settings, undefined, undefined, undefined, undefined, new FakeVideo());
-    const run = (n: number) => {
-      for (let i = 0; i < n; i++) game.tick(input);
-    };
-    run(40);
-    expect([...game.screen.texts.values()].find((t) => t.text === 'Prototyp 1997')).toMatchObject({ font: 'DEFAULT', classic: true });
-    press(game, input, 'ArrowDown'); // Remastered 2026 -> Prototyp 1997
-    run(10);
-    expect(game.screen.y[12]).toBe(134 - 10);
-    press(game, input, 'Enter');
-    run(40);
-    expect(game.launch).toBe('sly.html');
-    expect(settings.remastered).toBe(true); // unchanged
-    game.launch = null; // main.ts opened it
-    run(40);
-    expect(game.atStart).toBe(true);
-    expect(game.screen.fade).toBeGreaterThan(0);
-  });
-
   it('the language line switches the language and stays on the screen', async () => {
     const input = new Script();
     const saved: string[] = [];
@@ -124,19 +102,18 @@ describe.skipIf(!hasData)('start screen', () => {
     run(40);
     const texts = () => [...game.screen.texts.values()].map((t) => t.text);
     expect(texts()).toContain('Sprache: Deutsch');
-    press(game, input, 'ArrowDown'); // Remastered 2026 -> Prototyp 1997
+    press(game, input, 'ArrowDown'); // Remastered 2026 -> Sprache
     run(10);
-    press(game, input, 'ArrowDown'); // -> Sprache
-    run(10);
-    expect(game.screen.y[12]).toBe(154 - 10);
-    expect(game.screen.classic[12]).toBe(1); // still the look of the line above, Prototyp 1997
+    expect(game.screen.y[12]).toBe(134 - 10);
+    expect(game.screen.classic[12]).toBe(0); // still the look of the line above, Remastered 2026
     press(game, input, 'Enter');
     run(10);
     expect(game.atStart).toBe(true);
     expect(settings.language).toBe('en');
     expect(saved).toEqual(['en']);
-    expect(texts()).toEqual(expect.arrayContaining(['Language: English', 'Prototype 1997', 'inspired by Raptor and Xenon 2.']));
-    expect(texts()).not.toContain('Prototyp 1997');
+    expect(texts()).toEqual(expect.arrayContaining(['Language: English', 'inspired by Raptor and Xenon 2.']));
+    expect(texts()).not.toContain('Sprache: Deutsch');
+    expect(texts().some((t) => /^Prototyp/.test(t))).toBe(false); // the prototype has only its direct link
   });
 
   it('a click on a button chooses it', async () => {

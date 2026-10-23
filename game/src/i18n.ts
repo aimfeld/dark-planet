@@ -26,7 +26,7 @@ const de = {
   // Start screen (remake). The hint names the HD button with touch controls, else R.
   intro: ["Dark Planet ist ein Shoot 'em up", 'für DOS aus dem Jahr 1998,', 'inspiriert von Raptor und Xenon 2.'],
   versionHint: (key: string) => ['Die Version kann jederzeit im Spiel', `gewechselt werden (${key} oder Optionen).`],
-  versions: ['Classic 1998', 'Remastered 2026', 'Prototyp 1997'],
+  versions: ['Classic 1998', 'Remastered 2026'],
   // Options (DS:0x502 + 256 ctl; the remake adds WASD, Touch and the language)
   controlLine: (player: number, control: string) => `Steuerung Player${player}:${control}`,
   controls: ['Tastatur', 'Maus', 'Joystick', 'WASD', 'Touch'],
@@ -88,7 +88,7 @@ const en: Strings = {
   languageName: 'English',
   intro: ["Dark Planet is a shoot 'em up", 'for DOS from 1998,', 'inspired by Raptor and Xenon 2.'],
   versionHint: (key: string) => ['You can switch versions at any time', `in the game (${key} or Options).`],
-  versions: ['Classic 1998', 'Remastered 2026', 'Prototype 1997'],
+  versions: ['Classic 1998', 'Remastered 2026'],
   controlLine: (player: number, control: string) => `Controls Player${player}:${control}`,
   controls: ['Keyboard', 'Mouse', 'Joystick', 'WASD', 'Touch'],
   cdSound: 'CD Sound:',
