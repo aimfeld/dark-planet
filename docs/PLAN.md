@@ -14,6 +14,7 @@
   - *Remastered*: the same state rendered at native resolution and refresh rate with interpolation between ticks, plus upscaled assets (AI upscaling baseline, hand-refined later), particles, bloom and lighting, and the CD soundtrack as OGG/Opus.
   - Keep the 320×200 playfield proportions in both modes, because widening it would change the gameplay.
 - **Distribution (user, session 11):** the browser version is the product: desktop browsers, and phones and tablets with touch controls (installable from the browser as a PWA). Steam and the app stores are **optional**, probably not worth the hassle. If ever wanted: Electron rather than Tauri for Steam (the same Chromium on Windows, macOS, Linux and the Steam Deck; Tauri would use WebKitGTK there), Capacitor for Google Play / the App Store.
+  **Update (user, session 23): the game will also be published on Steam, for free** (decision 26, Phase 5). The browser version stays free on GitHub Pages.
 - **Asset pipeline:** Python tools under `tools/` convert the original files into PNG atlases, JSON, OGG and WebM at build time. The user owns all assets.
 
 ## Phases
@@ -290,6 +291,149 @@ boss) playable as TypeScript too, shipped as its own page or launchable from the
 - [x] **User:** play `sly.html` (`npm run dev`, start screen → Prototyp 1997) and say whether speed and feel are
   right, and whether the launcher on the start screen is where you want it.
 
+### Phase 5: Steam release (free) 🔄 (from session 23, 2026-10-23)
+**Goal (user, session 23):** publish Dark Planet on Steam as a free game. It isn't about money. It should commemorate
+this part of our childhood: how we became programmers, how much effort we put into the game, and DOS retro games
+in general. The store page should tell that story, not only sell a shooter.
+
+#### To discuss (open; my recommendations in *italics*)
+1. **Languages.** English is needed, with German ↔ English switchable at any time. Decision 2 said "classic German
+   only". *Make the language independent of the graphics mode, so a Steam player who picks Classic 1998 can still
+   read English. German stays labelled as the original. The default comes from the system language (Steam passes
+   its language to the game; the browser has `navigator.language`).* Needs the user's OK, because it changes
+   decision 2.
+2. **Main menu items (the wavy ones).** They are pre-drawn REST.LIB sprites, not text: 6 items × 11 frames (base +
+   10 glow frames, sprites 613 + 11(i−1)), re-notes "Main menu". "Horse Productions" and "Exit" can stay, so four
+   words need new art: Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung. *First work out what the 10 frames
+   do (a wave distortion, a light sweep, or both). Then write a generator (`tools/menu_items.py`) that rebuilds the
+   **German** sprites closely enough to diff against the originals, and only then render "New Game", "Load Game",
+   "The Story", "Manual". If it can't match, fall back to the user drawing or rendering them by hand.* Both modes need
+   them: 320 × 200 for classic, and hq4x of the new sprites (or a direct 4× render) for remastered. No AI-generated
+   art (see 6).
+3. **Gameplay videos.** Steam trailers: at most 1920 × 1080, 16:9, MP4 with H.264 + AAC, 30 or 60 fps, at least
+   5000 kbps. The first trailer autoplays muted on the store page, so the first seconds must work without sound.
+   *Instead of screen recording, the user plays normally with an input recorder on (dev build), and we render the
+   video from the deterministic replay, like `tools/screenshots.mjs` already does for screenshots. That gives
+   pixel-exact classic frames, judder-free 60 fps remastered frames (interpolated), no capture hiccups, and the
+   same playthrough rendered in classic, remastered, German or English. Audio is rendered offline from the same
+   replay (the SFX events plus the music track's position). Fallback: OBS on a 1080p screen, browser fullscreen,
+   60 fps, a high-quality CQP setting.* Suggested cut: one trailer of 60–90 s (start screen, levels and bosses,
+   shop, two players, a classic ↔ remastered switch). Maybe a second short "1998 → 2026" trailer with photos and
+   CD scans from back then. Trailers may show material that isn't gameplay; screenshots may not.
+4. **Classic vs remastered in the gallery.** I agree that classic is more authentic, but Remastered is the default
+   mode (decision 25), and the store should show what a player gets. *Lead with classic shots and include one or
+   two remastered shots of the same moments. Text in screenshots isn't allowed, so the description should say
+   that both modes exist.*
+5. **16:9 framing.** Steam asks for screenshots of at least 1920 × 1080 in 16:9. Our shots are 1920 × 1200 (16:10).
+   Cropping 6× to 1080 would cut the HUD (money at the top, bonus boxes at the bottom). *Scale the full picture to
+   1728 × 1080 (5.4×: nearest 6×, then a smooth downscale, "sharp bilinear") with 96 px bars on each side. Use the
+   same for the videos.* Alternative: integer 5× (1600 × 1000) with bars all round.
+6. **AI content disclosure.** Since January 2026 Steam only asks about AI-generated content that players see
+   (in-game and marketing). Code assistants (Claude Code) don't need to be disclosed. hq4x is a classic algorithm,
+   not AI. *Keep all store art and new sprites AI-free, so the page needs no AI label.* (The Real-ESRGAN renders
+   were dropped in session 18.)
+7. ~~macOS~~ **Decided (user, session 23): no macOS build on Steam.** Valve's docs (since 2019) require new Mac
+   builds to be notarized by Apple, which needs the Apple Developer Program ($99 a year), and we won't pay that
+   every year. Windows + Linux (Linux also covers the Steam Deck); Mac users have the browser version, and the
+   store page links to it. The $100 Steam fee is fine.
+8. **Rights and consent (a topic the user didn't list).** Horse Productions were Wunibald, Jan and Urs (ABOUT.TXT);
+   the CD sound is by Wunibald + Giratte.
+   - Urs: consent given (user, session 23).
+   - **Jan: contact lost.** Jan co-designed the game and made the videos and part of the 3D graphics, so his work
+     can't simply be left out of the Steam build. **The user (session 23)** is trying to reach him, which may take a
+     few weeks. If that fails, the user takes the risk: release anyway, credited as in 1998, and take it down if he
+     objects (very unlikely).
+   - Soundtrack: **the user produced all the music, guitar included** (session 23), so no further consent is needed.
+   - Sly prototype: **the user asks Sly** whether it goes into the Steam release or stays browser-only. Until then
+     the Steam build hides "Prototyp 1997" (a build flag).
+   - [ ] Check the texts for real people (classmates, teachers) named in the insider jokes.
+9. **Title.** Other games share the name (Ubisoft's *Dark Planet: Battle for Natrolis*, 2002, and itch.io games
+   called *The Dark Planet*). **The user (session 23): "Dark Planet Remastered" or "Dark Planet 1998".** No Steam
+   game with either name was found (2026-10-23). *"Dark Planet Remastered": it says what the game is, and it
+   matches the repo and the start screen's "Classic 1998 / Remastered 2026".*
+   **Developer/publisher name:** "Horse Productions". These are free text in Steamworks, not registered names, and
+   no Steam developer or publisher with that name was found (2026-10-23). The Steamworks partner account itself is
+   in the name of a real person.
+10. **Extras for the commemoration angle (optional).** An "About this game" section with the story of the game and
+    1998 material (photos, the CD, the manual), a link to the browser version and the GitHub repo, achievements
+    (each boss, the GEDANKE cheat, the prototype; needs steamworks.js), and the Sly prototype as a bonus (see 8).
+    Bundling the original DP.EXE with DOSBox would be possible (DOSBox is GPL: ship its source), but classic mode
+    already covers it. *Keep it out at first.*
+
+#### English translation
+About 4,300 words in `texts.json` (STORY.TXT 1,270, ANLEIT.UNG 1,050, INFO.PAS 1,080, MISSIONS.PAS 480, ABOUT.TXT
+470), plus the remake's own UI strings (start screen, options, hangar status, key legend, touch buttons, messages
+such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked into pictures and sprites.
+- [ ] Inventory of text in pictures and sprites: main menu items (see 2), shop buttons and labels (KAUFEN,
+  VERKAUFEN, POSITION WECHSEL, HAUPT MENU, GELD AUSTAUSCH, ANTRIEB, BONI, KUGEL, KL.POD, GR.PODS, STANDADPOD), HUD
+  bonus names, "Loser!", the hangar, and the intro and ending videos (check frame by frame for German text).
+- [ ] i18n structure: `texts.en.json` next to `texts.json` with the same BEGIN/END markers and hand-wrapped lines;
+  the UI strings in one table (`src/i18n.ts`); a `language` setting (Options line, start screen) that switches at
+  once, both in the browser and on Steam.
+- [ ] Overflow check as a test: measure every line in both languages with the font's glyph widths (`fonts.json`)
+  against its box (shop info box: line count and width in DEFAULT; text viewer: width in SUPER; options and hangar
+  lines in BROADWA; start screen). The shop info box holds about 18 characters × 7 lines, so English item texts
+  must be rewritten to fit, not translated word for word.
+- [ ] Draft translation by Claude, with a list of the passages that need the user (insider jokes, slang, Swiss
+  German, puns like "Schlitzohr" and "Fladnag der Graue") in `docs/translation-notes.md`. Then the user reviews
+  everything; the jokes should still be funny in English rather than literal.
+- [ ] New main menu sprites (see 2) and, if they can't be drawn as text, the shop labels and buttons.
+- [ ] Store page text in English and German.
+
+#### Desktop package (Electron)
+Electron as already planned in "Architecture": the same Chromium on Windows, Linux and the Steam Deck.
+- [ ] `desktop/`: Electron main process plus a preload script, loading the Vite build from disk. electron-builder
+  (or Forge) builds win-x64 and linux-x64 (no macOS, see 7).
+- [ ] Desktop differences from the web build: no service worker, manifest or install hints; starts fullscreen
+  (F or Alt+Enter toggles); Exit quits the app; no ⛶ button.
+- [ ] Saves and settings as files in the user data folder (through the preload script), so Steam Auto-Cloud can sync
+  them without the SDK. localStorage in Electron is a LevelDB folder, which doesn't work well with cloud sync.
+- [ ] Steam Deck: 1280 × 800 is exactly 4× 320 × 200, so classic fills the screen pixel-perfect (hide the key legend
+  there). Ship the native Linux build, which runs in the Steam Linux Runtime container. Electron's sandbox often
+  crashes there; the usual fix is `--no-sandbox` in the launch options. Test the Windows build with Proton as a
+  fallback.
+- [ ] Controller-only play, needed for "Verified": every screen works with the gamepad, including the hangar and
+  the shop (a virtual pointer moved by the stick, A clicks, B is the right button). Show Deck or Xbox button glyphs
+  instead of keys while a gamepad is in use (the key legend and the manual's key names). Text is large enough:
+  the 6 px DEFAULT font becomes 24 px at 4× (the minimum is 9 px at 1280 × 800). Target Verified, but Playable is
+  fine.
+- [ ] Licence notices (Electron/Chromium, PixiJS) in the build; electron-builder adds Chromium's automatically.
+
+#### Store page and media
+- [ ] Capsules (required): header 920 × 430, small 462 × 174, main 1232 × 706, vertical 748 × 896; library assets
+  (capsule 600 × 900, hero 3840 × 1240, logo 1280 × 720 with transparency); optional page background 1438 × 810.
+  No text on capsules except the game's name. Sources: the `title` shot (HMBILD without items), the "DARK PLANET"
+  logo from the intro video (where the logo holds), and the jets and bosses from the sprite sheets.
+- [ ] At least 5 screenshots, 1920 × 1080 (16:9, see 5), gameplay only; mark at least 4 as suitable for all ages.
+  Pick from `screenshots/index.html` (still open in "Store screenshots"; needs a 16:9 output in
+  `tools/screenshots.mjs`).
+- [ ] Input recorder plus a replay-to-video renderer (see 3); the user records one or two runs.
+- [ ] Trailer(s) cut and encoded (H.264, high bitrate; Steam transcodes it anyway).
+- [ ] Descriptions (short and long, EN + DE), tags (Shoot 'Em Up, Retro, Pixel Graphics, Local Co-Op, Free to
+  Play?), system requirements, supported languages, controller support.
+- [ ] Content survey: violence (a cartoon shooter), black humour, any swearing. Germany has needed an age rating
+  since 2024; the Steam questionnaire gives an IARC label, so no USK review is needed.
+
+#### Publishing on Steam (the process, as of 2026-10; check the details in Steamworks when we do it)
+1. **Account:** one of us signs up as a Steamworks partner (individual, developer and publisher shown as "Horse
+   Productions"). That means the distribution agreement, identity verification, the tax interview (the US form
+   W-8BEN for an individual outside the US) and a bank account. As far as I can tell this is the same for a free game. It takes
+   days to a few weeks.
+2. **App fee:** $100 per game (Steam Direct). It is refunded only after $1,000 of revenue, so for a free game it's a
+   cost. Release is possible no sooner than **30 days** after paying it, so pay early.
+3. **Store page:** create the app, fill in the page, assets, content survey and AI disclosure, and submit it for
+   review (1–5 days). Then it goes live as **"Coming soon"**, which must be public for at least **2 weeks** before
+   release (it collects wishlists and followers).
+4. **Builds:** one depot per OS, uploaded with SteamPipe (`steamcmd` and an `app_build` VDF; a script in
+   `bin/`). Set the launch options per OS, test on a beta branch through the Steam client on Windows, Linux and the
+   Deck, and set up Auto-Cloud for the save folder.
+5. **Build review** (1–5 days: it launches and matches the page); request the Steam Deck compatibility review
+   (Valve tests it).
+6. **Release:** press the button (not possible while a trailer is still converting). Later updates: a new build
+   through SteamPipe, news as Steam events.
+- Rough timeline: at least 5–6 weeks from paying the fee, more realistically 2–3 months including the translation.
+- [ ] Decide who owns the Steamworks account in the long run, and add the other two as team members.
+
 ## Decisions (user)
 1. Classic mode doesn't need to be frame-exact. It must play and feel identical.
 2. Language: classic version German only. An English translation can come later in the remastered version (settings switch). The remastered version waits until the classic version is finished.
@@ -316,6 +460,10 @@ boss) playable as TypeScript too, shipped as its own page or launchable from the
 23. Remastered graphics: hq4x (user, session 17), over xbr4 and Real-ESRGAN.
 24. Audio stays original (user, session 17): the remastered variants (higher bitrate, pseudo-stereo, AudioSR, cleaned SFX) add nothing or add hiss; the music was recorded in poor quality and no song files exist.
 25. Two graphics modes only, Classic and Remastered (always with the effects); Remastered is the default (user, session 18).
+26. Publish on Steam as a free game, to commemorate the project and DOS retro games rather than to make money (user, session 23). This replaces "optional" in decision 14 and "Distribution". English becomes necessary, switchable with German (Phase 5).
+27. Steam: Windows and Linux/Steam Deck only, no macOS build (no yearly $99 Apple Developer fee; the $100 Steam fee is fine). Title "Dark Planet Remastered" or "Dark Planet 1998" (not yet chosen), developer "Horse Productions" (user, session 23).
+28. Jan (contact lost): the user is trying to reach him; if that fails, release anyway and take the game down if he objects (user, session 23). The soundtrack is entirely the user's own work.
+
 
 ## Notes (session 11, polish pass)
 - Recordings that would settle open questions (DOSBox-X with `dplanet.conf`, video recording from the Capture menu):
