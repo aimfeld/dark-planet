@@ -75,8 +75,10 @@ function recordingsPlugin(): Plugin {
 
 export default defineConfig({
   base: './',
-  // tools/headless.mjs runs its own dev server: its own dependency cache, so it can't disturb one already running
-  cacheDir: process.env.DP_VITE_CACHE ?? 'node_modules/.vite',
+  // tools/headless.mjs runs its own dev server: its own dependency cache, so it can't disturb one already running,
+  // and no file watching, so edits in the tree during a long render don't reload its pages
+  cacheDir: process.env.DP_HEADLESS ? 'node_modules/.vite-headless' : 'node_modules/.vite',
+  server: process.env.DP_HEADLESS ? { hmr: false, watch: null } : undefined,
   plugins: [offlinePlugin(), recordingsPlugin()],
   // the game, and the 1997 prototype (sly.html, src/sly/)
   build: { rollupOptions: { input: { main: 'index.html', sly: 'sly.html' } } },

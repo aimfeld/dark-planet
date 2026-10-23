@@ -24,17 +24,23 @@ async function waitFor(url, ms = 30000) {
   throw new Error(`timeout waiting for ${url}`);
 }
 
-/** The Vite dev server of game/ (serves the dev-only pages). */
+/** The Vite dev server of game/ (serves the dev-only pages), without file watching (vite.config.ts: DP_HEADLESS). */
 export async function startVite(port) {
-  const vite = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
-    cwd: join(ROOT, 'game'), stdio: 'ignore', env: { ...process.env, DP_VITE_CACHE: 'node_modules/.vite-headless' },
+  if (await fetch(`http://localhost:${port}/`).then(() => true, () => false)) {
+    throw new Error(`port ${port} is in use (a dev server left running?): stop it or pass another --port`);
+  }
+  // vite itself, not npx (killing npx leaves vite running)
+  const vite = spawn(process.execPath, [join(ROOT, 'game/node_modules/vite/bin/vite.js'), '--port', String(port), '--strictPort'], {
+    cwd: join(ROOT, 'game'), stdio: 'ignore', env: { ...process.env, DP_HEADLESS: '1' },
   });
   const stop = () => {
     process.off('exit', stop);
     vite.kill();
   };
   process.on('exit', stop);
-  await waitFor(`http://localhost:${port}/`);
+  const exited = new Promise((_, reject) => vite.on('exit', (code) => reject(new Error(`vite exited (${code})`))));
+  exited.catch(() => undefined);
+  await Promise.race([waitFor(`http://localhost:${port}/`), exited]);
   return { stop };
 }
 

@@ -461,9 +461,10 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
     classic shows the nearest tick, so both modes match frame for frame. Frames go as PNG blobs by HTTP POST to the
     tool (base64 through the DevTools protocol was the bottleneck), several browsers take 5 s chunks from a queue
     and draw them into lossless files in `videos/.work/`, then one x264 encode (CRF 12, about 15–20 Mbit/s) with
-    fades. A browser that hangs (seen once: SwiftShader stopped answering) is replaced after 5 minutes and its chunk
-    drawn again; a stopped run resumes from the finished chunks. The tools' dev server has its own Vite cache
-    (`DP_VITE_CACHE`), so it can't break a running `npm run dev`. Sound: `Sfx` can schedule on an
+    fades. A browser that hangs (seen twice: SwiftShader stopped answering) is replaced after 5 minutes and its chunk
+    drawn again; a stopped run resumes from the finished chunks. The tools' dev server (`DP_HEADLESS`) has its own Vite cache,
+    so it can't break a running `npm run dev`, and no file watching: an edit in the tree during a render once
+    reloaded all of its pages at once. Sound: `Sfx` can schedule on an
     OfflineAudioContext (`sfx.at`), so the effects use the game's voice rules and gain; the music is the CD track
     from the disc image (`export_music.py --wav`), restarted at each track change as CDPlay does. Speed with
     SwiftShader (no GPU in headless Chrome here): about 20–30 s per second of remastered video, 6 s for classic.
