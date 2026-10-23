@@ -5,7 +5,7 @@
 **▶ Play it in your browser: https://aimfeld.github.io/dark-planet/**
 
 *Dark Planet* is a vertical-scrolling arcade shooter for DOS in the spirit of Raptor and Xenon 2. Three friends,
-calling themselves Horse Productions, wrote it in Turbo Pascal at the age of 16 to 18, worked on it for about a
+calling themselves HORSE Productions, wrote it in Turbo Pascal at the age of 16 to 18, worked on it for about a
 year and a half, and released it on CD-ROM in October 1998. This project brings it back to life in the browser,
 on desktops, phones and tablets:
 
@@ -58,10 +58,10 @@ The shop-and-upgrade design comes from Raptor and Xenon 2. What we added ([docs/
   down on Earth themselves, told with black humour, Swiss-German in-jokes, and nods to Lord of the Rings, Indiana
   Jones and the Simpsons.
 
-### Horse Productions
+### HORSE Productions
 | | |
 |---|---|
-| Horse Productions | Adrian (aka Wunibald), Urs (aka Üse), Jan |
+| HORSE Productions | Adrian (aka Wunibald), Urs (aka Üse), Jan |
 | Game design & Graphics | Adrian, Jan, Urs |
 | Programming | Adrian, Urs (tips: apw) |
 | Videos | Jan |
