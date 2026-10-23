@@ -62,7 +62,7 @@ The shop-and-upgrade design comes from Raptor and Xenon 2. What we added ([docs/
 | | |
 |---|---|
 | Horse Productions | Adrian (aka Wunibald), Urs (aka Üse), Jan |
-| Game design, 3D graphics | Adrian, Jan, Urs |
+| Game design & Graphics | Adrian, Jan, Urs |
 | Programming | Adrian, Urs (tips: apw) |
 | Videos | Jan |
 | CD soundtrack | Adrian + Giratte |
