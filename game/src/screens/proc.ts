@@ -3,6 +3,7 @@
 // each step takes in milliseconds; the 40 Hz driver (game.ts) runs steps until a tick's 25 ms are used.
 // So a menu loop pass of Delay(15) + drawing runs at the original's rate, independent of the tick.
 
+import type { Lang } from '../i18n';
 import type { Music } from '../audio/music';
 import type { Sfx } from '../audio/sfx';
 import type { VideoPlayer } from '../video';
@@ -51,6 +52,7 @@ export interface Settings {
   cdSound: boolean;
   soundEffects: boolean;
   remastered: boolean; // the remake's remastered graphics with effects (Options, R, the touch HD button)
+  language: Lang; // the remake's language (Options, the start screen), independent of the graphics (decision 29)
 }
 
 export interface Ctx {

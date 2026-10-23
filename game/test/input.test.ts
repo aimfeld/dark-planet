@@ -160,20 +160,20 @@ describe('keyboard sets (remake: WASD for a second keyboard player)', () => {
 
 describe('key legend', () => {
   it('one line per player (P2 only in multiplayer), X/C/V instead of Ctrl/Alt/Space, , . - while WASD plays', () => {
-    expect(keyLegend([1, 4], [true, false])).toEqual([
+    expect(keyLegend('de', [1, 4], [true, false])).toEqual([
       'Player1 — Pfeile: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern',
       'P: Pause · Esc: Spiel abbrechen · F: Vollbild · R: Grafik classic/remastered',
     ]);
-    const wasd = keyLegend([1, 4], [true, true]);
+    const wasd = keyLegend('de', [1, 4], [true, true]);
     expect(wasd[0]).toBe('Player1 — Pfeile: fliegen · Komma: ballern · Punkt: hoch/tief · Minus: Bonus selektieren · Komma+Minus: Bonus abfeuern');
     expect(wasd[1]).toBe('Player2 — WASD: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern');
     expect(wasd.join()).not.toMatch(/Ctrl|Alt/);
-    const pad = keyLegend([2, 3], [true, true]);
+    const pad = keyLegend('de', [2, 3], [true, true]);
     expect(pad[0]).toContain('Player1 — Maus: fliegen · links: ballern');
     expect(pad[1]).toContain('Player2 — Joystick: fliegen · A/RT: ballern');
     expect(pad).toHaveLength(3);
-    expect(keyLegend([1, 4], [true, false], 'hangar')).toHaveLength(3);
-    expect(keyLegend([1, 4], [true, false], 'hangar')[2]).toBe('Cheat Code: gedanke');
-    expect(keyLegend([1, 4], [true, false], 'intro')).toEqual(['Beliebige Taste oder Klick: Intro überspringen']);
+    expect(keyLegend('de', [1, 4], [true, false], 'hangar')).toHaveLength(3);
+    expect(keyLegend('de', [1, 4], [true, false], 'hangar')[2]).toBe('Cheat Code: gedanke');
+    expect(keyLegend('de', [1, 4], [true, false], 'intro')).toEqual(['Beliebige Taste oder Klick: Intro überspringen']);
   });
 });

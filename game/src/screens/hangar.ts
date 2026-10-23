@@ -1,7 +1,9 @@
 // The hangar (game menu @0x1D095, setup 0x1CE10): UMBILD.PIC with four animated doors, driven by the
 // mouse. Shoot em all (briefing, then the level), Shop, Multiplayer (P2 joins), Optionen, back to the main menu.
 
+import { strings } from '../i18n';
 import { joinPlayer2 } from '../sim/tick';
+import { gameText, missionSections } from '../texts';
 import { playLevel } from './level';
 import { options } from './options';
 import { shop } from './shop';
@@ -13,26 +15,19 @@ const POINTER = 612; // slot 1, an 8 x 11 arrow
 const LABEL_SPRITE = 817; // text sprite 0x331 in slot 3
 const LABEL_SLOT = 3;
 const P2_DOOR = [610, 611]; // slot 23: P2 not joined / joined
-// Hotspots (DS:0x98E, inclusive) and labels (DS:0x917 + 0x15 i).
-const ITEMS: { x1: number; y1: number; x2: number; y2: number; label: string }[] = [
-  { x1: 92, y1: 110, x2: 185, y2: 154, label: 'Shoot em all' },
-  { x1: 245, y1: 111, x2: 320, y2: 154, label: 'Shop' },
-  { x1: 20, y1: 126, x2: 76, y2: 170, label: 'Multiplayer' },
-  { x1: 228, y1: 18, x2: 312, y2: 58, label: 'Optionen' },
-  { x1: 77, y1: 175, x2: 282, y2: 200, label: 'Zurück zu Hauptmenu' },
+// Hotspots (DS:0x98E, inclusive); their labels (DS:0x917 + 0x15 i) are i18n's hangarItems.
+const ITEMS: { x1: number; y1: number; x2: number; y2: number }[] = [
+  { x1: 92, y1: 110, x2: 185, y2: 154 },
+  { x1: 245, y1: 111, x2: 320, y2: 154 },
+  { x1: 20, y1: 126, x2: 76, y2: 170 },
+  { x1: 228, y1: 18, x2: 312, y2: 58 },
+  { x1: 77, y1: 175, x2: 282, y2: 200 },
 ];
 // Animated doors: slot, first and last frame (REST.LIB), the item that opens them, steps every n passes.
 const DOORS = [
   { slot: 20, first: 579, last: 588, item: 1, every: 5, x: 87, y: 96 },
   { slot: 21, first: 589, last: 598, item: 2, every: 5, x: 242, y: 102 },
   { slot: 22, first: 599, last: 609, item: 4, every: 1, x: 230, y: 7 },
-];
-/** Mission briefing lines in MISSIONS.PAS per level (DS:0x910 + 4 level). */
-const BRIEFING: [number, number][] = [[1, 14], [16, 30], [32, 47], [49, 64], [66, 79], [81, 96]];
-const ENDING: [number, number] = [98, 119];
-const JOIN_KEYS = [
-  { code: 'Enter', label: 'Ja' },
-  { code: 'Escape', label: 'Nein' },
 ];
 // The cheat (0x1CF34): typing G-E-D-A-N-K-E sets both players' money to 666666.
 const CHEAT = ['KeyG', 'KeyE', 'KeyD', 'KeyA', 'KeyN', 'KeyK', 'KeyE'];
@@ -141,7 +136,7 @@ export function* hangar(ctx: Ctx): Proc {
       doorSound(ctx, now);
       hover = now;
     }
-    label(ctx, now === 0 ? null : ITEMS[now - 1].label);
+    label(ctx, now === 0 ? null : strings(ctx.settings.language).hangarItems[now - 1]);
     passes += 1;
     for (const d of DOORS) {
       if (passes % d.every !== 0) continue;
@@ -196,7 +191,9 @@ export function* hangar(ctx: Ctx): Proc {
  */
 function* shootEmAll(ctx: Ctx, dev?: { atBoss: boolean }): Proc<'hangar' | 'menu'> {
   const w = ctx.world;
-  const [first, last] = BRIEFING[w.level - 1];
+  // Mission briefing lines in MISSIONS.PAS per level (the original's DS:0x910 + 4 level), then the ending
+  const sections = missionSections(gameText(ctx.data, ctx.settings.language, 'MISSIONS.PAS'));
+  const [first, last] = sections[w.level - 1];
   if (!dev) yield* textViewer(ctx, { file: 'MISSIONS.PAS', centred: false, first, last, mode: 2, frameDelay: 0 });
   const result = yield* playLevel(ctx, w.level, dev?.atBoss);
   // Back from the level: faded out after a completed level; after game over or Esc the original cuts
@@ -205,7 +202,7 @@ function* shootEmAll(ctx: Ctx, dev?: { atBoss: boolean }): Proc<'hangar' | 'menu
   ctx.screen.fade = 0;
   ctx.screen.clear();
   if (result === 'done' && w.gameCompleted) {
-    yield* textViewer(ctx, { file: 'MISSIONS.PAS', centred: false, first: ENDING[0], last: ENDING[1], mode: 1, frameDelay: 130 });
+    yield* textViewer(ctx, { file: 'MISSIONS.PAS', centred: false, first: sections[6][0], last: sections[6][1], mode: 1, frameDelay: 130 });
     // The original quits here and endvideo.bat plays CD track 9 with the ending video; the remake then
     // returns to the main menu.
     yield* playVideo(ctx, 'ending', 9);
@@ -220,9 +217,10 @@ function* shootEmAll(ctx: Ctx, dev?: { atBoss: boolean }): Proc<'hangar' | 'menu
 /** "Multiplayer": P2 joins on Enter; it can't be undone. Touch gets Ja/Nein buttons (Enter / Esc). */
 function* multiplayer(ctx: Ctx): Proc {
   const input = ctx.input;
+  const t = strings(ctx.settings.language);
   if (!ctx.world.twoPlayer) {
-    label(ctx, 'Verstärkung? Enter=Ja, Rest=Nein');
-    ctx.touchKeys = JOIN_KEYS;
+    label(ctx, t.joinQuestion);
+    ctx.touchKeys = [{ code: 'Enter', label: t.yes }, { code: 'Escape', label: t.no }];
     yield* frame(ctx, 15);
     while (!input.anyKey()) yield 10; // busy wait without redrawing
     if (input.held('Enter')) {
@@ -232,7 +230,7 @@ function* multiplayer(ctx: Ctx): Proc {
     while (input.anyKey()) yield 10;
     ctx.touchKeys = [];
   } else {
-    label(ctx, 'Zurückschalten nicht möglich!');
+    label(ctx, t.cantSwitchBack);
     yield* frame(ctx, 15);
     while (input.mouse.down || input.anyKey()) yield 10;
     while (!input.mouse.down && !input.anyKey()) yield 10;

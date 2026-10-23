@@ -5,6 +5,7 @@
 // paging, Ja/Nein, the hangar's cheat) through Ctx.touchKeys. The menus themselves take taps on the canvas as
 // mouse clicks.
 
+import { strings, type Lang } from '../i18n';
 import { NO_INPUT, type PlayerInput } from '../sim/state';
 
 export interface Rect {
@@ -95,10 +96,10 @@ export function stickDirections(dx: number, dy: number, radius: number) {
 }
 
 const BUTTONS = [
-  { id: 'fire', label: 'Feuer', big: true },
-  { id: 'altitude', label: 'Höhe', big: false },
-  { id: 'select', label: 'Bonus<br>wählen', big: false },
-  { id: 'use', label: 'Bonus<br>feuern', big: false },
+  { id: 'fire', big: true }, // labels: i18n's touch
+  { id: 'altitude', big: false },
+  { id: 'select', big: false },
+  { id: 'use', big: false },
 ] as const;
 export type ButtonId = (typeof BUTTONS)[number]['id'];
 const DOUBLE_TAP_MS = 300; // a double tap on Feuer locks autofire, the next tap releases it
@@ -148,6 +149,7 @@ export class TouchControls {
   private autofire = false;
   private lastFireTap = -Infinity;
   private radius = 50;
+  private lang: Lang = 'de';
 
   /** `only`: the game buttons to show (all by default; the prototype in src/sly/ has only Feuer). */
   constructor(parent: HTMLElement, onFullscreen?: () => void, onRemaster?: () => void, private readonly only?: readonly ButtonId[]) {
@@ -158,7 +160,7 @@ export class TouchControls {
     for (const b of BUTTONS) {
       const el = document.createElement('div');
       el.className = 'b';
-      el.innerHTML = b.label;
+      el.innerHTML = strings(this.lang).touch[b.id];
       el.hidden = true;
       this.buttons.set(b.id, el);
       this.root.appendChild(el);
@@ -237,6 +239,13 @@ export class TouchControls {
   /** A key button (KeyboardEvent.code) is held. */
   held(code: string): boolean {
     return this.sampled.has(code) && this.keys.some((k) => k.code === code);
+  }
+
+  /** The game buttons' labels (Feuer, Höhe …) in this language. */
+  setLanguage(lang: Lang): void {
+    if (lang === this.lang) return;
+    this.lang = lang;
+    for (const b of BUTTONS) this.buttons.get(b.id)!.innerHTML = strings(lang).touch[b.id];
   }
 
   anyKey(): boolean {

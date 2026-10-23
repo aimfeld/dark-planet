@@ -151,6 +151,22 @@ describe.skipIf(!hasData)('menus', () => {
     expect(s.picture).toBe('UMBILD');
   });
 
+  it('options: the language line switches every line at once', async () => {
+    const { game, run, press, click } = await setup();
+    run(40);
+    press('Enter');
+    run(40);
+    click(270, 40, 60);
+    const s = game.screen;
+    for (let i = 0; i < 5; i++) press('ArrowDown', 1);
+    expect(s.texts.get(823)?.text).toBe('Sprache: Deutsch');
+    press('Enter');
+    expect(game.settings.language).toBe('en');
+    expect(s.texts.get(823)?.text).toBe('Language: English');
+    expect(s.texts.get(818)?.text).toBe('Controls Player1:Keyboard');
+    expect(s.texts.get(824)?.text).toBe('Leave Menu');
+  });
+
   it('story scrolls one pixel per frame, a line every 11 frames', async () => {
     const { game, run, press, dump } = await setup();
     run(40);

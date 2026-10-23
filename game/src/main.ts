@@ -8,6 +8,7 @@ import { Keyboard } from './input/keyboard';
 import { toggleFullscreen } from './input/fullscreen';
 import { Gamepad } from './input/gamepad';
 import { keyLegend } from './input/keyLegend';
+import { strings, systemLanguage, type Strings } from './i18n';
 import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchKey, type TouchLayout } from './input/touch';
@@ -33,6 +34,7 @@ const INSTALLED =
 function loadSettings(): Settings {
   const s = structuredClone(DEFAULT_SETTINGS);
   if (TOUCH_DEVICE) s.control = [5, 1]; // P1 touch (P2 the keyboard, for a tablet with one)
+  s.language = systemLanguage();
   try {
     Object.assign(s, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'));
   } catch {
@@ -119,7 +121,7 @@ const within = <T>(promise: Promise<T>, ms: number) =>
  * waits for it and reloads ("Lade Update…"). The app also asks whenever it comes back to the screen and every hour;
  * `onUpdate` is called when a new version has taken over, and the caller reloads at a moment that loses nothing.
  */
-async function registerOffline(base: string, status: HTMLElement, onUpdate: () => void): Promise<void> {
+async function registerOffline(base: string, status: HTMLElement, t: Strings, onUpdate: () => void): Promise<void> {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
   navigator.storage?.persist?.().catch(() => undefined);
   const sw = navigator.serviceWorker;
@@ -148,24 +150,27 @@ async function registerOffline(base: string, status: HTMLElement, onUpdate: () =
   if (!controlled) return; // the first visit: this page is the newest version
   await within(check(), UPDATE_CHECK_MS);
   if (!updated && !reg.installing && !reg.waiting) return;
-  status.textContent = 'Lade Update…';
+  status.textContent = t.loadingUpdate;
   await within(changed, UPDATE_INSTALL_MS);
   if (updated) {
     location.reload();
     await new Promise(() => undefined); // the page is going away
   }
-  status.textContent = 'Lade Daten…';
+  status.textContent = t.loading;
 }
 
 async function main(): Promise<void> {
+  const settings = loadSettings();
+  const t = () => strings(settings.language);
+  document.documentElement.lang = settings.language;
   const status = document.getElementById('status')!;
-  status.textContent = 'Lade Daten…';
+  status.textContent = t().loading;
   const base = import.meta.env.BASE_URL;
   const data = await loadGameData({
     json: async (name) => (await fetch(base + 'data/' + name)).json(),
     binary: async (name) => (await fetch(base + 'data/' + name)).arrayBuffer(),
   }).catch((e) => {
-    status.textContent = 'Daten konnten nicht geladen werden (game/public/data/)';
+    status.textContent = t().loadFailed('game/public/data/');
     throw e;
   });
   const sfx = await Sfx.load(base + 'data/').catch((e) => {
@@ -179,7 +184,7 @@ async function main(): Promise<void> {
   let updateReady = false;
   const canReload = () =>
     game === undefined || game.atStart || game.atMainMenu || (game.view === 'video' && video.name === 'intro');
-  await registerOffline(base, status, () => {
+  await registerOffline(base, status, t(), () => {
     updateReady = true;
     if (canReload()) location.reload();
   });
@@ -213,7 +218,6 @@ async function main(): Promise<void> {
       return playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad, touch);
     },
   };
-  const settings = loadSettings();
   const touchUsed = () => settings.control.includes(5);
   status.textContent = '';
   view.setArea(touchUsed() ? layout().game : null);
@@ -240,7 +244,7 @@ async function main(): Promise<void> {
     legend.hidden = TOUCH_DEVICE || touchUsed();
     const playing = game!.atStart ? 'start' : game!.view === 'video' ? video.name
       : game!.view === 'screen' && game!.screen.picture === 'UMBILD' ? 'hangar' : '';
-    const text = keyLegend(settings.control, game!.world.players.map((p) => p.active), playing).join('\n');
+    const text = keyLegend(settings.language, settings.control, game!.world.players.map((p) => p.active), playing).join('\n');
     if (legend.textContent !== text) legend.textContent = text;
     view.setBelow(legend.hidden ? 0 : legend.offsetHeight);
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
@@ -259,7 +263,7 @@ async function main(): Promise<void> {
   toggleRemaster = () => {
     settings.remastered = !settings.remastered;
     saveSettings(settings);
-    showRemaster(settings.remastered ? 'Grafik: Remastered' : 'Grafik: Classic');
+    showRemaster(t().graphicsToast(settings.remastered));
   };
 
   let acc = 0;
@@ -306,6 +310,8 @@ async function main(): Promise<void> {
     const touchOnly = game.view === 'world' || game.touchKeys === CHEAT_KEYS;
     const touchKeys = !touchOnly || TOUCH_DEVICE || touchUsed() ? game.touchKeys : NO_KEYS;
     // The videos (intro, ending) have no remastered version: no HD button over them.
+    touch.setLanguage(settings.language);
+    document.documentElement.lang = settings.language;
     touch.update(touchPlays, touchKeys, layout(), settings.remastered, game.view !== 'video');
     view.setArea(touchUsed() ? layout().game : null);
     showKeys();

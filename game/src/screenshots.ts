@@ -332,7 +332,7 @@ class Shots {
   /** A Game at its main menu (no start screen, no intro video), with scripted keys and mouse. */
   private menuGame(seed: number) {
     const input = new Script();
-    const settings = { control: [1, 4] as [number, number], cdSound: false, soundEffects: false, remastered: true };
+    const settings = { control: [1, 4] as [number, number], cdSound: false, soundEffects: false, remastered: true, language: 'de' as const };
     const game = new Game(createWorld(this.data, seed), input, settings, undefined, undefined, undefined, memorySlot(),
       undefined, false);
     const hiRes = this.view.hiRes;

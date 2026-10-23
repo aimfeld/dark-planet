@@ -18,7 +18,7 @@ import { playVideo } from './screens/video';
  * mouse), so two players can share one keyboard right away (user, session 12). The remake starts with the
  * remastered graphics (user, session 18).
  */
-export const DEFAULT_SETTINGS: Settings = { control: [1, 4], cdSound: true, soundEffects: true, remastered: true };
+export const DEFAULT_SETTINGS: Settings = { control: [1, 4], cdSound: true, soundEffects: true, remastered: true, language: 'de' };
 
 /** A save slot in memory (tests, or no browser storage). */
 export function memorySlot(): SaveSlot {

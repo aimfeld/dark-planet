@@ -9,6 +9,7 @@ import { toggleFullscreen } from '../input/fullscreen';
 import { Gamepad } from '../input/gamepad';
 import { Keyboard } from '../input/keyboard';
 import { TouchControls, touchLayout, type TouchKey } from '../input/touch';
+import { strings, storedLanguage } from '../i18n';
 import { loadSlyData } from './data';
 import { Sly } from './sim';
 import { SlyView } from './view';
@@ -24,8 +25,9 @@ const LAUGH = 38; // FXInit's Sounds[38], LACHEN2: Sly's laugh
  */
 const VOICES = { gains: { 34: 3, 35: 3, 36: 3, 37: 3, 38: 3 }, duck: 0.32 };
 
+const t = strings(storedLanguage()); // Dark Planet's language setting
 const PLAY_KEYS: TouchKey[] = [{ code: 'Escape', label: 'Esc' }];
-const END_KEYS: TouchKey[] = [{ code: 'Enter', label: 'Nochmal' }, { code: 'Escape', label: 'Zurück' }];
+const END_KEYS: TouchKey[] = [{ code: 'Enter', label: t.sly.again }, { code: 'Escape', label: t.sly.back }];
 
 function insets() {
   const probe = document.createElement('div');
@@ -44,12 +46,14 @@ async function main(): Promise<void> {
   const title = document.getElementById('title')!;
   const legend = document.getElementById('keys')!;
   const base = import.meta.env.BASE_URL;
-  status.textContent = 'Lade Daten…';
+  document.documentElement.lang = storedLanguage();
+  legend.textContent = t.sly.keys;
+  status.textContent = t.loading;
   const data = await loadSlyData({
     json: async (name) => (await fetch(base + 'sly/' + name)).json(),
     binary: async (name) => (await fetch(base + 'sly/' + name)).arrayBuffer(),
   }).catch((e) => {
-    status.textContent = 'Daten konnten nicht geladen werden (game/public/sly/)';
+    status.textContent = t.loadFailed('game/public/sly/');
     throw e;
   });
   const sfx = await Sfx.load(base + 'sly/', VOICES).catch((e) => {
@@ -103,7 +107,7 @@ async function main(): Promise<void> {
   const showText = () => {
     title.hidden = state === 'play';
     document.body.style.cursor = state === 'play' ? 'none' : '';
-    if (state === 'end') title.innerHTML = 'Programm beendet<br><br>Enter: nochmal &nbsp; Esc: zurück zu Dark Planet';
+    if (state === 'end') title.innerHTML = t.sly.end;
     legend.hidden = TOUCH_DEVICE || state !== 'play';
     if (!legend.hidden) {
       const p = view.picture;
@@ -166,8 +170,7 @@ async function main(): Promise<void> {
     sfx?.setHidden(document.hidden);
     last = performance.now();
   });
-  title.innerHTML = 'Dark Planet: die Sly-Version<br>(der Prototyp von 1997)<br><br>' +
-    (TOUCH_DEVICE ? 'Zum Starten tippen' : 'Taste drücken');
+  title.innerHTML = `${t.sly.title}<br><br>${t.sly.start(TOUCH_DEVICE)}`;
   requestAnimationFrame(frame);
   laugh();
 }

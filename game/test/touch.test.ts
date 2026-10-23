@@ -99,7 +99,7 @@ describe.skipIf(!hasData)('touch in the menus', () => {
     click(120, 128); // line 5: Grafik (the remake's remastered graphics, on by default)
     expect(game.settings.remastered).toBe(false);
     expect(game.screen.texts.get(822)?.text).toBe('Grafik: Classic');
-    click(120, 148); // line 6: Menu verlassen
+    click(120, 168); // line 7: Menu verlassen
     run(40);
     expect(game.screen.picture).toBe('UMBILD');
   });

@@ -4,7 +4,9 @@
 // wechseln, Haupt Menu. Plus the player switch and the money exchange for two players.
 // The original edits a copy of the player record and writes it back; the remake edits the Player directly.
 
+import { strings } from '../i18n';
 import type { Player } from '../sim/state';
+import { gameText } from '../texts';
 import { MODE_SHADOW } from '../sim/state';
 import { hitDetectIn } from '../sim/sprites';
 import { encodeSave } from '../save';
@@ -13,7 +15,6 @@ import { delay, DRAW_MS, fadeIn, frame, playSound, type Ctx, type Proc } from '.
 // Categories (ItemInfo 1d9e:3C5A): 1 small pods, 2 large pods, 3 boni, 4 engines, 5 shields, 6 ball pods,
 // 7 jets; 8 = the jet's standard weapon (mount 2, never offered).
 const SMALL = 1, LARGE = 2, BONI = 3, ENGINE = 4, SHIELD = 5, BALL = 6, JET = 7, STANDARD = 8;
-const CAT_NAMES = ['', 'Kleine Pods', 'Grosse Pods', 'Boni', 'Antriebe', 'Schilde', 'Kugel Pods', 'Jets'];
 const CAT_COUNT = [0, 7, 11, 11, 3, 3, 4, 5];
 
 // Positions on the jet display p = 0..13 (DS:0x9C2 / 0x9D0): 0 large nose, 1 engine, 2 small, 3 standard,
@@ -251,7 +252,7 @@ function line(sh: Shop, k: number, str: string): void {
 
 /** Info box 1d9e:4366 from INFO.PAS: SPEZIAL<n> (with the INFO header), or THEMA<cat> ART<id>. */
 function info(sh: Shop, spezial: number, cat = 0, id = 0): void {
-  const lines = sh.ctx.data.texts['INFO.PAS'];
+  const lines = gameText(sh.ctx.data, sh.ctx.settings.language, 'INFO.PAS');
   let body: string[] | null;
   if (spezial !== 0) {
     header(sh, INFO_ICON, 0, -17, 6);
@@ -262,7 +263,7 @@ function info(sh: Shop, spezial: number, cat = 0, id = 0): void {
     const start = lines.indexOf(`BEGIN THEMA${cat}`);
     const end = start < 0 ? -1 : lines.indexOf(`END THEMA${cat}`, start);
     body = start < 0 ? null : section(lines, start, end < 0 ? lines.length : end, `BEGIN ART${id}`, `END ART${id}`);
-    if (body === null) body = ['Noch kein Text!']; // plus a PC-speaker beep in the original
+    if (body === null) body = [strings(sh.ctx.settings.language).noText]; // plus a PC-speaker beep in the original
   }
   (body ?? []).forEach((str, i) => line(sh, i + 1, str));
 }
@@ -278,7 +279,8 @@ function section(lines: string[], from: number, to: number, begin: string, end: 
 /** "Gekauft" with "Investiert:" + price (1d9e:7504), or "Verkauft" with the refund (1d9e:54E2). */
 function dealMessage(sh: Shop, bought: boolean, value: number): void {
   info(sh, bought ? 5 : 6);
-  line(sh, 2, (bought ? 'Investiert:' : 'Rückzahlung: ') + value);
+  const t = strings(sh.ctx.settings.language);
+  line(sh, 2, (bought ? t.invested : t.refund) + value);
 }
 
 /** Highlight frames (1d9e:50A5 / 4FC7): every position of `cat` the jet has, or only `pos`, in slots 26 + count. */
@@ -346,7 +348,7 @@ function drawOffers(sh: Shop): void {
 function rebuildOffers(sh: Shop): void {
   const s = sh.ctx.screen;
   sh.offers = [undefined, ...offers(sh.ctx, pl(sh), sh.cat)];
-  const w = text(sh, T_CAT, CAT_NAMES[sh.cat]);
+  const w = text(sh, T_CAT, strings(sh.ctx.settings.language).categories[sh.cat]);
   s.set(3, T_CAT, 94 - (w >> 1), 141);
   drawOffers(sh);
   clearLines(sh);

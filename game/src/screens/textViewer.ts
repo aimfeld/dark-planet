@@ -3,6 +3,7 @@
 // The remake also ends the scrolling texts and the briefings on a tap, and offers the manual's keys as touch
 // buttons.
 
+import { gameText } from '../texts';
 import { delay, fadeIn, fadeOut, frame, playSound, waitNoKey, type Ctx, type Proc } from './proc';
 
 export interface ViewerArgs {
@@ -27,7 +28,7 @@ const MANUAL_KEYS = [
 
 export function* textViewer(ctx: Ctx, a: ViewerArgs): Proc {
   const s = ctx.screen;
-  const lines = ctx.data.texts[a.file];
+  const lines = gameText(ctx.data, ctx.settings.language, a.file);
   const line = (n: number) => (n <= a.last && lines[n - 1]) || ' '; // an empty line becomes " "
   s.clear();
   yield* fadeOut(ctx);

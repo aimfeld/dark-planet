@@ -297,7 +297,8 @@ this part of our childhood: how we became programmers, how much effort we put in
 in general. The store page should tell that story, not only sell a shooter.
 
 #### To discuss (open; my recommendations in *italics*)
-1. **Languages.** English is needed, with German ↔ English switchable at any time. Decision 2 said "classic German
+1. ~~Languages~~ **Decided (user, session 24): the language is its own setting, independent of the graphics mode**
+   (decision 29). English is needed, with German ↔ English switchable at any time. Decision 2 said "classic German
    only". *Make the language independent of the graphics mode, so a Steam player who picks Classic 1998 can still
    read English. German stays labelled as the original. The default comes from the system language (Steam passes
    its language to the game; the browser has `navigator.language`).* Needs the user's OK, because it changes
@@ -328,6 +329,9 @@ in general. The store page should tell that story, not only sell a shooter.
    Cropping 6× to 1080 would cut the HUD (money at the top, bonus boxes at the bottom). *Scale the full picture to
    1728 × 1080 (5.4×: nearest 6×, then a smooth downscale, "sharp bilinear") with 96 px bars on each side. Use the
    same for the videos.* Alternative: integer 5× (1600 × 1000) with bars all round.
+   Stretching to 16:9 (asked by the user, session 24) is worse: the pixels stop being square (10 % squashed, against
+   decision 20), rows end up 5 or 6 px tall, which shimmers in a scrolling trailer, and Steam wants the game as it is
+   played. The 96 px bars are 5 % of the width and hardly show on the store's dark background. Not yet decided.
 6. **AI content disclosure.** Since January 2026 Steam only asks about AI-generated content that players see
    (in-game and marketing). Code assistants (Claude Code) don't need to be disclosed. hq4x is a classic algorithm,
    not AI. *Keep all store art and new sprites AI-free, so the page needs no AI label.* (The Real-ESRGAN renders
@@ -347,10 +351,15 @@ in general. The store page should tell that story, not only sell a shooter.
    - Sly prototype: **the user asks Sly** whether it goes into the Steam release or stays browser-only. Until then
      the Steam build hides "Prototyp 1997" (a build flag).
    - [ ] Check the texts for real people (classmates, teachers) named in the insider jokes.
-9. **Title.** Other games share the name (Ubisoft's *Dark Planet: Battle for Natrolis*, 2002, and itch.io games
+9. ~~Title~~ **Decided (user, session 24): "Dark Planet Remastered".** Other games share the name (Ubisoft's *Dark Planet: Battle for Natrolis*, 2002, and itch.io games
    called *The Dark Planet*). **The user (session 23): "Dark Planet Remastered" or "Dark Planet 1998".** No Steam
    game with either name was found (2026-10-23). *"Dark Planet Remastered": it says what the game is, and it
    matches the repo and the start screen's "Classic 1998 / Remastered 2026".*
+   Session 24 check (2026-10-23): neither name exists on Steam (store search API), itch.io or the web. Other "Dark
+   Planet"s: Stern's arcade game (1982), Ubisoft's RTS (2002), the film (1997), a few itch.io games. The only US
+   trademark "DARK PLANET" found covers books and comics (Reg. 4879812), not games; the USPTO wasn't searched
+   directly. **Decided (user, session 24): "Dark Planet Remastered"** (decision 30). With other Dark Planets from 1982,
+   1997 and 2002, a year in the title would just look like one more of them.
    **Developer/publisher name:** "Horse Productions". These are free text in Steamworks, not registered names, and
    no Steam developer or publisher with that name was found (2026-10-23). The Steamworks partner account itself is
    in the name of a real person.
@@ -364,16 +373,20 @@ in general. The store page should tell that story, not only sell a shooter.
 About 4,300 words in `texts.json` (STORY.TXT 1,270, ANLEIT.UNG 1,050, INFO.PAS 1,080, MISSIONS.PAS 480, ABOUT.TXT
 470), plus the remake's own UI strings (start screen, options, hangar status, key legend, touch buttons, messages
 such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked into pictures and sprites.
-- [ ] Inventory of text in pictures and sprites: main menu items (see 2), shop buttons and labels (KAUFEN,
-  VERKAUFEN, POSITION WECHSEL, HAUPT MENU, GELD AUSTAUSCH, ANTRIEB, BONI, KUGEL, KL.POD, GR.PODS, STANDADPOD), HUD
-  bonus names, "Loser!", the hangar, and the intro and ending videos (check frame by frame for German text).
-- [ ] i18n structure: `texts.en.json` next to `texts.json` with the same BEGIN/END markers and hand-wrapped lines;
-  the UI strings in one table (`src/i18n.ts`); a `language` setting (Options line, start screen) that switches at
-  once, both in the browser and on Steam.
-- [ ] Overflow check as a test: measure every line in both languages with the font's glyph widths (`fonts.json`)
-  against its box (shop info box: line count and width in DEFAULT; text viewer: width in SUPER; options and hangar
-  lines in BROADWA; start screen). The shop info box holds about 18 characters × 7 lines, so English item texts
-  must be rewritten to fit, not translated word for word.
+- [x] Inventory of everything a player reads (session 24): `docs/translation-notes.md`. New art is needed only for
+  the four main menu items and the shop panel's labels (sprite 501); the HUD bonus names, PLAYER 1/2, EXIT, INFO
+  and the videos' texts are English already, and the pictures have no text.
+- [x] i18n structure (session 24): `settings.language` (default from the system language), Options line 6 and a
+  fourth line on the start screen, both switching at once (spec §14). UI strings in `src/i18n.ts` (German and
+  English, the English typed against the German); the text files in `src/texts.ts`: English as plain UTF-8 files
+  in `game/src/texts/en/` with the original names (a missing file falls back to German), and the line ranges the
+  original hard-coded (briefings DS:0x910, story 261, about 207) derived from the files, pinned by a test to the
+  German values. The prototype page takes the stored language. Still German: the main menu and shop sprites.
+- [x] Overflow check as a test (`test/i18n.test.ts`, session 24): every UI string in both languages measured with
+  the fonts against where it is drawn; the English text files no wider than the widest German line (SUPER, or
+  DEFAULT for the shop's INFO.PAS), INFO.PAS with the same BEGIN/END markers, briefings at most 20 lines. The
+  shop info box holds about 18 characters × 6 lines, so English item texts must be rewritten to fit.
+- [ ] Steam: pass Steam's language to the game (the Electron build), so the default follows the Steam client.
 - [ ] Draft translation by Claude, with a list of the passages that need the user (insider jokes, slang, Swiss
   German, puns like "Schlitzohr" and "Fladnag der Graue") in `docs/translation-notes.md`. Then the user reviews
   everything; the jokes should still be funny in English rather than literal.
@@ -461,8 +474,11 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
 24. Audio stays original (user, session 17): the remastered variants (higher bitrate, pseudo-stereo, AudioSR, cleaned SFX) add nothing or add hiss; the music was recorded in poor quality and no song files exist.
 25. Two graphics modes only, Classic and Remastered (always with the effects); Remastered is the default (user, session 18).
 26. Publish on Steam as a free game, to commemorate the project and DOS retro games rather than to make money (user, session 23). This replaces "optional" in decision 14 and "Distribution". English becomes necessary, switchable with German (Phase 5).
-27. Steam: Windows and Linux/Steam Deck only, no macOS build (no yearly $99 Apple Developer fee; the $100 Steam fee is fine). Title "Dark Planet Remastered" or "Dark Planet 1998" (not yet chosen), developer "Horse Productions" (user, session 23).
+27. Steam: Windows and Linux/Steam Deck only, no macOS build (no yearly $99 Apple Developer fee; the $100 Steam fee is fine). Title: see decision 30, developer "Horse Productions" (user, session 23).
 28. Jan (contact lost): the user is trying to reach him; if that fails, release anyway and take the game down if he objects (user, session 23). The soundtrack is entirely the user's own work.
+29. Language is a setting of its own, independent of the graphics mode: Classic 1998 can be played in English too. German is labelled as the original; the default comes from the system language (user, session 24). This replaces decision 2.
+30. Steam title: "Dark Planet Remastered" (user, session 24). Neither it nor "Dark Planet 1998" exists on Steam or itch.io (checked 2026-10-23); with other Dark Planets from 1982, 1997 and 2002, a year wouldn't set the game apart.
+31. The cheat stays GEDANKE in English too; the English riddle must still lead to the German word (user, session 24).
 
 
 ## Notes (session 11, polish pass)

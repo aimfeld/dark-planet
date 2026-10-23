@@ -9,13 +9,12 @@ import { newGameState } from '../sim/tick';
 import { FADE_STEPS } from '../sim/state';
 import { cdPlay, delay, fadeIn, fadeOut, frame, playSound, waitMouseUp, waitNoKey, type Ctx, type Proc } from './proc';
 import { textViewer } from './textViewer';
+import { strings } from '../i18n';
+import { gameText, lastLine } from '../texts';
 
 const ITEMS = 6; // Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions (about), Exit
 const itemSprite = (i: number) => 613 + 11 * (i - 1); // 0x265
 const itemSlot = (i: number) => 13 + i;
-// The original shows ABOUT.TXT up to line 199 (@0x1D989) and cuts the cheat riddle off after its second line;
-// the remake shows it to its last line (spec §12 #20).
-const ABOUT_LAST = 207;
 
 function* drawMainMenu(ctx: Ctx, selected: number): Proc {
   const s = ctx.screen;
@@ -74,8 +73,7 @@ function* cheated(ctx: Ctx): Proc {
   s.palette = 'EPIS1';
   s.font = 'DEFAULT'; // (DOS text mode in the original)
   s.ink = 0x1c;
-  const lines = ['Na du kleines Schlitzohr, so läuft das aber nicht!', 'Da musste schon früher aufstehen, um den Saveschutz', 'übers Ohr zu hauen!!!'];
-  lines.forEach((str, i) => {
+  strings(ctx.settings.language).cheated.forEach((str, i) => {
     s.makeText(900 + i, str);
     s.set(10 + i, 900 + i, 4, 8 + 8 * i);
   });
@@ -88,6 +86,7 @@ function* cheated(ctx: Ctx): Proc {
 export function* mainMenu(ctx: Ctx): Proc {
   const s = ctx.screen;
   const held = (code: string) => ctx.input.held(code);
+  const text = (file: string) => gameText(ctx.data, ctx.settings.language, file);
   let selected = 1;
   ctx.view = 'screen';
   yield* drawMainMenu(ctx, selected);
@@ -144,15 +143,17 @@ export function* mainMenu(ctx: Ctx): Proc {
         }
         case 3:
           cdPlay(ctx, 3);
-          yield* textViewer(ctx, { file: 'STORY.TXT', centred: false, first: 1, last: 261, mode: 1, frameDelay: 150 });
+          yield* textViewer(ctx, { file: 'STORY.TXT', centred: false, first: 1, last: lastLine(text('STORY.TXT')), mode: 1, frameDelay: 150 });
           yield* drawMainMenu(ctx, selected);
           break;
         case 4:
-          yield* textViewer(ctx, { file: 'ANLEIT.UNG', centred: false, first: 1, last: 288, mode: 3, frameDelay: 0 });
+          yield* textViewer(ctx, { file: 'ANLEIT.UNG', centred: false, first: 1, last: text('ANLEIT.UNG').length, mode: 3, frameDelay: 0 });
           yield* drawMainMenu(ctx, selected);
           break;
         case 5:
-          yield* textViewer(ctx, { file: 'ABOUT.TXT', centred: true, first: 1, last: ABOUT_LAST, mode: 1, frameDelay: 80 });
+          // The original shows ABOUT.TXT up to line 199 (@0x1D989) and cuts the cheat riddle off after its second
+          // line; the remake shows it to its last line (spec §12 #20).
+          yield* textViewer(ctx, { file: 'ABOUT.TXT', centred: true, first: 1, last: lastLine(text('ABOUT.TXT')), mode: 1, frameDelay: 80 });
           yield* drawMainMenu(ctx, selected);
           break;
         case 6:
