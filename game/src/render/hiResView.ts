@@ -35,6 +35,7 @@ interface Index {
   chunk: number;
   groups: Record<string, number>;
   sprites: Record<PaletteName, Record<string, Entry>>;
+  english?: Partial<Record<PaletteName, Record<string, Entry>>>; // tools/export_english_sprites.py
   pictures: Record<string, string>;
   fonts: Record<string, { file: string; cell: [number, number]; glyphs: Record<string, [number, number]> }>;
 }
@@ -175,10 +176,11 @@ export class HiResView {
 
   /** The upscaled frame of sprite n in `palette`; the indexed one (nearest) if it has none or its page still loads. */
   private frame(n: number, palette: PaletteName): Frame | null {
-    const key = `${palette}/${n}`;
+    const english = this.data.spriteLanguage === 'en' ? this.index!.english?.[palette]?.[n] : undefined;
+    const key = `${english ? 'en/' : ''}${palette}/${n}`;
     const known = this.frames.get(key);
     if (known) return known;
-    const entry = this.index!.sprites[palette]?.[n];
+    const entry = english ?? this.index!.sprites[palette]?.[n];
     const page = entry && this.texture(`${entry[0]}_${entry[1]}.avif`);
     if (!entry || !page) return this.indexedSprite(n, palette);
     const [, , x, y, w, h, ox, oy] = entry;
@@ -189,7 +191,7 @@ export class HiResView {
 
   /** Sprite n as the 320 x 200 picture, nearest-scaled. */
   private indexedSprite(n: number, palette: PaletteName): Frame | null {
-    return this.indexed(`s${palette}/${n}`, palette, () => {
+    return this.indexed(`s${this.data.spriteLanguage}${palette}/${n}`, palette, () => {
       const s = this.data.sprites.get(n);
       return s ? { w: s.w, h: s.h, px: s.px } : null;
     });

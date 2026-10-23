@@ -1,5 +1,7 @@
 // Game data exported from the original files by tools/export_engine_data.py (game/public/data/).
 
+import type { Lang } from './i18n';
+
 export interface Volley {
   dx: number;
   dy: number;
@@ -152,7 +154,9 @@ export interface Font {
 
 export interface GameData {
   tables: Tables;
-  sprites: Map<number, Sprite>;
+  sprites: Map<number, Sprite>; // in the current sprite language (useSpriteLanguage)
+  spriteLanguage: Lang;
+  spriteVariants: Record<Lang, Map<number, Sprite>>; // the sprites with text in them, per language
   tiles: Uint8Array[]; // per episode: 32 x 32 tiles, 1024 bytes each
   levels: Level[];
   fonts: Record<string, Font>;
@@ -182,10 +186,12 @@ export async function gunzip(buf: ArrayBuffer): Promise<ArrayBuffer> {
 }
 
 export async function loadGameData(raw: RawData): Promise<GameData> {
-  const [tables, spriteIndex, spriteBin, tiles1, tiles2, levels, fontIndex, fontBin, palette, pictureBin, texts] = await Promise.all([
+  const [tables, spriteIndex, spriteBin, englishIndex, englishBin, tiles1, tiles2, levels, fontIndex, fontBin, palette, pictureBin, texts] = await Promise.all([
     raw.json('tables.json'),
     raw.json('sprites.json'),
     raw.binary('sprites.bin.gz').then(gunzip),
+    raw.json('sprites-en.json'),
+    raw.binary('sprites-en.bin.gz').then(gunzip),
     raw.binary('tiles1.bin.gz').then(gunzip),
     raw.binary('tiles2.bin.gz').then(gunzip),
     raw.json('levels.json'),
@@ -195,10 +201,16 @@ export async function loadGameData(raw: RawData): Promise<GameData> {
     raw.binary('pictures.bin.gz').then(gunzip),
     raw.json('texts.json'),
   ]);
-  const sprites = new Map<number, Sprite>();
-  for (const [n, [offset, w, h]] of Object.entries(spriteIndex as Record<string, [number, number, number]>)) {
-    sprites.set(Number(n), new Sprite(w, h, new Uint8Array(spriteBin, offset, w * h)));
-  }
+  const readSprites = (index: unknown, bin: ArrayBuffer) => {
+    const out = new Map<number, Sprite>();
+    for (const [n, [offset, w, h]] of Object.entries(index as Record<string, [number, number, number]>)) {
+      out.set(Number(n), new Sprite(w, h, new Uint8Array(bin, offset, w * h)));
+    }
+    return out;
+  };
+  const sprites = readSprites(spriteIndex, spriteBin);
+  const en = readSprites(englishIndex, englishBin);
+  const de = new Map([...en.keys()].map((n) => [n, sprites.get(n)!]));
   const fonts: Record<string, Font> = {};
   for (const [name, f] of Object.entries(fontIndex as Record<string, { width: number; height: number; offset: number; widths: number[]; multicolor: boolean }>)) {
     fonts[name] = { width: f.width, height: f.height, widths: f.widths, multicolor: f.multicolor, glyphs: new Uint8Array(fontBin, f.offset, 256 * f.width * f.height) };
@@ -206,6 +218,8 @@ export async function loadGameData(raw: RawData): Promise<GameData> {
   return {
     tables: tables as Tables,
     sprites,
+    spriteLanguage: 'de',
+    spriteVariants: { de, en },
     tiles: [new Uint8Array(tiles1), new Uint8Array(tiles2)],
     levels: levels as Level[],
     fonts,
@@ -213,4 +227,14 @@ export async function loadGameData(raw: RawData): Promise<GameData> {
     pictures: Object.fromEntries(PICTURES.map((name, i) => [name, new Uint8Array(pictureBin, i * 64000, 64000)])) as GameData['pictures'],
     texts: texts as GameData['texts'],
   };
+}
+
+/**
+ * Show the sprites with text in them in `lang` (Phase 5): the main menu items and the shop panel
+ * (tools/export_english_sprites.py). German shows the originals.
+ */
+export function useSpriteLanguage(data: GameData, lang: Lang): void {
+  if (data.spriteLanguage === lang) return;
+  data.spriteLanguage = lang;
+  for (const [n, s] of data.spriteVariants[lang]) data.sprites.set(n, s);
 }

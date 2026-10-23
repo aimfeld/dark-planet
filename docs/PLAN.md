@@ -311,6 +311,23 @@ in general. The store page should tell that story, not only sell a shooter.
    "The Story", "Manual". If it can't match, fall back to the user drawing or rendering them by hand.* Both modes need
    them: 320 × 200 for classic, and hq4x of the new sprites (or a direct 4× render) for remastered. No AI-generated
    art (see 6).
+   **Done, awaiting the user's review (session 25, 2026-10-23):** `tools/menu_items.py` renders extruded 3D text
+   (point-splatted, z-buffered, 4× supersampled, mapped to the HMBILD colours the originals use). The originals
+   were made in 3D Studio Max (the user); their glow frames are a vertical wave running through the text (Max's
+   Wave modifier), plus a black outline. A pixel match wasn't reachable (a different font per item), so the
+   generator matches the style, and the English items use one font (DejaVu Sans) at the originals' heights.
+   First round: the user asked for the vertical wave instead of a per-letter wobble, and the black outline. Second
+   round: a slightly bolder font, a stronger and slightly faster wave, an anti-aliased outline, one camera for
+   the whole menu with its horizon at the bottom of item 3, and all six items re-rendered for English (Horse
+   Productions and Exit too, so the set matches). The goal (user): the original German rendering as closely as
+   possible, with English text.
+   `compare` shows the originals next to its German re-renders, `preview` writes the menu as a GIF. Details in
+   translation-notes "English sprites".
+   - [x] Remastered items rendered directly at 4× for both languages (user, session 25): true colour, the dark
+     outline anti-aliased against transparency, atlas group `menuitems` (`tools/remaster_upscale.py`
+     do_menu_items, about 1 MB). German in remastered mode now shows these re-renders (DejaVu Sans, sized like
+     the originals), not the hq4x originals; classic German still shows the original sprites. Checked in Chrome.
+   - [ ] **User:** review the remastered menu in both languages.
 3. **Gameplay videos.** Steam trailers: at most 1920 × 1080, 16:9, MP4 with H.264 + AAC, 30 or 60 fps, at least
    5000 kbps. The first trailer autoplays muted on the store page, so the first seconds must work without sound.
    *Instead of screen recording, the user plays normally with an input recorder on (dev build), and we render the
@@ -381,7 +398,7 @@ such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked
   English, the English typed against the German); the text files in `src/texts.ts`: English as plain UTF-8 files
   in `game/src/texts/en/` with the original names (a missing file falls back to German), and the line ranges the
   original hard-coded (briefings DS:0x910, story 261, about 207) derived from the files, pinned by a test to the
-  German values. The prototype page takes the stored language. Still German: the main menu and shop sprites.
+  German values. The prototype page takes the stored language.
 - [x] Overflow check as a test (`test/i18n.test.ts`, session 24): every UI string in both languages measured with
   the fonts against where it is drawn; the English text files against the screen (SUPER: 38 characters at x 10 in
   the text viewer, 40 centred for ABOUT; the shop's info box: 19 DEFAULT characters × 7 lines per block), INFO.PAS
@@ -393,7 +410,12 @@ such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked
   manual kept historical, and the hard passages settled one by one (`docs/translation-notes.md`).
 - [ ] The user reads the whole English text in the game; the jokes should still be funny in English rather than
   literal.
-- [ ] New main menu sprites (see 2) and, if they can't be drawn as text, the shop labels and buttons.
+- [x] English sprites (session 25): all six main menu items (see 2) and the shop panel's labels, in
+  `game/public/data/sprites-en.*` (`tools/export_english_sprites.py`) and the remastered atlases (`english` in
+  index.json: the hq4x `shop` page, the 4× `menuitems` page); `useSpriteLanguage` swaps them with the language. Checked in Chrome, classic and
+  remastered. Test `test/spriteLanguage.test.ts`.
+- [ ] **User:** review the English menu items (`tools/menu_items.py preview … en` writes the GIF) and the shop
+  labels (BALL, SMALL, STD.POD, LARGE, BONUS, ENGINE, MONEY/EXCHANGE, BUY, SELL, CHANGE/POSITION, MAIN/MENU).
 - [ ] Store page text in English and German.
 
 #### Desktop package (Electron)

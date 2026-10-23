@@ -2,7 +2,7 @@
 
 import { Music } from './audio/music';
 import { Sfx } from './audio/sfx';
-import { loadGameData } from './data';
+import { loadGameData, useSpriteLanguage } from './data';
 import { DEFAULT_SETTINGS, Game } from './game';
 import { Keyboard } from './input/keyboard';
 import { toggleFullscreen } from './input/fullscreen';
@@ -173,6 +173,7 @@ async function main(): Promise<void> {
     status.textContent = t().loadFailed('game/public/data/');
     throw e;
   });
+  useSpriteLanguage(data, settings.language);
   const sfx = await Sfx.load(base + 'data/').catch((e) => {
     console.warn('no sounds:', e);
     return undefined;
@@ -311,6 +312,7 @@ async function main(): Promise<void> {
     const touchKeys = !touchOnly || TOUCH_DEVICE || touchUsed() ? game.touchKeys : NO_KEYS;
     // The videos (intro, ending) have no remastered version: no HD button over them.
     touch.setLanguage(settings.language);
+    useSpriteLanguage(data, settings.language); // the menu items and the shop panel
     document.documentElement.lang = settings.language;
     touch.update(touchPlays, touchKeys, layout(), settings.remastered, game.view !== 'video');
     view.setArea(touchUsed() ? layout().game : null);

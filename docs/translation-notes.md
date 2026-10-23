@@ -43,7 +43,7 @@ INFO.PAS, so they are translated there.
 ### 3. Text in sprites and pictures
 | Sprite(s) | Text | Needs new art? |
 |---|---|---|
-| 613–678 (REST.LIB, main menu items, 6 × 11 frames, in the `menu`, `hangar` and `common` atlases) | Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions, Exit | yes, the first four (PLAN Phase 5, item 2) |
+| 613–678 (REST.LIB, main menu items, 6 × 11 frames, in the `menu`, `hangar` and `common` atlases) | Neues Spiel, Spiel laden, Die Geschichte, Spielanleitung, Horse Productions, Exit | yes, the first four (PLAN Phase 5, item 2); English re-renders all six for a matching set: see "English sprites" |
 | 501 (SHOP.LIB, the shop panel) | KUGEL, KL.POD, STANDADPOD [sic], SHIELD, GR.PODS (×2), BONI, ANTRIEB, GELD AUSTAUSCH, PLAYER, KAUFEN, VER KAUFEN, POSITION WECHSEL, HAUPT MENU | yes: KUGEL, KL.POD, STANDADPOD, GR.PODS, BONI, ANTRIEB, GELD AUSTAUSCH, KAUFEN, VER KAUFEN, POSITION WECHSEL, HAUPT MENU (a small all-caps pixel font, about 5 px high) |
 | 535 (the money exchange panel) | PLAYER 1, PLAYER 2 | no |
 | 536 | EXIT | no |
@@ -61,7 +61,71 @@ cut suggests one.
 New art is needed only for the four main menu items and the shop panel's labels. Everything else is text drawn
 with the game's fonts, which have every character English needs.
 
+## English sprites (session 25, 2026-10-23)
+`tools/export_english_sprites.py` writes `game/public/data/sprites-en.json` + `.bin.gz` (the sprites.json format);
+`data.ts useSpriteLanguage` swaps them into `data.sprites` while the language is English (main.ts, every frame),
+and the remastered renderer takes theirs from index.json's `english`: the shop panel upscaled with hq4x (`shop`
+page), the menu items rendered at 4× (see "Remastered menu items"). Kept under version control: the menu items depend on system fonts.
+
+### Shop panel (sprite 501, `tools/english_shop.py`)
+The labels use a 3 × 5 pixel font, 1 px apart (I and the dot 1 px wide, M and W 5 px), yellow (97) on
+transparent or dark red (253) on the yellow buttons. The English labels are built from letters harvested from
+the panel itself; only X is drawn by hand (`#.# #.# .#. #.# #.#`). Button labels are erased with the colour of the
+row above them in the same column (the faces are constant down each column).
+| German | English | Note |
+|---|---|---|
+| KUGEL | BALL | |
+| KL.POD | SMALL | SM.POD would be 23 px, the slot has 21 |
+| STANDADPOD | STD.POD | the standard weapon's slot |
+| GR.PODS (×2) | LARGE | matches SMALL |
+| BONI | BONUS | |
+| ANTRIEB | ENGINE | |
+| GELD / AUSTAUSCH | MONEY / EXCHANGE | |
+| KAUFEN | BUY | INFO.PAS's English help text names the BUY symbol |
+| VER / KAUFEN | SELL | one line |
+| POSITION / WECHSEL | CHANGE / POSITION | |
+| HAUPT / MENU | MAIN / MENU | |
+SHIELD and PLAYER stay.
+
+### Main menu items (613–678, `tools/menu_items.py`)
+The originals were rendered in **3D Studio Max** (the user, session 25). What they show (observed in the sprites):
+- Each item: a base frame and 10 glow frames, all drawn from the same top-left; the sizes vary per frame.
+- Perspective: one camera for the whole menu, its horizon at the bottom of item 3, Die Geschichte (the user,
+  session 25), so items above it show their extrusion's bottom sides and items below it their top sides.
+- Faces blue (dark steel blue to light sky blue), sides grey metal, a dark line where face and side meet, and a
+  dark outline around the silhouette (about 40 % of the edge pixels are darker than 45/255), anti-aliased against
+  black as rendered.
+- Glow frames: **a vertical wave runs through the text** (the user: no horizontal wobble), as Max's Wave modifier
+  makes it: the text bulges towards the camera and back as a sine of the height. That changes the face's height
+  (Exit 23–28 px), which sides show, and where the highlights are; the highlights move upwards from frame to frame
+  (Exit, Horse Productions). Through the perspective, letters left and right of the centre seem to lean opposite
+  ways. The loop has 10 frames.
+- The fonts differ per item (best matches: Neues Spiel ≈ DejaVu Sans Condensed, Spiel laden and Horse Productions
+  ≈ Liberation/DejaVu Sans, Exit ≈ FreeSans Bold; inferred, mask overlap only 0.55–0.78).
+
+The renderer extrudes a glyph mask (depth 10 px), renders each item where the menu draws it, seen from one camera
+with its horizon at y 98 (`VP`), applies the wave (amplitude 3.6 px of depth, wave length 21 px of height, one period per loop,
+running upwards), shades the faces (diffuse + specular) and the sides (chrome-like, with grain), darkens the sides'
+front 0.7 px, and quantizes to the 133 HMBILD colours the original items use, as if rendered on black and cut out:
+each pixel's colour fades to black with its coverage, so the outline is anti-aliased. Drawn are the pixels covered
+at least 40 % and the partly covered ones around them. It matches the style, not the pixels (`compare` shows the
+originals beside German re-renders).
+English (user, session 25): **all six items** re-rendered in one font, DejaVu Sans made slightly bolder (0.15 px
+stroke per side): New Game 23 px, Load Game 21, The Story 20, Manual 20, Horse Productions 18, Exit 20. The German
+menu keeps the original sprites.
+
+### Remastered menu items (session 25)
+The remastered menu doesn't upscale the 320 × 200 items: `menu_items.hires_items` renders them again at 4× (2×
+supersampled), in true colour, for **both languages**: German with the `GERMAN` table (the original texts in DejaVu
+Sans, sized like the 1998 items; the user's goal is the original look), English with `ENGLISH`. The dark outline
+(0.8 menu px) is anti-aliased against transparency. Each frame is placed relative to the classic sprite the menu
+draws (the original German one, or the English one), so the camera and wave match the classic frames.
+`tools/remaster_upscale.py` packs the 132 frames into `menuitems_0.avif` and indexes them under `sprites` (German)
+and `english`, palette HMBILD; the hq4x `menu` group no longer holds the items. Review sheet:
+`tools/menu_items.py hires game/public/data <out.png> de|en`.
+
 ## Where the English goes (session 24)
+- Sprites with text: `game/public/data/sprites-en.*` (see "English sprites").
 - UI strings: `game/src/i18n.ts` (the English object must have every key the German one has; TypeScript checks).
   First English versions are in; they fit (test/i18n.test.ts) but still need the user's review.
 - Text files: `game/src/texts/en/STORY.TXT`, `ANLEIT.UNG`, `ABOUT.TXT`, `MISSIONS.PAS`, `INFO.PAS`, plain UTF-8,

@@ -9,13 +9,16 @@ Reads the engine data (game/public/data/, tools/export_engine_data.py) and write
                                         colour), multicolour fonts in EPIS1 colours
   <out>/<method>/index.json             {scale, chunk, groups: {group: pages},
                                          sprites: {palette: {n: [group, page, x, y, w, h, ox, oy]}},
+                                         english: {palette: {n: ...}} (the same for sprites-en.json),
                                          pictures: {"PIC_PAL": file}, fonts: {name: {file, cell, glyphs}}}
 Sprite entries: the trimmed sprite at (x, y, w, h) on its page (4x px), drawn at (ox, oy) source px from the
 sprite's top-left corner. Font glyphs: code -> [x, y] of the glyph cell's top-left corner (4x px).
 
 Groups: "common" (jets, pods, shots, explosions, boni, HUD, REST.LIB), "shop" (SHOP.LIB) and one per episode
 (enemies and wrecks), all in EPIS1; REST.LIB again in the main menu's (HMBILD) and the hangar's (UMBILD)
-palette. So a screen loads only what it can show.
+palette. So a screen loads only what it can show. The English sprites (sprites-en.json, tools/export_english_sprites.py)
+go into "shop" (the panel), indexed under "english" like "sprites". The main menu items (both languages) are
+rendered directly at 4x by tools/menu_items.py into the group "menuitems" (do_menu_items).
 
 The whole level is upscaled as one picture, so the tiles have their real neighbours and no seams. Sprites and
 glyphs are upscaled in colour and outline separately: transparent pixels take the nearest opaque colour first
@@ -28,7 +31,7 @@ Format (session 18): AVIF, 4:4:4. Level 1 at quality 60 is 1.1 MB and closer to 
 the WebP at quality 90 used before (3.0 MB, PSNR 38); WebP below 90 smooths away the dirt grain. Needs Pillow 11.3+.
 
 Usage: uv run --with numpy --with 'pillow>=11.3' python tools/remaster_upscale.py game/public/data game/public/remaster \
-           [methods, comma-separated] [levels, comma-separated]
+           [methods, comma-separated] [levels, comma-separated; '' = none]
 """
 import gzip
 import json
@@ -47,11 +50,12 @@ LEVEL_ROWS = 200  # tile rows of 32 px: level y -6200 .. 199
 PAGE = 1024  # atlas page size in source px (4096 upscaled)
 PAD = 4  # source px around each sprite or glyph (keeps neighbours out of the filters)
 REST = range(544, 850)
-GROUPS = [('common', 'EPIS1', lambda n: n < 493 or n in REST),
-          ('shop', 'EPIS1', lambda n: 493 <= n < 544),
+MENU_ITEMS = range(613, 679)  # rendered directly at 4x (tools/menu_items.py), not upscaled
+GROUPS = [('common', 'EPIS1', lambda n: n < 493 or n in REST),  # n: sprite number, or 'en' + number
+          ('shop', 'EPIS1', lambda n: 493 <= n < 544, ['en501']),
           ('episode1', 'EPIS1', lambda n: 850 <= n < 1024),
           ('episode2', 'EPIS1', lambda n: n >= 1024),
-          ('menu', 'HMBILD', lambda n: n in REST),
+          ('menu', 'HMBILD', lambda n: n in REST and n not in MENU_ITEMS),
           ('hangar', 'UMBILD', lambda n: n in REST)]
 PICTURES = ['HMBILD', 'UMBILD', 'OMBILD', 'RASTER']  # tools/export_engine_data.py order
 PICTURE_PALETTES = {'HMBILD': 'HMBILD', 'UMBILD': 'UMBILD', 'OMBILD': 'EPIS1', 'RASTER': 'EPIS1'}  # screens/*.ts
@@ -66,6 +70,9 @@ def load(data):
     index = json.load(open(os.path.join(data, 'sprites.json')))
     pixels = np.frombuffer(gzip.open(os.path.join(data, 'sprites.bin.gz')).read(), np.uint8)
     sprites = {int(n): pixels[o:o + w * h].reshape(h, w) for n, (o, w, h) in index.items()}
+    index = json.load(open(os.path.join(data, 'sprites-en.json')))
+    pixels = np.frombuffer(gzip.open(os.path.join(data, 'sprites-en.bin.gz')).read(), np.uint8)
+    sprites.update({'en%s' % n: pixels[o:o + w * h].reshape(h, w) for n, (o, w, h) in index.items()})
     tiles = [np.frombuffer(gzip.open(os.path.join(data, 'tiles%d.bin.gz' % e)).read(), np.uint8).reshape(-1, 32, 32)
              for e in (1, 2)]
     levels = json.load(open(os.path.join(data, 'levels.json')))
@@ -188,8 +195,9 @@ def do_levels(method, dst, levels, tiles, palette, numbers, work):
 
 def do_sprites(method, dst, sprites, palettes, work):
     index, groups = {}, {}
-    for group, pal, member in GROUPS:
-        chosen = {n: t for n in sorted(sprites) if member(n) and (t := trimmed(sprites[n])) is not None}
+    for group, pal, member, *english in GROUPS:
+        chosen = {n: t for n in [n for n in sorted(k for k in sprites if isinstance(k, int)) if member(n)]
+                  + (english[0] if english else []) if (t := trimmed(sprites[n])) is not None}
         placed, count = pack(chosen)
         groups[group] = count
         pages = []
@@ -201,11 +209,37 @@ def do_sprites(method, dst, sprites, palettes, work):
             pages.append((idx, palettes[pal]))
         for p, rgba in enumerate(upscale_rgba(method, work, pages)):
             save(Image.fromarray(rgba), os.path.join(dst, '%s_%d.avif' % (group, p)))
-        entries = index.setdefault(pal, {})
         for n, (page, x, y, w, h, ox, oy) in placed.items():
-            entries[n] = [group, page, x * SCALE, y * SCALE, w * SCALE, h * SCALE, ox, oy]
+            entries = index.setdefault('english' if isinstance(n, str) else 'sprites', {}).setdefault(pal, {})
+            entries[str(n).removeprefix('en')] = [group, page, x * SCALE, y * SCALE, w * SCALE, h * SCALE, ox, oy]
         print(method, group, len(placed), 'sprites,', count, 'pages', flush=True)
     return index, groups
+
+
+def do_menu_items(dst, data, index, groups):
+    """The main menu items in both languages, rendered at 4x (tools/menu_items.py hires_items) instead of
+    upscaled: group "menuitems", indexed under "sprites" (German) and "english" in the HMBILD palette."""
+    import menu_items
+    frames = {(lang, n): f for lang in ('de', 'en') for n, f in menu_items.hires_items(data, lang).items()}
+    size, pad = PAGE * SCALE, PAD * SCALE
+    pages, x, y, shelf = [Image.new('RGBA', (size, size))], pad, pad, 0
+    for (lang, n), (img, ox, oy) in frames.items():
+        h, w = img.shape[:2]
+        if x + w + pad > size:
+            x, y, shelf = pad, y + shelf + pad, 0
+        if y + h + pad > size:
+            pages.append(Image.new('RGBA', (size, size)))
+            x, y, shelf = pad, pad, 0
+        pages[-1].paste(Image.fromarray(img), (x, y))
+        key = 'english' if lang == 'en' else 'sprites'
+        index.setdefault(key, {}).setdefault('HMBILD', {})[str(n)] = ['menuitems', len(pages) - 1, x, y, w, h,
+                                                                      round(ox, 3), round(oy, 3)]
+        x += w + pad
+        shelf = max(shelf, h)
+    for p, page in enumerate(pages):
+        save(page, os.path.join(dst, 'menuitems_%d.avif' % p))
+    groups['menuitems'] = len(pages)
+    print('menu items', len(frames), 'frames,', len(pages), 'pages', flush=True)
 
 
 def do_pictures(method, dst, pictures, palettes, work):
@@ -253,10 +287,11 @@ def main(data, out, methods, level_numbers):
         os.makedirs(dst, exist_ok=True)
         do_levels(method, dst, levels, tiles, palettes['EPIS1'], level_numbers, work)
         index, groups = do_sprites(method, dst, sprites, palettes, work)
+        do_menu_items(dst, data, index, groups)
         pics = do_pictures(method, dst, pictures, palettes, work)
         font_index = do_fonts(method, dst, fonts, palettes, work)
         with open(os.path.join(dst, 'index.json'), 'w') as f:
-            json.dump({'scale': SCALE, 'chunk': CHUNK, 'groups': groups, 'sprites': index, 'pictures': pics,
+            json.dump({'scale': SCALE, 'chunk': CHUNK, 'groups': groups, **index, 'pictures': pics,
                        'fonts': font_index}, f)
     shutil.rmtree(work)
 
@@ -264,4 +299,4 @@ def main(data, out, methods, level_numbers):
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2],
          sys.argv[3].split(',') if len(sys.argv) > 3 else METHODS,
-         [int(n) for n in sys.argv[4].split(',')] if len(sys.argv) > 4 else [1, 2, 3, 4, 5, 6])
+         [int(n) for n in sys.argv[4].split(',') if n] if len(sys.argv) > 4 else [1, 2, 3, 4, 5, 6])
