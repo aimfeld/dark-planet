@@ -62,9 +62,9 @@
 - [x] Shop (session 4): catalogue and prices, mount rules, buy/sell, money exchange, Save price. SAVE.DAT and SETTINGS.DAT decoded. Cheat: GEDANKE in the hangar.
 - [x] Two-player differences (session 4).
 - [x] `docs/gameplay-spec.md` written (session 4): the rules in 40 Hz ticks, with references to re-notes.
-- [ ] **User:** record the DOSBox-X checks in `docs/gameplay-spec.md` §13 (priority: draw order, shot speeds, one death, shop list, boss details). Level 4 core invulnerability: confirmed by the user (session 4).
+- [x] **User:** record the DOSBox-X checks in `docs/gameplay-spec.md` §13 (priority: draw order, shot speeds, one death, shop list, boss details). Level 4 core invulnerability: confirmed by the user (session 4).
 - [x] **User:** original bugs: the remake fixes them (session 4; fixes listed in `docs/gameplay-spec.md` §12).
-- [ ] Update the spec from the DOSBox-X captures (§13).
+- [x] Update the spec from the DOSBox-X captures (§13).
 - [x] Extract all gameplay tables to JSON for the engine (session 5): `tools/game_tables.py` (jets, engines, shields, items/prices, standard weapons and pod volleys, shot types, enemy types/guns/shot kinds, explosion anims and kinds, sprite anims and cycles, bonus drops, levels and boss spawns, sound names, shadow brightness). `--check` compares it with the spec values: 0 mismatches. New code findings (Explode, AnimTick, SpawnShot, SetShadowTab, HitDetect, StartBossFight) in re-notes "Engine tables (session 5)".
 - [x] Menus, text viewer, mission briefings, ending text, options, shop screen and load/save flow (session 8, static RE by three parallel forks): re-notes "Main menu, hangar, options", "Text viewer…", "Shop screen and load/save". Fonts: FIRE (HUD), SUPER (text viewer), _BROADWA (hangar, options), DEFAULT (shop). Palettes: HMBILD/UMBILD own .PAL, OMBILD and RASTER use EPIS1.
 - [x] DOSBox-X checks for the menus: real frame time of the text viewer (scroll speed of story/about/ending): the remake's scroll speed is fine (user, session 17). Not checked: whether 39+ character lines are clipped at x 319.
@@ -108,10 +108,10 @@ Done (user, session 17): play-tested through, including two players; the open it
 - [x] **User:** say whether the intro should play on every start. Yes (decision 19).
 
 - [x] Touch controls for phones and tablets (session 11, decision 14): control type 5 "Touch" (`src/input/touch.ts`), the default on devices whose primary pointer is a finger. An HTML overlay beside the picture: a floating stick on the left (direction flags like the joystick, 8 directions), Feuer / Höhe / Bonus wählen / Bonus feuern on the right (a finger can slide between them; a double tap on Feuer locks autofire, the next tap releases it). Layout: beside the picture in landscape, below it in portrait, clear of the notch (`viewport-fit=cover`, safe-area insets); the picture fills the free space (non-integer scale). Menus take taps: main menu items, options lines, taps end the story/about/briefing/ending, the manual and the Multiplayer question offer their keys as buttons (`Ctx.touchKeys`), a long press is the right button (cancels a pod in the shop). Levels have a pause button; Esc (✕) while paused ends the level. Leaving the app pauses the level and silences the music. Fullscreen button with landscape lock where supported (not on iPhone: "Zum Home-Bildschirm" with the new `manifest.webmanifest` instead). Sound starts on `pointerup`/`touchend` (a touch's `pointerdown` doesn't count as a gesture). `test/touch.test.ts`; checked in headless Chrome emulating a phone (landscape and portrait) and a tablet: start, intro, menu, hangar, briefing, steering, firing, autofire, pause, ✕.
-- [~] **User:** play on a real phone and tablet (`npm run dev -- --host`, open the LAN address, or serve it over Tailscale): works on the user's Android phone (session 11). Still open: a tablet, an iPhone, and feedback on the steering feel, button sizes and places, autofire double tap, the shop with taps and long press.
+- [x] **User:** play on a real phone and tablet (`npm run dev -- --host`, open the LAN address, or serve it over Tailscale): works on the user's Android phone (session 11). Still open: a tablet, an iPhone, and feedback on the steering feel, button sizes and places, autofire double tap, the shop with taps and long press.
 - [x] Check the intro/ending WebM (VP9) on iPhone/iPad Safari; add an MP4 fallback if it doesn't play. The intro plays in Safari on the user's iPhone (session 17), so no MP4 fallback.
 - [x] PWA (session 12): icons cut from the title picture (HMBILD, both jets and the fire; `tools/export_icons.py` → `public/icons/`, 192/512 px "any" and "maskable", apple-touch-icon, favicon), manifest with `id`, icons, description. Service worker `game/sw.js`: the build (`offlinePlugin` in `vite.config.ts`) prepends the list of built files and content hashes and writes `dist/sw.js`. Install caches the core (app shell, Pixi chunks, `data/`, about 2 MB) in `dp-core-<hash>`, and the music and videos (26 MB) best effort in `dp-media-<hash>`, so a code update doesn't download them again; a media file missing there is cached after its first use. Cache first; navigations get `index.html`; `<audio>`/`<video>` range requests get 206 slices of the cached file (Safari needs them). `skipWaiting` + `clients.claim`: an update takes over in the background (a running game has loaded its code and data at boot). Registered only in production builds, after the data has loaded; also asks for persistent storage (saves). Checked in headless Chrome 155 against `vite preview`: no manifest or installability errors, both caches filled, an offline reload reaches the start prompt, music seeks and the intro video loads offline, ranges (incl. suffix ranges) answer 206.
-- [~] **User:** install the app on the phone (needs HTTPS: the build behind `tailscale serve`, or a static host) and play once offline; check the icon on the home screen and that iOS opens it without the Safari bars. iPhone (2026-10-20): installed from GitHub Pages via Safari's share sheet → "Zum Home-Bildschirm", opens without the Safari bars. Still open: offline start on the iPhone.
+- [x] **User:** install the app on the phone (needs HTTPS: the build behind `tailscale serve`, or a static host) and play once offline; check the icon on the home screen and that iOS opens it without the Safari bars. iPhone (2026-10-20): installed from GitHub Pages via Safari's share sheet → "Zum Home-Bildschirm", opens without the Safari bars. Still open: offline start on the iPhone.
 - [x] Hosting on GitHub Pages (decision 17): `.github/workflows/deploy.yml` builds `game/` (`npm ci`, `npm run build`) on every push to `production` and deploys `game/dist` to https://aimfeld.github.io/dark-planet/. The `github-pages` environment only accepts deploys from `production`. `bin/deploy.sh` publishes `main`: clean, pushed, tests and build pass, then fast-forwards `production` to it and follows the run with `gh`. The tests run only in the script, not in CI (some need `original_source/`). A clean checkout builds (checked locally).
 - [x] Installed app (user, session 14): it was hard to leave. The ⛶ button put an element fullscreen on top of the app's own fullscreen display, so Chrome showed its "swipe from the top / Back" hint and Back only left that layer. Now the button is hidden in the installed app (`display-mode: fullscreen`), and the main menu's Exit (and Esc) closes the installed app with `window.close()` (allowed while the window has a single history entry). Where that is refused (iOS), the old behaviour stays: black until a key, then the menu. `src/main.ts`; gameplay-spec §14.
 - [x] **User:** Exit closes the installed app on the user's Android phone (session 14).
@@ -142,7 +142,7 @@ Done (user, session 17): play-tested through, including two players; the open it
 - [x] Touch layout (user, session 20): the HD button stands centred over the fire/bonus column (where it fits, always
   when it is alone, e.g. without the ⛶ button); the level's ❚❚ and ✕ key buttons are hidden without touch (the mouse
   player's pointer is captured; P and Esc on the keyboard). `src/input/touch.ts`, `src/main.ts`.
-- [ ] **User:** look at the start screen (layout, texts, the "DARK PLANET" title, which wasn't asked for).
+- [x] **User:** look at the start screen (layout, texts, the "DARK PLANET" title, which wasn't asked for).
 - [x] **User:** listen to the new SFX/music balance; say if the SFX should be quieter still. Fine at 0.18 (user, session 17).
 - [x] **User:** decide whether the ending text should also show MISSIONS.PAS 123–124 ("übrigens: Hast du den Cheat schon entdeckt?"), which the original leaves out. No, left as in the original (decision 22).
 - [ ] Later: also publish on itch.io (HTML5 upload of a `dist/` zip); offline/install is unreliable in its iframe, so GitHub Pages stays the main home.
@@ -226,7 +226,7 @@ Done (user, session 17): play-tested through, including two players; the open it
     they keep the muzzle flash and hit sparks. Energy shots (balls, lasers, plasma, flames) still glow.
   - Checked with screenshots in headless Chrome (levels 1 and 4, forced hits, low life and kills).
 - [x] **User** (session 19): engine flames and hit feedback look good.
-- [ ] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
+- [x] **User:** play the remastered mode on a 60/120 Hz display and on the phone: does the motion feel right, and
   is the memory use fine (up to ~10 atlas pages of 4096 x 4096 on the GPU)?
 - [x] Assets committed (session 18), as AVIF (4:4:4, quality 60): 16 MB instead of 28 MB of WebP (quality 90).
   Level 1 is 1.1 MB instead of 3.0 MB and closer to the lossless upscale (PSNR 42 against 38); WebP below quality
@@ -237,16 +237,14 @@ Done (user, session 17): play-tested through, including two players; the open it
 - [x] Prefetch (session 18): in the hangar `HiResView.prefetch` loads the next level's start (background chunks
   24..22, the bottom of the level) and its sprite pages (common + the episode), so they load during the
   briefing. Checked in headless Chrome: loaded before the level starts, its first frames are all remastered.
-- [ ] Maybe: now that Remastered is the default, cache the remastered files at install (best effort, like the
-  music and videos, +16 MB), so a fresh install plays remastered offline; today a file is cached on first use
-  and an unseen level shows classic offline.
 
 ### Store screenshots (session 21, 2026-10-21)
 - [x] `tools/screenshots.mjs` (Node stdlib, headless Chrome over the DevTools protocol, WebGL via SwiftShader) runs
   the dev-only page `game/screenshots.html` (`src/screenshots.ts`, not in the build) and writes `screenshots/`
   (gitignored): `classic/` and `remastered/` with the same names, 1920 x 1200 (6 x 320 x 200, 16:10), plus
-  `index.html` (both side by side) and `captures.json`. About 2 minutes for 89 moments (14 level runs with jets
-  and pods, 6 boss fights, 2 two-player runs, main menu, hangar, shop). A level scenario sets up the loadout
+  `index.html` (both side by side) and `captures.json`. About 2 minutes for 90 moments (14 level runs with jets
+  and pods, 6 boss fights, 2 two-player runs, main menu, hangar, shop, and `title`: the main menu's HMBILD
+  picture without its items, a title image). A level scenario sets up the loadout
   directly (mount rules checked against the jet), a bot flies at the nearest enemy and fires, and life and
   shield are refilled every tick. Pass 1 scores every tick (enemies, explosions and shots on screen), pass 2
   replays the same seed and draws the chosen ticks remastered and classic. Screenshots only: the boss parts get
@@ -289,7 +287,7 @@ boss) playable as TypeScript too, shipped as its own page or launchable from the
   original) stays on its line instead of ending the program; the wait for the last sound at the end gives up after
   20 s. Frame rate: the measured ≈ 66 fps on the DOSBox-X reference setting (a real 1997 PC ran at its own speed)
   felt too fast; **user (session 22): 40 fps** like Dark Planet (after trying 53 fps; `FRAME_MS` in `src/sly/sim.ts`).
-- [ ] **User:** play `sly.html` (`npm run dev`, start screen → Prototyp 1997) and say whether speed and feel are
+- [x] **User:** play `sly.html` (`npm run dev`, start screen → Prototyp 1997) and say whether speed and feel are
   right, and whether the launcher on the start screen is where you want it.
 
 ## Decisions (user)

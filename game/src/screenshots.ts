@@ -12,6 +12,7 @@ import { Game, memorySlot } from './game';
 import { ClassicView } from './render/classicView';
 import { REMASTER_METHOD } from './render/hiResView';
 import type { MenuInput } from './screens/proc';
+import { Screen } from './screens/screen';
 import { useBonus } from './sim/bonus';
 import { createWorld, FADE_STEPS, NO_INPUT, type Mount, type Player, type PlayerInput, type World } from './sim/state';
 import { joinPlayer2, newGameState, startLevel, step } from './sim/tick';
@@ -364,8 +365,14 @@ class Shots {
   }
 
   private async menus(): Promise<Capture[]> {
-    const g = this.menuGame(3);
     const out: Capture[] = [];
+    // the main menu's picture alone, without its items: a title image
+    const title = new Screen(this.data);
+    title.picture = 'HMBILD';
+    title.palette = 'HMBILD';
+    title.fade = FADE_STEPS;
+    out.push(await this.capture('title', 'Main menu picture (HMBILD) without the items', () => this.view.drawScreen(title, 1)));
+    const g = this.menuGame(3);
     g.run(60);
     out.push(await g.shot('menu-1', 'Main menu'));
     g.press('ArrowDown', 2, 45);
