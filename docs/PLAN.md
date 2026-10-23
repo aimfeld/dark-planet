@@ -383,13 +383,16 @@ such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked
   original hard-coded (briefings DS:0x910, story 261, about 207) derived from the files, pinned by a test to the
   German values. The prototype page takes the stored language. Still German: the main menu and shop sprites.
 - [x] Overflow check as a test (`test/i18n.test.ts`, session 24): every UI string in both languages measured with
-  the fonts against where it is drawn; the English text files no wider than the widest German line (SUPER, or
-  DEFAULT for the shop's INFO.PAS), INFO.PAS with the same BEGIN/END markers, briefings at most 20 lines. The
-  shop info box holds about 18 characters × 6 lines, so English item texts must be rewritten to fit.
+  the fonts against where it is drawn; the English text files against the screen (SUPER: 38 characters at x 10 in
+  the text viewer, 40 centred for ABOUT; the shop's info box: 19 DEFAULT characters × 7 lines per block), INFO.PAS
+  with the same BEGIN/END markers, MISSIONS.PAS with 7 sections and briefings of at most 20 lines.
 - [ ] Steam: pass Steam's language to the game (the Electron build), so the default follows the Steam client.
-- [ ] Draft translation by Claude, with a list of the passages that need the user (insider jokes, slang, Swiss
-  German, puns like "Schlitzohr" and "Fladnag der Graue") in `docs/translation-notes.md`. Then the user reviews
-  everything; the jokes should still be funny in English rather than literal.
+- [x] Draft translation by Claude (session 24): all five text files in `game/src/texts/en/`, wrapped to the
+  screen (test: 38 characters at x 10 in the text viewer, 40 centred for ABOUT, 19 × 7 in the shop's info box).
+  Session 24 with the user: American English, "schaa" (Wayne's World) → "sh'yeah", names untranslated, the
+  manual kept historical, and the hard passages settled one by one (`docs/translation-notes.md`).
+- [ ] The user reads the whole English text in the game; the jokes should still be funny in English rather than
+  literal.
 - [ ] New main menu sprites (see 2) and, if they can't be drawn as text, the shop labels and buttons.
 - [ ] Store page text in English and German.
 

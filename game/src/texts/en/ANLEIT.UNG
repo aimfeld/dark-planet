@@ -1,0 +1,271 @@
+MANUAL
+------
+
+GENERAL
+-------
+
+For this pretty little game you need
+at least:
+-a 486
+-4 MByte of RAM
+-500 KB of free conventional
+ memory (rejoice, you DOS freaks)
+-a CD-ROM drive
+-a monitor (no joke!)
+-a sense of black humor
+
+
+THE IDEA
+--------
+
+The game is actually a strategy game
+without strategy, in which you shoot
+down aliens. Of course the cute little
+strangers shouldn't simply be bumped
+off for no reason! For the dirty work
+you get money, which you can spend on
+new armament as you please. The goal
+is to survive all the levels and to
+relocate the nasty Golem into eternal
+darkness. Got it?
+
+
+THE CONTROLS
+------------
+
+So far so good, but how do you steer
+your funny little spaceship?
+Well, there are four ways: the
+keyboard, the joystick, the mouse and
+telepathy.
+
+The keyboard works like this:
+
+    Forward          : Arrow up
+    Backward         : Arrow down
+    Left             : Arrow left
+    Right            : Arrow right
+    Fire             : Ctrl
+    Fly high/low     : Alt
+    Select bonus     : Space
+    Fire bonus       : Ctrl+Space
+
+    Pause            : P
+    Esc              : Abort game
+
+The joystick is used like this:
+
+    Forward, backward,
+    left, right      : Stick
+    Fire             : Button1
+    Fly high/low     : Button2
+
+    Since most sticks only have 2
+    buttons, you select and fire
+    the bonuses with the keyboard:
+
+    Select bonus     : -
+    Fire bonus       : +
+
+Here comes the mouse:
+
+    Forward, backward,
+    left, right      : Move the
+                       mouse that
+                       way
+
+    Fire             : Button1
+    Fly high/low     : Button3
+    Select bonus     : Button2
+    Fire bonus       : Button1+Button2
+
+
+FLYING HIGH AND LOW
+-------------------
+
+You are surely wondering why you can
+fly high or low. Here's why:
+The aliens are either in the air or on
+the ground, which you can tell by how
+far away their shadow is. To crumble
+an alien to bits, you have to fly at
+the same height, which does raise the
+risk of a collision quite a bit! So
+watch out! By the way, there are also
+homing weapon systems that aim at the
+right height automatically...
+
+
+THE BONUS SYSTEM
+----------------
+
+During the game, bonuses keep turning
+up as a reward for disintegrated
+enemies; you grab them by touching
+them with your ship. You can also buy
+bonuses in the shop. Your bonuses,
+three at most, are listed at the
+bottom left of the screen.
+If you already have three bonuses and
+pick up another one, it is activated
+at once. The selected bonus has a
+frame around it. How to select and
+fire a bonus is described above, under
+the controls. Bonuses are a useful
+source of money, because you can also
+sell them in the shop.
+
+
+ENERGY, MONEY AND LIVES
+-----------------------
+
+There's no shoot 'em up without an
+energy display! On the left edge of
+the screen you'll find a frame with
+two vertical bars in it. The upper one
+shows your shield energy, which slowly
+recharges. The better the shield, the
+faster the shield energy recharges.
+Damage goes to the shield first, but
+once it is at zero, the lower bar
+suffers: your life energy. It doesn't
+recharge by itself. There is an Aid
+bonus, though, which pumps both
+energies back up, a kind of potency
+pill.
+The number of your lives and the money
+you've collected are shown in the top
+left corner. For Player2 everything is
+on the right side.
+
+
+THE SHOP
+--------
+
+The shop is not for buying painkillers
+for the aliens, but for buying
+yourself new equipment. For that you
+need dough, cash, bucks, moolah,
+bread, dinero, greenbacks, clams,
+smackers, Benjamins, scratch or simply
+money.
+How the shop works you'll have to
+figure out yourself, because typing a
+description ten feet long bugs me like
+crazy. But here are the most important
+things:
+-You can buy and sell equipment
+-Which equipment, and how much, you
+ can fit where depends on the jet;
+ on the first jet, for example, you
+ can't fit a ball
+-A jet's standard weapon can't be
+ sold
+-Large pods can swap positions
+-With two players you can share your
+ money in the exchange menu
+-You can page through the little
+ windows at the bottom, which show
+ all the junk
+-When you sell, you only get half
+ the price, for bonuses only a
+ quarter
+-You can only have two of the same
+ large pod
+
+DIFFERENT JETS
+--------------
+
+There's a nice choice of flying
+machines in our game; our graphics guy
+even conjured up a helicopter. The
+better (more expensive) your jet, the
+more positions you can use for fitting
+weapons. Better jets also have more
+life energy and ram the aliens out of
+the way more easily. Most important:
+the standard weapon keeps getting
+better!
+
+
+ENGINES AND SHIELDS
+-------------------
+
+Well, sh'yeah!
+If you want to be more agile, buy
+yourself a better engine! If the nasty
+aliens keep giving you a beating, a
+better shield is the order of the day:
+it has more energy and recharges
+faster!
+
+
+SAVING/LOADING THE GAME
+-----------------------
+
+To save your game, you have to buy a
+save bonus in the shop; the game is
+then saved automatically. There is
+only one single save! The save bonus
+gets more expensive with every level!!
+Have fun spending money!
+
+MULTIPLAYER
+-----------
+
+It is possible to calm down your
+whining brother, who is unhappy
+because he can't play along. During
+your own game, just click on
+Multiplayer in the hangar, and the
+little pest is ready to mess up your
+game! You set his controls in the
+options menu.
+Once your fellow player has joined,
+you can't throw him out again, so
+think about it and choose wisely, for
+only the penitent man will pass...
+As mentioned, you can exchange money
+with each other in the shop. Don't
+fall for the illusion that it's twice
+as easy with two, because the aliens
+simply get stronger too. Oh well..
+
+
+THE OPTIONS MENU
+----------------
+
+The options menu is self-explanatory.
+If it's all Greek to someone, I can't
+help them either.
+
+
+WHAT TO DO IF THERE ARE PROBLEMS
+--------------------------------
+
+Yippee, I'm almost done describing.
+If you have a problem, follow the
+following following of follow-ups:
+ -You notice a flicker in the bottom
+  left corner of the screen.
+ »Set the CPU again in the options
+  menu in the hangar.
+ -You have too little free
+  conventional memory.
+ »Ask a friend how to change
+  Config.sys and Autoexec.bat to get
+  more.
+ -The game is suddenly hellishly
+  slow when you use the joystick.
+ »There's nothing I can do, just use
+  the keys...
+  (It works with Urs's joystick!)
+ -Dark Planet quits with the Windows
+  message 'Must be run in full
+  screen'.
+ »Run Dark Planet from the autorun
+  of the original CD.
+
+That's it then, have fun!
+
+

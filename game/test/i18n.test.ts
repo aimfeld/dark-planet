@@ -78,25 +78,30 @@ describe.skipIf(!hasData)('every string fits', () => {
     for (const l of [t.refund + '999999', t.invested + '999999', t.noText]) expect(width('DEFAULT', l), l).toBeLessThanOrEqual(boxMax);
   });
 
-  it('English text files: as wide as the German ones at most', async () => {
+  it('English text files fit the screen', async () => {
     const data = await gameData();
     const width = await measure();
-    // The text viewer's files in SUPER, INFO.PAS in the shop's DEFAULT
-    const font = (file: string) => (file === 'INFO.PAS' ? 'DEFAULT' : 'SUPER');
-    // INFO.PAS: only the lines the shop shows (inside ART and SPEZIAL blocks), not its header comment
-    const shown = (file: string, lines: string[]) => {
-      if (file !== 'INFO.PAS') return lines;
-      let inside = false;
-      return lines.filter((l) => {
-        if (/^BEGIN (ART|SPEZIAL)/.test(l)) inside = true;
-        else if (/^END (ART|SPEZIAL)/.test(l)) inside = false;
-        else return inside;
-        return false;
-      });
-    };
     for (const file of ENGLISH_FILES) {
-      const max = Math.max(...shown(file, data.texts[file]).map((l) => width(font(file), l)));
-      for (const l of shown(file, gameText(data, 'en', file))) expect(width(font(file), l), `${file}: ${l}`).toBeLessThanOrEqual(max);
+      const lines = gameText(data, 'en', file);
+      if (file === 'INFO.PAS') {
+        // The shop's info box: DEFAULT lines at x 203, as wide as the widest German line (19 characters, x 317),
+        // at most 7 lines (text sprites 827..833) per block
+        let block: string[] | null = null;
+        for (const l of lines) {
+          if (/^BEGIN (ART|SPEZIAL)/.test(l)) block = [];
+          else if (/^END (ART|SPEZIAL)/.test(l)) {
+            expect(block!.length, `${file}: ${block![0]}`).toBeLessThanOrEqual(7);
+            block = null;
+          } else if (block) {
+            block.push(l);
+            expect(203 + width('DEFAULT', l), `${file}: ${l}`).toBeLessThanOrEqual(317);
+          }
+        }
+      } else {
+        // The text viewer's SUPER lines: ABOUT.TXT centred, the others at x 10
+        const x = file === 'ABOUT.TXT' ? 0 : 10;
+        for (const l of lines) expect(x + width('SUPER', l), `${file}: ${l}`).toBeLessThanOrEqual(320);
+      }
     }
   });
 });

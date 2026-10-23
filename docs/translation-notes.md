@@ -70,7 +70,46 @@ with the game's fonts, which have every character English needs.
   each briefing at most 20 lines, and two empty lines after the ending (what follows stays hidden).
 
 ## Passages that need the user
+Draft translation by Claude (session 24, 2026-10-23), about 4,400 words in `game/src/texts/en/`. Everything needs
+the user's review; these are the places where the draft had to guess or change something.
+
+### Decided
 - ~~The cheat word~~ **Decided (user, session 24): the cheat stays GEDANKE in English too** (decision 31). The
-  English riddle in ABOUT.TXT must still lead to it, e.g. by saying the answer is German, and the key legend keeps
+  English riddle in ABOUT.TXT is a new rhyme that asks for the answer "in German"; the key legend keeps
   "Cheat code: gedanke".
-(More with the draft translation.)
+
+- **American English** (user, session 24); the draft was converted (civilization, humor, ass, toward, Band-Aid,
+  American money slang in the manual).
+- **"schaa" is Wayne's World** (user, session 24): what Wayne says in the German dub. In English it becomes
+  "sh'yeah" everywhere (STORY, ANLEIT "Well, sh'yeah!", ABOUT, including the "SCHAAAA…" line of the rant).
+- **People's names stay as they are, untranslated** (user, session 24), including the Swiss German lines around them.
+- **The manual stays historical** (user, session 24): the 1998 keys, the CPU setting, Config.sys and the Windows
+  error, translated as they were.
+- **Item names** as in the draft (user, session 24).
+- **Walkthrough of the hard passages** (user, session 24): "Unter Uns" → "daytime soaps"; "Teufelshuren" →
+  "devil's harlots"; "unheiliger Deftigkeit" → "unholy fierceness"; Zarathustra's "(schaaa)" is Wayne too
+  ("(sh'yeah)"); Mission 3's "ihnen" is the player ("May a better fate be granted to you"); "Ezechiel der Waise" →
+  "Ezekiel the Wise" (the pun can't be translated); "Kaffe Allah Üse" stays (coffee à la Üse, Urs's nickname);
+  the riddle, ATOMBOMBE's "glow with joy", MK POD, SHIELD 48C and the rewritten rhymes are fine; DEATH's "Ihr
+  sterbt" → "You all die"; TEUFELSREIGEN's "der hinter den Reigen geht" is Children of the Corn (1984, "Kinder des
+  Zorns"), whose "He Who Walks Behind the Rows" the English uses.
+
+### Jokes and references: what the translation does
+- "Nur der bussfertige Mann wird bestehn" (Indiana Jones and the Last Crusade) → the film's English line, "Only
+  the penitent man will pass", everywhere; "DEINE WAHL WAR SCHLECHT" → "YOU CHOSE POORLY"; PROTECTOR's "Echt
+  bussfertig!" → "Truly penitent!".
+- STORY: "Unter Uns" (a German soap) → "daytime soaps"; "Teufelshuren" → "devil's harlots"; "ein Blick von
+  unheiliger Deftigkeit" → "a glance of unholy fierceness"; "Sprachfehler" → "lisp", which
+  explains "BESSSSST"; "ELENDIGLICH VERRECKEN" → "WE'LL ALL CROAK MISERABLY"; the countdown line shortened to fit.
+  Fladnag, Garfildon, Smithers and Zarathustra kept.
+- ANLEIT: the list of German money slang → English slang (dough, cash, bucks, moolah, dosh, …); "nur Bahnhof
+  verstehen" → "all Greek"; "folgendes Gefolge von Folgen" → "the following following of follow-ups".
+- ABOUT: "Windoof 98" → "Windoze 98"; "Ezechiel der Waise" (orphan, a pun on "der Weise", the wise) → "Ezekiel the
+  Wise" (the pun is lost); "Pascal Bornland: Gratulation zum 7.0 Geburtstag" → "Happy 7.0th birthday"; "Lucky
+  Luki: Schneller als der Schatten seiner Oma" → "Faster than his granny's shadow". The blank lines before the
+  cheat part are kept, so it still scrolls in after "***THE END***".
+- INFO: STARGUN's rhyme rewritten ("Twinkle, twinkle, little star, hit them near and hit them far!"); AID's rhyme
+  rewritten ("Helps in need, stops the bleed."); ATOMBOMBE's "Strahlemänner" (beaming / radiating) → "Makes
+  everyone glow with joy!!"; DEATH's conjugation keeps the joke ("You die" for "du", "You all die" for "ihr");
+  SHIELD 48C keeps the Always pad and the condom test; "Metülisator" kept.
+- MISSIONS: Indigo Jonas kept; star dates with a decimal point (745302.6).
