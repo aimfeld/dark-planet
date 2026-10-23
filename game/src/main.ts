@@ -305,9 +305,8 @@ async function main(): Promise<void> {
     // the keyboard has P and Esc. So does the hangar's cheat button (the key legend names the cheat).
     const touchOnly = game.view === 'world' || game.touchKeys === CHEAT_KEYS;
     const touchKeys = !touchOnly || TOUCH_DEVICE || touchUsed() ? game.touchKeys : NO_KEYS;
-    // The intro video has no remastered version: no HD button over it.
-    const intro = game.view === 'video' && video.name === 'intro';
-    touch.update(touchPlays, touchKeys, layout(), settings.remastered, !intro);
+    // The videos (intro, ending) have no remastered version: no HD button over them.
+    touch.update(touchPlays, touchKeys, layout(), settings.remastered, game.view !== 'video');
     view.setArea(touchUsed() ? layout().game : null);
     showKeys();
     if (mousePlays() !== mouseWasPlaying) {
