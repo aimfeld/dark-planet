@@ -123,6 +123,11 @@ draws (the original German one, or the English one), so the camera and wave matc
 `tools/remaster_upscale.py` packs the 132 frames into `menuitems_0.avif` and indexes them under `sprites` (German)
 and `english`, palette HMBILD; the hq4x `menu` group no longer holds the items. Review sheet:
 `tools/menu_items.py hires game/public/data <out.png> de|en`.
+Fixed (user, session 25): fine black horizontal lines in the blue faces of the top and bottom items (New Game,
+Exit, both languages). Far from the horizon, the perspective stretches the wave-tilted face vertically by up to
+about 1.8×, more than the face's sample points (1.6× the screen samples) covered, so the dark side edge behind
+showed through between rows. The face is now sampled with twice as many rows (5,327 → 71 such pixels in New
+Game's frames, the rest being real edges).
 
 ## Where the English goes (session 24)
 - Sprites with text: `game/public/data/sprites-en.*` (see "English sprites").

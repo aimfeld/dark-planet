@@ -66,6 +66,9 @@ def surface_points(mask, scale, depth):
     h, w = mask.shape
     vs, us = np.nonzero(mask)
     front = np.stack([us, vs, np.zeros_like(us)], 1).astype(float) / [scale, scale, 1]
+    # Twice as many rows: the wave tilts the face, and seen from far above or below the horizon the perspective
+    # stretches it vertically by up to about 1.8x, which opened gaps (dark lines) between single rows.
+    front = np.concatenate([front, front + [0, 0.5 / scale, 0]])
     pad = np.pad(mask, 1)
     edge = mask & ~(pad[:-2, 1:-1] & pad[2:, 1:-1] & pad[1:-1, :-2] & pad[1:-1, 2:])
     blur = mask.astype(float)
