@@ -65,7 +65,7 @@ The shop-and-upgrade design comes from Raptor and Xenon 2. What we added ([docs/
 | Game design & Graphics | Adrian, Jan, Urs |
 | Programming | Adrian, Urs (tips: apw) |
 | Videos | Jan |
-| CD soundtrack | Adrian + Giratte |
+| CD soundtrack & Guitar | Adrian |
 | Story | Adrian, Urs, Sutter-Kane |
 | Starring | Pferdi |
 
