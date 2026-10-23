@@ -87,7 +87,10 @@ export class HiResView {
     clipped.addChild(this.background, this.fx.ground, this.playfield, this.fx.top);
     clipped.mask = clip;
     this.level.addChild(clip, this.bars, clipped, this.hud);
-    this.menu.addChild(this.picture, this.menuSprites);
+    // Menu screens clip to 320 x 200 as well (scrolling text starts below the picture)
+    const menuClip = new Graphics().rect(0, 0, W * S, H * S).fill(0xffffff);
+    this.menu.addChild(menuClip, this.picture, this.menuSprites);
+    this.menu.mask = menuClip;
     this.root.addChild(this.level, this.menu, this.overlay);
     for (let i = 0; i < 3; i++) {
       const s = new Sprite();

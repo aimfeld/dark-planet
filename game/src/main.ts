@@ -14,7 +14,6 @@ import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchKey, type TouchLayout } from './input/touch';
 import { ClassicView } from './render/classicView';
 import { REMASTER_METHOD } from './render/hiResView';
-import { CHEAT_KEYS } from './screens/hangar';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
 import { Video } from './video';
@@ -306,10 +305,9 @@ async function main(): Promise<void> {
       if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
-    // Without touch the level's buttons (pause, abort) stay hidden: a mouse player's pointer is captured, and
-    // the keyboard has P and Esc. So does the hangar's cheat button (the key legend names the cheat).
-    const touchOnly = game.view === 'world' || game.touchKeys === CHEAT_KEYS;
-    const touchKeys = !touchOnly || TOUCH_DEVICE || touchUsed() ? game.touchKeys : NO_KEYS;
+    // The screens' buttons (pause, abort, paging, Ja/Nein, the hangar's cheat) only on a touch device or with
+    // touch controls: the keyboard has the keys (the legend names them), and a mouse player's pointer is captured.
+    const touchKeys = TOUCH_DEVICE || touchUsed() ? game.touchKeys : NO_KEYS;
     // The videos (intro, ending) have no remastered version: no HD button over them.
     touch.setLanguage(settings.language);
     useSpriteLanguage(data, settings.language); // the menu items and the shop panel

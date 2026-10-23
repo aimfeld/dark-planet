@@ -822,7 +822,7 @@ remastered mode.
 | Main menu Exit / Esc | quits to DOS | closes the installed app (PWA); in a browser tab, or where closing is refused (iOS), the start screen again, then the intro and the main menu (session 20); Esc needs a fresh press (one still held from the hangar doesn't quit) |
 | Bad SAVE.DAT checksum | message, then quits to DOS | message until a key, then the main menu |
 | Screens ended by a key | end while a key is still held | need a fresh press, so the confirm key doesn't skip them (§9.2) |
-| Text viewer, briefings, ending text | keyboard only | a click or tap ends them; the manual offers its keys as touch buttons |
+| Text viewer, briefings, ending text | keyboard only | a click or tap ends them; the manual offers its keys as touch buttons (on touch devices or with touch controls only, like all the screens' buttons); the remastered view clips the text to 320 x 200 like the classic one (RASTER.PIC is 317 x 197, so lines still run over its black bottom rows, as in the original) |
 | Hangar | returns to its loop with the button possibly held; the cheat only by typing GEDANKE | waits for the mouse button to be released after an item; with touch controls a round "Cheat" button (where the level's pause button is) does what GEDANKE does (user, session 23) |
 | Options | keyboard | a click or tap on a line selects and switches it; settings live in browser storage |
 | Shop | mouse windows confine the pointer; PC-speaker beeps | the pointer sprite is clamped to the window (a browser can't confine the real pointer); no beeps |
