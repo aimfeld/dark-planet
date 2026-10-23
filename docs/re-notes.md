@@ -987,6 +987,7 @@ Addresses below are offsets into the load image (file offset − 5120, the MZ he
   2×2 so 4:2:0 chroma doesn't smear, CRF 34, silent (the game plays track 4 / 9 itself).
 
 ## Soundtrack
+- **From the user (2026-10-23):** the music was produced in FastTracker 2, with the user's own electric guitar recordings, and then put onto the CD as audio tracks. No song (module) files survive (decision 24).
 - **Observed:** `Image/DPImage.iso` (= `.mdf` minus 528 trailing zero bytes, = `.bin` user data) has an ISO 9660 filesystem of 36755 sectors (75274240 bytes). The remaining 254 MB is raw CD-DA PCM: 44.1 kHz, 16-bit LE, stereo with identical channels (only 15 frames differ). It's continuous across 2048-byte sector boundaries, so nothing is missing.
 - **Observed (2026-10-21, before deleting them):** `.mdf` = `.iso` + 528 zero bytes; `.bin` = 160971 raw MODE1 sectors whose user data equals the `.iso` sector for sector (headers/ECC only). So `.bin/.cue/.mdf/.mds` held nothing beyond `DPImage.iso` and were deleted (user's decision); `DPImage.iso` is the only image kept.
 - **Observed:** the `.cue` declares a single MODE1 track, and the `.mds` is DAEMON Tools v2 (encrypted). The image was captured as one data track, which is why emulators saw no audio.

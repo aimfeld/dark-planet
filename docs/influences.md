@@ -47,7 +47,7 @@ which has both a tank and a ship.
   ancient-astronauts setup is a common trope, but this loop is original.
 - **The writing voice:** black humour throughout (the manual asks for "Sinn für schwarzen Humor"), Swiss-German
   in-jokes, and the joke weapon descriptions in `INFO.PAS` ("NICHT IN DEN MUND STECKEN!").
-- **All the content:** 3D-rendered graphics, the FLI videos (by Jan), the CD soundtrack (Wunibald and Giratte),
+- **All the content:** 3D-rendered graphics, the FLI videos (by Jan), the CD soundtrack (Wunibald and Giratte; FastTracker 2 plus their own electric guitar recordings),
   the levels, and the mascot "Pferdi" of Horse Productions.
 
 ## Parody and references in the text (borrowed on purpose)
