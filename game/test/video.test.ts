@@ -101,7 +101,7 @@ describe.skipIf(!hasData)('start screen', () => {
     };
     run(40);
     const texts = () => [...game.screen.texts.values()].map((t) => t.text);
-    expect(texts()).toContain('Sprache: Deutsch');
+    expect(texts()).toContain('Sprache: ◄ Deutsch (original) ►');
     press(game, input, 'ArrowDown'); // Remastered 2026 -> Sprache
     run(10);
     expect(game.screen.y[12]).toBe(134 - 10);
@@ -111,9 +111,23 @@ describe.skipIf(!hasData)('start screen', () => {
     expect(game.atStart).toBe(true);
     expect(settings.language).toBe('en');
     expect(saved).toEqual(['en']);
-    expect(texts()).toEqual(expect.arrayContaining(['Language: English', 'inspired by Raptor and Xenon 2.']));
-    expect(texts()).not.toContain('Sprache: Deutsch');
+    expect(texts()).toEqual(expect.arrayContaining(['Language: ◄ English (translation) ►', 'inspired by Raptor and Xenon 2.']));
+    expect(texts()).not.toContain('Sprache: ◄ Deutsch (original) ►');
     expect(texts().some((t) => /^Prototyp/.test(t))).toBe(false); // the prototype has only its direct link
+    press(game, input, 'ArrowLeft'); // Left/Right switch the language on its line
+    run(10);
+    expect(settings.language).toBe('de');
+    expect(game.screen.y[12]).toBe(134 - 10);
+    press(game, input, 'ArrowUp');
+    run(10);
+    expect(game.screen.y[12]).toBe(110 - 10);
+    press(game, input, 'ArrowRight'); // and between the two versions on theirs
+    run(10);
+    expect(game.screen.y[12]).toBe(86 - 10);
+    press(game, input, 'ArrowLeft');
+    run(10);
+    expect(game.screen.y[12]).toBe(110 - 10);
+    expect(game.atStart).toBe(true);
   });
 
   it('a click on a button chooses it', async () => {

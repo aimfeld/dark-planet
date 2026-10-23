@@ -475,6 +475,11 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
   and remastered (`videos/`, gitignored; the recordings in `recordings/`, also gitignored).
 - [ ] Decide one or two trailers (see 3).
 - [ ] Trailer(s) cut and encoded (H.264, high bitrate; Steam transcodes it anyway).
+- [x] Start screen language line (user, session 27): "Sprache: Deutsch (original)" / "Language: English
+  (translation)" (`startLanguageLine`; Options keeps "Sprache: Deutsch" / "Language: English"), and the three choices
+  are centred line by line, with the star cursor beside the selected one.
+  Then ◄ ► around the language (CP437 0x11/0x10, mapped in `cp437()`): Left/Right switch it on its line, and
+  flip between the two versions on theirs; Up/Down move between the lines.
 - [x] README rewritten (session 27, 2026-10-23): it now tells the 1998 story first (what the three of us built at
   16–18, our own ideas, the credits from ABOUT.TXT), then the remake. Controls moved to `docs/controls.md`, the
   developer sections (layout, building, tools, PWA, hosting) to `docs/development.md`, and the original game

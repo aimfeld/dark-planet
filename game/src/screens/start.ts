@@ -16,8 +16,7 @@ const BUTTON_SLOT = 3; // + 0 classic, + 1 remastered, + 2 the language
 const LINE_SLOT = 7;
 const CURSOR_SLOT = 12;
 const CURSOR = 556; // global sprite cycle 556..566, rate 4, 48 x 28
-const CURSOR_W = 48;
-const BUTTON_X = 118; // the cursor, a 3 px gap and the longer button text centred
+const CURSOR_W = 48; // left of the selected button's text, with a 3 px gap
 const BUTTON_Y = [86, 110, 134];
 const LANGUAGE = 2;
 // The language's line in the shop's 6 px DEFAULT font (user, session 22), moved down 5 px so its middle stays
@@ -33,19 +32,25 @@ const HINT_Y = 174;
 
 const buttons = (ctx: Ctx) => {
   const t = strings(ctx.settings.language);
-  return [...t.versions, t.languageLine];
+  return [...t.versions, t.startLanguageLine];
 };
+
+/** Each button's text centred (user, session 27): its left and right edge. */
+function buttonSpan(ctx: Ctx, i: number): [number, number] {
+  const s = ctx.screen;
+  const font = s.font;
+  s.font = BUTTON_FONT[i];
+  const w = s.textWidth(buttons(ctx)[i]);
+  s.font = font;
+  const x = 160 - (w >> 1);
+  return [x, x + w];
+}
 
 /** The button under the pointer (its text and the cursor beside it), -1 for none. */
 function buttonAt(ctx: Ctx, x: number, y: number): number {
-  const s = ctx.screen;
-  const font = s.font;
-  const texts = buttons(ctx);
-  for (let i = 0; i < texts.length; i++) {
-    s.font = BUTTON_FONT[i];
-    const right = BUTTON_X + s.textWidth(texts[i]);
-    s.font = font;
-    if (x >= BUTTON_X - CURSOR_W - 3 && x < right && y >= BUTTON_Y[i] - 4 && y < BUTTON_Y[i] + 20) return i;
+  for (let i = 0; i < BUTTON_Y.length; i++) {
+    const [left, right] = buttonSpan(ctx, i);
+    if (x >= left - CURSOR_W - 3 && x < right && y >= BUTTON_Y[i] - 4 && y < BUTTON_Y[i] + 20) return i;
   }
   return -1;
 }
@@ -70,8 +75,9 @@ export function* startScreen(ctx: Ctx): Proc {
     s.ink = INK;
     const t = strings(st.language);
     buttons(ctx).forEach((b, i) => {
+      const x = buttonSpan(ctx, i)[0];
       s.font = BUTTON_FONT[i];
-      text(BUTTON_SLOT + i, b, BUTTON_X, BUTTON_Y[i] + BUTTON_DY[i], i !== 1);
+      text(BUTTON_SLOT + i, b, x, BUTTON_Y[i] + BUTTON_DY[i], i !== 1);
     });
     s.font = 'SUPER';
     s.ink = TEXT_INK;
@@ -87,10 +93,10 @@ export function* startScreen(ctx: Ctx): Proc {
   let version = choice; // the look follows the version last selected (the language line keeps it)
   const cursor = () => {
     if (choice !== LANGUAGE) version = choice;
-    s.set(CURSOR_SLOT, s.n[CURSOR_SLOT] || CURSOR, BUTTON_X - CURSOR_W - 3, BUTTON_Y[choice] - 10);
     s.classic[CURSOR_SLOT] = version !== 1 ? 1 : 0;
     s.classicPicture = version !== 1;
-    drawTexts(version !== 1);
+    drawTexts(version !== 1); // first: the language line's width follows the language
+    s.set(CURSOR_SLOT, s.n[CURSOR_SLOT] || CURSOR, buttonSpan(ctx, choice)[0] - CURSOR_W - 3, BUTTON_Y[choice] - 10);
   };
   cursor();
   ctx.atStart = true;
@@ -116,15 +122,18 @@ export function* startScreen(ctx: Ctx): Proc {
     const tap = mouseArmed && m.down && at >= 0;
     mouseArmed = !m.down;
     const held = (code: string) => ctx.input.held(code);
-    const back = ['ArrowUp', 'ArrowLeft'].some(held);
-    if (back || ['ArrowDown', 'ArrowRight'].some(held)) {
+    // Up/Down move between the lines; Left/Right switch the language on its line (◄ ►, user, session 27) and
+    // between the two versions on theirs.
+    const sideways = ['ArrowLeft', 'ArrowRight'].some(held);
+    const up = held('ArrowUp');
+    if (up || held('ArrowDown') || (sideways && choice !== LANGUAGE)) {
       playSound(ctx, 12); // GRLASER
-      choice = (choice + (back ? BUTTON_Y.length - 1 : 1)) % BUTTON_Y.length;
+      choice = sideways ? 1 - choice : (choice + (up ? BUTTON_Y.length - 1 : 1)) % BUTTON_Y.length;
       cursor();
       yield* delay(150);
       continue;
     }
-    if (!(tap || held('Enter') || held('Space'))) continue;
+    if (!(tap || held('Enter') || held('Space') || sideways)) continue;
     if (choice !== LANGUAGE) break;
     playSound(ctx, 16); // DROHNE3
     st.language = st.language === 'de' ? 'en' : 'de';

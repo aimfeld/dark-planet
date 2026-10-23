@@ -95,4 +95,5 @@ export function cp437(ch: string): number {
 const UPPER =
   'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀' +
   'αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■\u00a0';
-const UNICODE_TO_CP437 = new Map([...UPPER].map((ch, i) => [ch, 0x80 + i]));
+// + the arrows of the start screen's language line (user, session 27).
+const UNICODE_TO_CP437 = new Map<string, number>([...[...UPPER].map((ch, i): [string, number] => [ch, 0x80 + i]), ['►', 0x10], ['◄', 0x11]]);
