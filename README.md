@@ -61,12 +61,12 @@ The shop-and-upgrade design comes from Raptor and Xenon 2. What we added ([docs/
 ### Horse Productions
 | | |
 |---|---|
-| Horse Productions | Wunibald, Jan, Urs |
-| Game design, 3D graphics | Wunibald, Jan, Urs |
-| Programming | Wunibald, Urs (tips: apw) |
+| Horse Productions | Adrian (aka Wunibald), Urs (aka Üse), Jan |
+| Game design, 3D graphics | Adrian, Jan, Urs |
+| Programming | Adrian, Urs (tips: apw) |
 | Videos | Jan |
-| CD soundtrack | Wunibald + Giratte |
-| Story | Wunibald, Urs, Sutter-Kane |
+| CD soundtrack | Adrian + Giratte |
+| Story | Adrian, Urs, Sutter-Kane |
 | Starring | Pferdi |
 
 ## The remake (2026)
