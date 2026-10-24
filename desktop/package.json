@@ -1,0 +1,29 @@
+{
+  "name": "dark-planet-desktop",
+  "productName": "Dark Planet Remastered",
+  "version": "0.1.0",
+  "description": "Dark Planet (1998), a DOS shoot 'em up, remastered",
+  "author": "Horse Productions",
+  "private": true,
+  "main": "main.mjs",
+  "scripts": {
+    "game": "cd ../game && npm run build:desktop",
+    "start": "npm run game && electron .",
+    "dist": "npm run game && electron-builder --win --linux"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "ch.horseproductions.darkplanet",
+    "productName": "Dark Planet Remastered",
+    "copyright": "© 1998, 2026 Horse Productions",
+    "directories": { "output": "dist" },
+    "files": ["main.mjs", "preload.cjs", "app/**/*", "package.json"],
+    "asar": true,
+    "electronLanguages": ["en-US", "de"],
+    "win": { "target": "dir", "icon": "app/icons/icon-512.png", "executableName": "DarkPlanet" },
+    "linux": { "target": "dir", "icon": "app/icons/icon-512.png", "executableName": "darkplanet", "category": "Game" }
+  }
+}

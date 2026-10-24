@@ -6,6 +6,7 @@
 | `original_source/` | The original 1998 game and CD, untouched (see [original-game.md](original-game.md)) |
 | `game/` | The remake (TypeScript + Vite + PixiJS): `src/sim/` deterministic simulation, `src/render/` classic and remastered renderers, `src/screens/` menus, hangar, shop and levels, `src/input/` keyboard, mouse, gamepad and touch, `src/sly/` the 1997 prototype, `test/` Vitest tests |
 | `game/public/` | Generated, committed game assets: `data/` (engine data, `tools/export_engine_data.py`), `sly/` (the 1997 prototype's data, `tools/export_sly_data.py`), `music/` (soundtrack, `tools/export_music.py`), `remaster/hq4x/` (4x graphics as AVIF, `tools/remaster_upscale.py`), `video/` (intro and ending, `tools/export_videos.py`), `icons/` (app icons, `tools/export_icons.py`) |
+| `desktop/` | The desktop app for Steam (Electron): `main.mjs`, `preload.cjs`, `smoke.mjs`; `app/` is the game's desktop build (not committed) |
 | `tools/` | Asset extraction, remastering and reverse-engineering helpers; `tools/dosbox/` holds the XMS workaround for DOSBox-X |
 | `docs/` | Plan, reverse-engineering notes, specs; `images/` = README pictures (from `tools/screenshots.mjs`) |
 | `bin/deploy.sh` | Publishes the game (see Hosting) |
@@ -65,6 +66,29 @@ menu → "Install app"; on iPhone/iPad Safari: Share → "Add to Home Screen". B
 on `localhost`), so a phone needs the build served over HTTPS, e.g. `npx vite preview --host` behind
 `tailscale serve`, or the public build on GitHub Pages. The dev server (`npm run dev`) doesn't register the
 service worker.
+
+## Desktop app (Electron, for Steam)
+`desktop/` wraps the game for Windows and Linux (Steam Deck included). In `desktop/`, after `npm install`:
+
+- `npm start`: builds the game's desktop version (`npm run build:desktop` in `game/` → `desktop/app/`) and opens it.
+- `npm run dist`: the same build, packaged by electron-builder as `dist/win-unpacked/` (`DarkPlanet.exe`) and
+  `dist/linux-unpacked/` (`darkplanet`), the folders a Steam depot uploads. Building for Windows on Linux
+  needs Wine (for the exe's icon and version info).
+- `npx electron smoke.mjs <dir>`: a check without a visible window. It goes from the start screen through the
+  intro to the main menu, streams and seeks a music track, presses R, and leaves screenshots, the page's
+  console and the `settings.json` it wrote in `<dir>`.
+
+The desktop build (Vite mode `desktop`, `vite.config.ts`) has no service worker, web manifest or link
+preview image, and no 1997 prototype (decision 32). The window loads the game from `app://game/`, a protocol
+that `main.mjs` serves from the app's files, with Range requests for the music and videos. The game detects
+the app through the bridge the preload script provides (`game/src/platform.ts`):
+
+- Settings and the save slot are files in the save folder, `%APPDATA%\Dark Planet Remastered\saves\` on Windows
+  and `~/.config/Dark Planet Remastered/saves/` on Linux: `settings.json` and `SAVE.DAT`, which uses the
+  original's layout, so it can be copied to and from the DOS game. Steam Auto-Cloud syncs this folder.
+- The app starts fullscreen. F, Alt+Enter and F11 toggle it. Exit in the main menu quits the app.
+- The music starts without a key press (`autoplayPolicy`). There are no touch controls by default. On a Steam
+  Deck, the player uses its controls.
 
 ## Hosting
 The game is published on GitHub Pages: https://aimfeld.github.io/dark-planet/

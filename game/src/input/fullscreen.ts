@@ -3,6 +3,9 @@
 // workspaces on Linux Mint/Cinnamon. Locking every key includes Esc, so Chrome asks to hold Esc to leave
 // fullscreen; F leaves it too. Other browsers get plain fullscreen; X and C stay as fire/altitude keys.
 // macOS keeps Ctrl+arrows (Spaces, Mission Control) even with the lock (observed in Brave).
+// The desktop build toggles its window's fullscreen instead (desktop/main.mjs, which also takes Alt+Enter and F11).
+
+import { desktop } from '../platform';
 
 interface KeyboardLock {
   lock(codes?: string[]): Promise<void>;
@@ -17,6 +20,7 @@ function keyboard(): KeyboardLock | undefined {
 export const keyboardLockSupported = () => typeof keyboard()?.lock === 'function';
 
 export async function toggleFullscreen(): Promise<void> {
+  if (desktop) return desktop.toggleFullscreen();
   if (document.fullscreenElement) {
     keyboard()?.unlock();
     await document.exitFullscreen();

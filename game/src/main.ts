@@ -17,14 +17,19 @@ import { REMASTER_METHOD } from './render/hiResView';
 import { Recorder, type Recording } from './recording';
 import type { MenuInput, SaveSlot, Settings } from './screens/proc';
 import { createWorld } from './sim/state';
+import { desktop } from './platform';
 import { Video } from './video';
 
 const TICK_MS = 1000 / 40; // decision (user, session 3): fixed 40 Hz, 1 tick = 1 original frame
 const MAX_TICKS_PER_FRAME = 8; // after a stall, catch up at most this much instead of spiralling
 const SETTINGS_KEY = 'darkplanet.settings'; // SETTINGS.DAT
 const SAVE_KEY = 'darkplanet.save'; // SAVE.DAT, base64
-/** A phone or tablet: the primary pointer is a finger. */
-const TOUCH_DEVICE = window.matchMedia('(pointer: coarse)').matches;
+// The desktop build keeps them as files in its save folder instead (desktop/main.mjs), which Steam Cloud can sync.
+// SAVE.DAT has the original's layout (save.ts), so it can be copied to and from the DOS game.
+const SETTINGS_FILE = 'settings.json';
+const SAVE_FILE = 'SAVE.DAT';
+/** A phone or tablet: the primary pointer is a finger. Not the desktop build (a Steam Deck plays with its controls). */
+const TOUCH_DEVICE = !desktop && window.matchMedia('(pointer: coarse)').matches;
 const NO_KEYS: readonly TouchKey[] = [];
 const displayMode = (mode: string) => window.matchMedia(`(display-mode: ${mode})`).matches;
 /** Started as the installed app (PWA), not in a browser tab; iOS reports it as navigator.standalone. */
@@ -36,7 +41,8 @@ function loadSettings(): Settings {
   if (TOUCH_DEVICE) s.control = [5, 1]; // P1 touch (P2 the keyboard, for a tablet with one)
   s.language = systemLanguage();
   try {
-    Object.assign(s, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'));
+    const stored = desktop ? desktop.read(SETTINGS_FILE) : localStorage.getItem(SETTINGS_KEY);
+    Object.assign(s, JSON.parse(stored === null ? '{}' : typeof stored === 'string' ? stored : new TextDecoder().decode(stored)));
   } catch {
     // no storage (private window) or a broken entry: the defaults
   }
@@ -45,7 +51,8 @@ function loadSettings(): Settings {
 
 function saveSettings(s: Settings): void {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    if (desktop) desktop.write(SETTINGS_FILE, new TextEncoder().encode(JSON.stringify(s)));
+    else localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   } catch {
     // not persisted
   }
@@ -53,6 +60,7 @@ function saveSettings(s: Settings): void {
 
 const saveSlot: SaveSlot = {
   read() {
+    if (desktop) return desktop.read(SAVE_FILE);
     try {
       const b64 = localStorage.getItem(SAVE_KEY);
       return b64 === null ? null : Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -61,6 +69,7 @@ const saveSlot: SaveSlot = {
     }
   },
   write(bytes) {
+    if (desktop) return desktop.write(SAVE_FILE, bytes);
     try {
       localStorage.setItem(SAVE_KEY, btoa(String.fromCharCode(...bytes)));
     } catch {
@@ -132,7 +141,7 @@ const within = <T>(promise: Promise<T>, ms: number) =>
  * `onUpdate` is called when a new version has taken over, and the caller reloads at a moment that loses nothing.
  */
 async function registerOffline(base: string, status: HTMLElement, t: Strings, onUpdate: () => void): Promise<void> {
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  if (!import.meta.env.PROD || desktop || !('serviceWorker' in navigator)) return;
   navigator.storage?.persist?.().catch(() => undefined);
   const sw = navigator.serviceWorker;
   // The first install also takes over the page (clients.claim); only a change of controller is an update.
@@ -318,7 +327,8 @@ async function main(): Promise<void> {
       quitting = game.quit;
       // Exit in the main menu closes the installed app, as the original quit to DOS. A page may close its window
       // when it is the window's only history entry; where the browser refuses (iOS), the start screen follows.
-      if (quitting && INSTALLED) window.close();
+      if (quitting && desktop) desktop.quit();
+      else if (quitting && INSTALLED) window.close();
     }
     const touchPlays = game.view === 'world' && game.world.players.some((p) => p.active && settings.control[p.index] === 5);
     // The screens' buttons (pause, abort, paging, Ja/Nein, the hangar's cheat) only on a touch device or with

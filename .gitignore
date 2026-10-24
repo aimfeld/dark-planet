@@ -27,3 +27,6 @@ recordings/
 
 # Gameplay videos (tools/trailer.mjs)
 videos/
+
+# The game build for the desktop app (game: npm run build:desktop)
+desktop/app/

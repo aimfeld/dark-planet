@@ -405,7 +405,10 @@ such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked
   the fonts against where it is drawn; the English text files against the screen (SUPER: 38 characters at x 10 in
   the text viewer, 40 centred for ABOUT; the shop's info box: 19 DEFAULT characters × 7 lines per block), INFO.PAS
   with the same BEGIN/END markers, MISSIONS.PAS with 7 sections and briefings of at most 20 lines.
-- [ ] Steam: pass Steam's language to the game (the Electron build), so the default follows the Steam client.
+- [x] ~~Steam: pass Steam's language to the game (the Electron build), so the default follows the Steam client.~~
+  Session 28: the app's `navigator.languages` follows the OS, so the default is already the system language. The
+  Steam client's language needs the SDK (`GetCurrentGameLanguage`, e.g. via steamworks.js, which achievements would
+  need too). **Decided (user, session 28): the OS language is enough**, no SDK for it.
 - [x] Draft translation by Claude (session 24): all five text files in `game/src/texts/en/`, wrapped to the
   screen (test: 38 characters at x 10 in the text viewer, 40 centred for ABOUT, 19 × 7 in the shop's info box).
   Session 24 with the user: American English, "schaa" (Wayne's World) → "sh'yeah", names untranslated, the
@@ -422,14 +425,26 @@ such as "Verstärkung? Enter=Ja, Rest=Nein" and "Rückzahlung"), plus text baked
 
 #### Desktop package (Electron)
 Electron as already planned in "Architecture": the same Chromium on Windows, Linux and the Steam Deck.
-- [ ] `desktop/`: Electron main process plus a preload script, loading the Vite build from disk. electron-builder
-  (or Forge) builds win-x64 and linux-x64 (no macOS, see 7).
-- [ ] Desktop differences from the web build: no service worker, manifest or install hints; starts fullscreen
-  (F or Alt+Enter toggles); Exit quits the app; no ⛶ button.
-- [ ] Leave the Sly prototype out of the desktop package (decision 32): no `sly.html`, `sly/` data or `src/sly/`
-  chunk (a Vite mode without the `sly` input and `public/sly/`, and the service worker's `sly` list empty).
-- [ ] Saves and settings as files in the user data folder (through the preload script), so Steam Auto-Cloud can sync
-  them without the SDK. localStorage in Electron is a LevelDB folder, which doesn't work well with cloud sync.
+- [x] `desktop/` (session 28, 2026-10-24): Electron 45 main process (`main.mjs`) plus a sandboxed preload script
+  (`preload.cjs`). The game is served from the app's files over an `app://game/` protocol (standard + secure, with
+  Range requests, so the music and videos seek; file:// would block fetch). electron-builder 26 builds
+  `dist/win-unpacked/` and `dist/linux-unpacked/` (target `dir`: the folders a depot uploads, no installer).
+  Details in development.md "Desktop app".
+- [x] Desktop differences from the web build (session 28): Vite mode `desktop` (`npm run build:desktop` →
+  `desktop/app/`) without the service worker, manifest and og-image. The app starts fullscreen. F (through the
+  bridge), Alt+Enter and F11 toggle it. Exit quits the app. There is no ⛶ button and no touch default
+  (`TOUCH_DEVICE` is false in the app, so a Deck doesn't start with touch controls). The music may start without a
+  key press.
+- [x] The Sly prototype is left out (decision 32): the desktop mode has no `sly` input, and its build deletes `sly/`.
+- [x] Saves and settings as files (session 28): `settings.json` and `SAVE.DAT` (the original's 129 bytes) in
+  `<userData>/saves/`, written atomically (tmp + rename). Auto-Cloud roots: Windows `WinAppDataRoaming` +
+  `Dark Planet Remastered/saves`, Linux `LinuxXdgConfigHome` + `Dark Planet Remastered/saves`. Check these in Steamworks
+  once the depots exist.
+- [x] Smoke test (`desktop/smoke.mjs`, hidden window): start screen, intro video, main menu, a music track
+  streamed and seeked from app://, R saves `settings.json`. All pass on Linux with the unpackaged app.
+- [ ] **User:** start the packaged builds: `desktop/dist/linux-unpacked/darkplanet` here, and
+  `dist/win-unpacked/DarkPlanet.exe` on Windows (or with Proton). Check fullscreen, sound, Exit, and a save
+  after a restart. Not tested yet: I didn't want to open a fullscreen window on your screen while you work.
 - [ ] Steam Deck: 1280 × 800 is exactly 4× 320 × 200, so classic fills the screen pixel-perfect (hide the key legend
   there). Ship the native Linux build, which runs in the Steam Linux Runtime container. Electron's sandbox often
   crashes there; the usual fix is `--no-sandbox` in the launch options. Test the Windows build with Proton as a

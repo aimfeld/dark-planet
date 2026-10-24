@@ -11,6 +11,7 @@
     "icons": "cd .. && uv run --with numpy --with pillow python tools/export_icons.py original_source game/public/icons",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:desktop": "tsc --noEmit && vite build --mode desktop",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
