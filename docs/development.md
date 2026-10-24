@@ -67,6 +67,12 @@ on `localhost`), so a phone needs the build served over HTTPS, e.g. `npx vite pr
 `tailscale serve`, or the public build on GitHub Pages. The dev server (`npm run dev`) doesn't register the
 service worker.
 
+The manifest `id` is `/dark-planet/`. Browsers resolve `id` against the *origin* of `start_url`, not its path, so
+`"./"` or `"/"` would mean `https://aimfeld.github.io/`, shared with every other PWA on that origin (Android
+Chrome then took Wunioid for an installed Dark Planet). `test/manifest.test.ts` checks it. An app installed before
+2026-10-24 had the old id and counts as a different app: uninstall it and install again. The saves, settings and
+caches belong to the origin, so they stay, unless the uninstall dialog's "also clear data" option is ticked.
+
 ## Desktop app (Electron, for Steam)
 `desktop/` wraps the game for Windows and Linux (Steam Deck included). In `desktop/`, after `npm install`:
 
