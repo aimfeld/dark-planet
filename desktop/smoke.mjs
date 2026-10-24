@@ -1,6 +1,7 @@
 // Smoke test of the desktop app without showing its window: `npx electron smoke.mjs <out dir>`.
 // Starts main.mjs with its user data in <out dir>, goes from the start screen into the intro and the main menu,
-// switches the graphics (R, which saves the settings), and writes screenshots and the page's console to <out dir>.
+// switches the graphics (R, which saves the settings), then plays on with a fake gamepad only: New Game, the hangar
+// (the stick moves the pointer), a level (fly, pause, quit), the shop. Screenshots and the page's console go to <out dir>.
 
 import { app, BrowserWindow } from 'electron';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -29,6 +30,21 @@ async function shot(win, name) {
   writeFileSync(join(out, `${name}.png`), (await win.webContents.capturePage()).toPNG());
 }
 
+/** A fake standard gamepad (navigator.getGamepads): the buttons in `window.__pad.buttons`, the axes in `.axes`. */
+const FAKE_PAD = `window.__pad = { buttons: [], axes: [0, 0, 0, 0] };
+  navigator.getGamepads = () => [{ connected: true, mapping: 'standard', axes: window.__pad.axes,
+    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: window.__pad.buttons.includes(i), value: 0 })) }];
+  0;`; // (executeJavaScript returns the last value, and a function can't be sent back)
+const A = 0, B = 1, MENU = 9;
+
+/** Hold pad buttons and axes for `ms`, then let go. */
+async function pad(win, buttons, axes = [0, 0, 0, 0], ms = 200) {
+  await win.webContents.executeJavaScript(`window.__pad.buttons = ${JSON.stringify(buttons)}; window.__pad.axes = ${JSON.stringify(axes)}`);
+  await sleep(ms);
+  await win.webContents.executeJavaScript('window.__pad.buttons = []; window.__pad.axes = [0, 0, 0, 0]');
+  await sleep(300);
+}
+
 async function run(win) {
   try {
     await sleep(4000);
@@ -52,6 +68,33 @@ async function run(win) {
     await shot(win, '3-menu');
     const settings = join(app.getPath('userData'), 'saves', 'settings.json');
     log.push(`settings.json: ${existsSync(settings) ? readFileSync(settings, 'utf8') : 'missing'}`);
+
+    // The gamepad alone. The pointer starts at 160,100; at full deflection it moves 6 px per 25 ms tick.
+    await win.webContents.executeJavaScript(FAKE_PAD);
+    await pad(win, [A]); // New Game (selected)
+    await sleep(3000);
+    await pad(win, [], [0, 0, 0, 1], 150); // right stick down to the "Shoot em all" door (92-185, 110-154)
+    await sleep(500);
+    await shot(win, '4-hangar-pad');
+    await pad(win, [A]); // click: the briefing
+    await sleep(4000);
+    await shot(win, '5-briefing');
+    await pad(win, [A]); // on to the level
+    await sleep(2000);
+    await pad(win, [0], [-1, 0, 0, 0], 800); // fly left while firing
+    await shot(win, '6-level');
+    await pad(win, [MENU]); // pause
+    await sleep(800);
+    await shot(win, '7-paused');
+    await pad(win, [B]); // quit the level: the main menu
+    await sleep(3000);
+    await shot(win, '8-back-in-menu');
+    await pad(win, [A]); // New Game again: the hangar, the pointer where it was (about 160,136)
+    await sleep(3000);
+    await pad(win, [], [1, 0, 0, 0], 450); // left stick right, to the shop's door (245-320, 111-154)
+    await pad(win, [A]);
+    await sleep(3000);
+    await shot(win, '9-shop');
   } catch (e) {
     log.push(`smoke failed: ${e.stack}`);
   }

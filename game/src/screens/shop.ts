@@ -788,6 +788,7 @@ export function* shop(ctx: Ctx): Proc {
   const s = ctx.screen;
   const w = ctx.world;
   ctx.view = 'screen';
+  ctx.pointerScreen = true;
   // (A mouse button still held on entry beeps on the PC speaker in the original.)
   s.picture = 'RASTER';
   s.font = 'DEFAULT';
@@ -850,5 +851,6 @@ export function* shop(ctx: Ctx): Proc {
     yield* frame(ctx, 15);
   }
   while (ctx.input.mouse.down) yield* delay(10);
+  ctx.pointerScreen = false;
   s.mode.fill(0);
 }

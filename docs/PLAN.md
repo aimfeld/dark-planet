@@ -451,11 +451,25 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
   there). Ship the native Linux build, which runs in the Steam Linux Runtime container. Electron's sandbox often
   crashes there; the usual fix is `--no-sandbox` in the launch options. Test the Windows build with Proton as a
   fallback.
-- [ ] Controller-only play, needed for "Verified": every screen works with the gamepad, including the hangar and
-  the shop (a virtual pointer moved by the stick, A clicks, B is the right button). Show Deck or Xbox button glyphs
-  instead of keys while a gamepad is in use (the key legend and the manual's key names). Text is large enough:
-  the 6 px DEFAULT font becomes 24 px at 4× (the minimum is 9 px at 1280 × 800). Target Verified, but Playable is
-  fine.
+- [x] Controller-only play, needed for "Verified" (session 28, user: no trip to the options; the Deck's trackpad
+  as the mouse). `input/gamepad.ts` has modes that main.ts picks per tick: `menu` (buttons as keys), `level`,
+  `paused` and `pointer` (`Ctx.pointerScreen`, set by the hangar and the shop: the sticks move the pointer, A/B are
+  the mouse buttons). The Keyboard players also take a pad each (`padAssignment` in `input/players.ts`). The legend
+  shows the pad's buttons from its first use until the next key press, with Deck names (L1/R1/L2/R2) when Steam sets
+  `SteamDeck=1` (bridge `steamDeck`). The manual's key names stay as they are (decided in session 24: the manual
+  is kept historical). Main menu: pointer movement in a sub-screen no longer selects an item on the way back. Tests
+  in `test/input.test.ts`; the smoke test (`desktop/smoke.mjs`) plays with a fake pad from New Game through the
+  hangar, a briefing, a level (fly, pause, quit) and into the shop. Text is large enough: the 6 px DEFAULT font
+  becomes 24 px at 4× (the minimum is 9 px at 1280 × 800). Target Verified, but Playable is fine. Controls in
+  `docs/controls.md` "Gamepad".
+- [ ] **User:** play with a real gamepad (Windows PC) and later on the Deck. Check the pointer speed in the hangar
+  and shop, the A/B mapping, pause/quit, and two players with two pads. I couldn't test real hardware: browser
+  gamepad support can vary by controller and OS.
+- [ ] Steamworks (at upload): controller support "Full"; Steam Input default layout "Gamepad with Mouse
+  Trackpad", so the Deck's right trackpad is the mouse.
+- [ ] Steam Deck: the legend below the picture takes about 50 px of 800, so classic shows at 3.75× instead of a
+  sharp 4×. Options: no legend on the Deck, the legend only in menus, or the legend over the picture's
+  bottom edge. Decide after seeing it on the Deck.
 - [ ] Licence notices (Electron/Chromium, PixiJS) in the build; electron-builder adds Chromium's automatically.
 
 #### Store page and media

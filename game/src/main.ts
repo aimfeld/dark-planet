@@ -6,9 +6,9 @@ import { loadGameData, useSpriteLanguage } from './data';
 import { DEFAULT_SETTINGS, Game } from './game';
 import { Keyboard } from './input/keyboard';
 import { toggleFullscreen } from './input/fullscreen';
-import { Gamepad } from './input/gamepad';
+import { Gamepad, type PadMode } from './input/gamepad';
 import { keyLegend } from './input/keyLegend';
-import { strings, systemLanguage, type Strings } from './i18n';
+import { STEAM_DECK_NAMES, strings, systemLanguage, XBOX_NAMES, type Strings } from './i18n';
 import { Mouse } from './input/mouse';
 import { playerInputs } from './input/players';
 import { TouchControls, touchLayout, type Insets, type TouchKey, type TouchLayout } from './input/touch';
@@ -232,8 +232,8 @@ async function main(): Promise<void> {
   let pauseTap = false; // the page was hidden during a level: pause it (one P press)
   const recorder = import.meta.env.DEV ? new Recorder(saveRecording) : null;
   const input: MenuInput = {
-    held: (code) => keys.held(code) || touch.held(code) || (code === 'KeyP' && pauseTap),
-    anyKey: () => keys.anyKey() || touch.anyKey(),
+    held: (code) => keys.held(code) || touch.held(code) || pad.held(code) || (code === 'KeyP' && pauseTap),
+    anyKey: () => keys.anyKey() || touch.anyKey() || pad.anyKey(),
     mouse,
     get players() {
       const players = playerInputs(game!.settings.control, game!.world.players.map((p) => p.active), keys, mouse, pad, touch);
@@ -262,13 +262,21 @@ async function main(): Promise<void> {
     if (mousePlays()) mouse.lock();
   });
   if (import.meta.env.DEV) Object.assign(window, { game, view }); // for debugging in the browser console
-  // The game keys below the picture (not with touch controls, which fill the window).
+  // The game keys below the picture (not with touch controls, which fill the window). A gamepad's buttons instead
+  // once it is used, until the next key press (not the mouse: a Steam Deck's trackpad is one).
   const legend = document.getElementById('keys')!;
+  let padShown = false;
+  window.addEventListener('keydown', () => (padShown = false));
+  const padNames = desktop?.steamDeck ? STEAM_DECK_NAMES : XBOX_NAMES;
   const showKeys = () => {
     legend.hidden = TOUCH_DEVICE || touchUsed();
-    const playing = game!.atStart ? 'start' : game!.view === 'video' ? video.name
-      : game!.view === 'screen' && game!.screen.picture === 'UMBILD' ? 'hangar' : '';
-    const text = keyLegend(settings.language, settings.control, game!.world.players.map((p) => p.active), playing).join('\n');
+    const g = game!;
+    const pads = padShown && pad.count > 0 ? { count: pad.count, names: padNames } : null;
+    const hangar = g.view === 'screen' && g.screen.picture === 'UMBILD';
+    // (the hangar's Multiplayer question takes A / B as Enter / Esc: the general pad line)
+    const context = g.atStart ? 'start' : g.view === 'video' ? video.name
+      : hangar ? (pads && !g.pointerScreen ? '' : 'hangar') : g.pointerScreen ? 'shop' : g.view === 'world' ? 'level' : '';
+    const text = keyLegend(settings.language, settings.control, g.world.players.map((p) => p.active), context, pads).join('\n');
     if (legend.textContent !== text) legend.textContent = text;
     view.setBelow(legend.hidden ? 0 : legend.offsetHeight);
     legend.style.top = `${Math.round(view.picture.y + view.picture.h)}px`;
@@ -290,6 +298,10 @@ async function main(): Promise<void> {
     showRemaster(t().graphicsToast(settings.remastered));
   };
 
+  /** What the gamepads do this tick (input/gamepad.ts). */
+  const padMode = (): PadMode =>
+    game!.view === 'world' ? (game!.paused ? 'paused' : 'level') : game!.pointerScreen ? 'pointer' : 'menu';
+
   let acc = 0;
   let last = performance.now();
   let mouseWasPlaying = false;
@@ -304,9 +316,14 @@ async function main(): Promise<void> {
     view.element.style.cursor = game.atStart ? 'default' : 'none'; // the menus with a pointer draw their own
     if (view.hiRes.current !== graphics) void view.hiRes.use(graphics);
     while (acc >= TICK_MS) {
+      pad.sample(padMode());
+      if (pad.used) {
+        padShown = true;
+        unlock(); // (where the browser counts a button as a gesture)
+      }
+      mouse.fromPad(pad.pointer.dx, pad.pointer.dy, pad.pointer.buttons);
       keys.sample();
       mouse.sample();
-      pad.sample();
       touch.sample();
       view.hiRes.beforeTick(game.view, game.world, game.screen);
       game.tick(input);

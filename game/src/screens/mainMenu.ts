@@ -161,6 +161,8 @@ export function* mainMenu(ctx: Ctx): Proc {
           return;
       }
       yield* waitMouseUp(ctx);
+      // where the pointer went in the hangar (a gamepad moves it there too) is no move in the menu
+      pointer = [ctx.input.mouse.x, ctx.input.mouse.y];
     }
     ctx.atMainMenu = true;
     yield* frame(ctx, 15);

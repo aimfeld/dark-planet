@@ -52,6 +52,7 @@ function pointer(ctx: Ctx): void {
 function* setup(ctx: Ctx): Proc {
   const s = ctx.screen;
   ctx.view = 'screen';
+  ctx.pointerScreen = true; // a gamepad's A is the mouse button from here, so the one that opened the hangar is waited for
   yield* fadeOut(ctx);
   s.clear();
   s.set(1, POINTER, 0, 0);
@@ -98,6 +99,7 @@ export function* hangar(ctx: Ctx): Proc {
   let cheat = 0;
   for (;;) {
     ctx.touchKeys = CHEAT_KEYS;
+    ctx.pointerScreen = true;
     pointer(ctx);
     let dev = devLevel(ctx);
     if (!dev && input.anyKey()) {
@@ -120,6 +122,7 @@ export function* hangar(ctx: Ctx): Proc {
     }
     if (dev) {
       ctx.touchKeys = [];
+      ctx.pointerScreen = false;
       while (input.anyKey()) yield* frame(ctx, 15); // Shift is a bonus key in the level
       w.level = dev.level;
       const result = yield* shootEmAll(ctx, dev);
@@ -147,6 +150,7 @@ export function* hangar(ctx: Ctx): Proc {
     let leave = input.held('Escape');
     if (now !== 0 && m.down) {
       ctx.touchKeys = [];
+      ctx.pointerScreen = false;
       playSound(ctx, 21); // LRM003B
       switch (now) {
         case 1: {
@@ -179,6 +183,7 @@ export function* hangar(ctx: Ctx): Proc {
     }
     if (leave) {
       ctx.touchKeys = [];
+      ctx.pointerScreen = false;
       yield* fadeOut(ctx);
       return;
     }
@@ -218,6 +223,8 @@ function* shootEmAll(ctx: Ctx, dev?: { atBoss: boolean }): Proc<'hangar' | 'menu
 function* multiplayer(ctx: Ctx): Proc {
   const input = ctx.input;
   const t = strings(ctx.settings.language);
+  // A gamepad's A that clicked the door is Enter now (not a pointer screen any more): it must not answer already.
+  while (input.anyKey() || input.mouse.down) yield 10;
   if (!ctx.world.twoPlayer) {
     label(ctx, t.joinQuestion);
     ctx.touchKeys = [{ code: 'Enter', label: t.yes }, { code: 'Escape', label: t.no }];

@@ -136,6 +136,8 @@ app.whenReady().then(() => {
     win?.setFullScreen(!win.isFullScreen());
   });
   ipcMain.on('dp:quit', () => app.quit());
+  // Steam sets SteamDeck=1 in the environment of games it starts on a Steam Deck
+  ipcMain.on('dp:info', (e) => (e.returnValue = { steamDeck: process.env.SteamDeck === '1' }));
   createWindow();
 });
 

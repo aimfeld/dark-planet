@@ -5,6 +5,8 @@ key skips it). Main menu: arrows and Enter, or the mouse. The hangar works with 
 the next level, "Multiplayer" adds player 2, and "Options" sets each player's controls (Keyboard, Mouse, Joystick =
 gamepad, WASD or Touch). Each player's controls are listed below the picture.
 
+A gamepad works everywhere without changing the options (see "Gamepad" below).
+
 ## In a level
 
 | Control | Move | Fire | High / low | Select bonus | Use bonus |
@@ -28,6 +30,25 @@ window the desktop takes some of their combinations, so the legend doesn't list 
 | R | switch between Classic and Remastered at any time (touch: the HD button) |
 
 In the menus on a touch screen, tap the items; a long press is the right mouse button.
+
+## Gamepad
+A gamepad plays the whole game, start screen to ending, with no setting to change. It must use the standard
+(Xbox) layout; a Steam Deck's controls arrive that way through Steam Input. The legend below the picture shows
+the pad's buttons once the pad is used, and the keys again after the next key press. On a Steam Deck it names
+the shoulder buttons L1/R1/L2/R2.
+
+| Where | Pad |
+|---|---|
+| Start screen, main menu, options, texts | d-pad or left stick = arrows, A or Menu = Enter, B or View = Esc, X = Space, LB/RB = page up/down |
+| Hangar and shop (mouse screens in the original) | either stick or the d-pad (slowly) moves the pointer, A = left button, B = right button, View = Esc, Y = the cheat (hangar) |
+| Hangar's "Multiplayer" question | A = yes, B = no |
+| Level | as in the table above; Menu = pause |
+| Pause | Menu or A = resume, B or View = quit the level |
+
+In a level the Keyboard player also takes the first gamepad, so neither keys nor pad need choosing. If two players
+use keys, player 2 takes a second pad. "Joystick" in the options still gives a player the first pad by itself.
+On a Steam Deck the right trackpad is the mouse (Steam Input's "Gamepad with Mouse Trackpad" layout) and the
+touchscreen taps as clicks, so the hangar and the shop also work that way.
 
 ## Ctrl on a Mac
 macOS takes Ctrl+arrows (Spaces, Mission Control) even in fullscreen. To fire with Ctrl, turn off "Mission

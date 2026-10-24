@@ -72,6 +72,11 @@ export interface Ctx {
   quit: boolean;
   /** Keys the current screen offers as touch buttons (none: the screen takes taps as clicks). */
   touchKeys: readonly TouchKey[];
+  /**
+   * A screen the original drives with the mouse (the hangar, the shop): a gamepad moves the pointer there, and its A
+   * and B are the mouse buttons instead of Enter and Esc (input/gamepad.ts, main.ts).
+   */
+  pointerScreen: boolean;
   /** A level is paused (P). */
   paused: boolean;
   /** The main menu waits for input: nothing would be lost if the page reloaded now (main.ts, app updates). */

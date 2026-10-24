@@ -48,6 +48,7 @@ export class Game implements Ctx {
   view: 'screen' | 'world' | 'video' = 'screen';
   quit = false;
   touchKeys: readonly TouchKey[] = [];
+  pointerScreen = false;
   paused = false;
   atMainMenu = false;
   atStart = false;

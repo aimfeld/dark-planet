@@ -142,7 +142,7 @@ async function main(): Promise<void> {
       while (acc >= wait) {
         acc -= wait;
         const kb = keys.player();
-        const jp = pad.player({ select: false, use: false });
+        const jp = pad.player(0);
         const tp = touch?.player();
         sly.input({
           left: kb.left || jp.left || !!tp?.left,

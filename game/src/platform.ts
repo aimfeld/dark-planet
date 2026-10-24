@@ -6,6 +6,8 @@ export interface DesktopBridge {
   read(name: string): Uint8Array | null;
   write(name: string, data: Uint8Array): void;
   toggleFullscreen(): void;
+  /** Started on a Steam Deck (Steam sets SteamDeck=1): the legend names its buttons. */
+  readonly steamDeck: boolean;
   quit(): void;
 }
 

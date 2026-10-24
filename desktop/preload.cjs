@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('darkPlanet', {
   read: (name) => ipcRenderer.sendSync('dp:read', name),
   write: (name, data) => ipcRenderer.send('dp:write', name, data),
   toggleFullscreen: () => ipcRenderer.send('dp:fullscreen'),
+  steamDeck: ipcRenderer.sendSync('dp:info').steamDeck,
   quit: () => ipcRenderer.send('dp:quit'),
 });

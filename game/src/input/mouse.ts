@@ -4,7 +4,8 @@
 // While the pointer is locked (a mouse player in a level), the movement deltas drive a virtual pointer
 // confined to the screen, like the DOS driver's; otherwise the pointer is the real one over the canvas.
 // A finger or pen is a mouse with the left button; holding it still for half a second adds the right button
-// (the shop's "cancel" while a pod hangs on the pointer).
+// (the shop's "cancel" while a pod hangs on the pointer). A gamepad can move the pointer and hold its buttons too
+// (fromPad: the hangar and the shop, input/gamepad.ts).
 
 const BUTTON_BIT = [1, 4, 2]; // PointerEvent.button (left, middle, right) -> PointerEvent.buttons bit
 const LONG_PRESS_MS = 500;
@@ -21,6 +22,7 @@ export class Mouse {
   private longPress = 0; // the right button's bit while a touch is held long enough
   private longTimer: ReturnType<typeof setTimeout> | undefined;
   private longFrom = [0, 0];
+  private padButtons = 0;
 
   /** `toScreen` maps client coordinates to the 320 x 200 screen (the view knows its scale and offset). */
   constructor(private readonly target: HTMLElement, private readonly toScreen: (cx: number, cy: number) => [number, number]) {
@@ -86,11 +88,17 @@ export class Mouse {
     this.longPress = 0;
   }
 
+  /** By client pixels (the locked pointer's movement). */
   private moveBy(dx: number, dy: number): void {
     const [x0, y0] = this.toScreen(0, 0);
     const [x1, y1] = this.toScreen(dx, dy);
-    this.fx = Math.max(0, Math.min(319.99, this.fx + x1 - x0));
-    this.fy = Math.max(0, Math.min(199.99, this.fy + y1 - y0));
+    this.moveOnScreen(x1 - x0, y1 - y0);
+  }
+
+  /** By screen pixels, keeping the fraction. */
+  private moveOnScreen(dx: number, dy: number): void {
+    this.fx = Math.max(0, Math.min(319.99, this.fx + dx));
+    this.fy = Math.max(0, Math.min(199.99, this.fy + dy));
     this.x = Math.floor(this.fx);
     this.y = Math.floor(this.fy);
   }
@@ -98,11 +106,19 @@ export class Mouse {
   private setPos(x: number, y: number): void {
     this.x = Math.max(0, Math.min(319, Math.floor(x)));
     this.y = Math.max(0, Math.min(199, Math.floor(y)));
+    this.fx = this.x;
+    this.fy = this.y;
+  }
+
+  /** A gamepad as the mouse for the next sample: moves the pointer by screen pixels; `buttons` as PointerEvent.buttons. */
+  fromPad(dx: number, dy: number, buttons: number): void {
+    if (dx !== 0 || dy !== 0) this.moveOnScreen(dx, dy);
+    this.padButtons = buttons;
   }
 
   /** Take the button state for the next tick. */
   sample(): void {
-    this.sampled = this.buttons | this.pressedSince | this.longPress;
+    this.sampled = this.buttons | this.pressedSince | this.longPress | this.padButtons;
     this.pressedSince = 0;
   }
 

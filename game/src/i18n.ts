@@ -3,6 +3,16 @@
 // (story, manual, briefings, shop texts) are in texts.ts.
 
 export type Lang = 'de' | 'en';
+
+/** The names of a gamepad's shoulder buttons in the legend: an Xbox pad's, or a Steam Deck's (platform.ts). */
+export interface PadNames {
+  lb: string;
+  rb: string;
+  lt: string;
+  rt: string;
+}
+export const XBOX_NAMES: PadNames = { lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT' };
+export const STEAM_DECK_NAMES: PadNames = { lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2' };
 export const LANGUAGES: readonly Lang[] = ['de', 'en'];
 
 /** The default: German for a German system language (de, de-CH, de-AT …), English for every other. */
@@ -55,7 +65,8 @@ const de = {
   legend: {
     player: (n: number) => `Player${n}`,
     mouse: 'Maus: fliegen · links: ballern · rechts: hoch/tief · Mitte: Bonus selektieren · links+Mitte: Bonus abfeuern',
-    joystick: 'Joystick: fliegen · A/RT: ballern · B: hoch/tief · X/LB/Ziffernblock −: Bonus selektieren · Y/RB/Ziffernblock +: Bonus abfeuern',
+    joystick: (b: PadNames) =>
+      `Joystick: fliegen · A/${b.rt}: ballern · B: hoch/tief · X/${b.lb}/Ziffernblock −: Bonus selektieren · Y/${b.rb}/Ziffernblock +: Bonus abfeuern`,
     wasd: 'WASD: fliegen · X: ballern · C: hoch/tief · V: Bonus selektieren · X+V: Bonus abfeuern',
     touch: 'Touch: Steuerknüppel links, Knöpfe rechts',
     arrowsShared: 'Pfeile: fliegen · Komma: ballern · Punkt: hoch/tief · Minus: Bonus selektieren · Komma+Minus: Bonus abfeuern',
@@ -64,6 +75,16 @@ const de = {
     cheat: 'Cheat Code: gedanke',
     start: 'Pfeile: Version wählen · Enter oder Klick: starten · F: Vollbild',
     skip: (intro: boolean) => `Beliebige Taste oder Klick: ${intro ? 'Intro' : 'Video'} überspringen`,
+    // while a gamepad is in use (input/gamepad.ts)
+    pad: {
+      player: (b: PadNames) => `Gamepad: fliegen · A/${b.rt}: ballern · B: hoch/tief · X/${b.lb}: Bonus selektieren · Y/${b.rb}: Bonus abfeuern`,
+      menus: 'A: OK · B: zurück',
+      level: 'Menu: Pause, dann B: Spiel abbrechen',
+      pointer: 'Stick: Zeiger · A: Klick · B: Rechtsklick · View: zurück',
+      cheat: 'Y: Cheat',
+      start: 'Steuerkreuz: Version wählen · A: starten',
+      skip: (intro: boolean) => `A: ${intro ? 'Intro' : 'Video'} überspringen`,
+    },
   },
   // Touch buttons (remake)
   touch: { fire: 'Feuer', altitude: 'Höhe', select: 'Bonus<br>wählen', use: 'Bonus<br>feuern' },
@@ -113,7 +134,7 @@ const en: Strings = {
   legend: {
     player: (n: number) => `Player${n}`,
     mouse: 'Mouse: fly · left: fire · right: high/low · middle: select bonus · left+middle: use bonus',
-    joystick: 'Joystick: fly · A/RT: fire · B: high/low · X/LB/numpad −: select bonus · Y/RB/numpad +: use bonus',
+    joystick: (b: PadNames) => `Joystick: fly · A/${b.rt}: fire · B: high/low · X/${b.lb}/numpad −: select bonus · Y/${b.rb}/numpad +: use bonus`,
     wasd: 'WASD: fly · X: fire · C: high/low · V: select bonus · X+V: use bonus',
     touch: 'Touch: stick on the left, buttons on the right',
     arrowsShared: 'Arrows: fly · Comma: fire · Period: high/low · Minus: select bonus · Comma+Minus: use bonus',
@@ -122,6 +143,15 @@ const en: Strings = {
     cheat: 'Cheat code: gedanke',
     start: 'Arrows: choose version · Enter or click: start · F: fullscreen',
     skip: (intro: boolean) => `Any key or click: skip ${intro ? 'intro' : 'video'}`,
+    pad: {
+      player: (b: PadNames) => `Gamepad: fly · A/${b.rt}: fire · B: high/low · X/${b.lb}: select bonus · Y/${b.rb}: use bonus`,
+      menus: 'A: OK · B: back',
+      level: 'Menu: pause, then B: quit game',
+      pointer: 'Stick: pointer · A: click · B: right click · View: back',
+      cheat: 'Y: cheat',
+      start: 'D-pad: choose version · A: start',
+      skip: (intro: boolean) => `A: skip ${intro ? 'intro' : 'video'}`,
+    },
   },
   touch: { fire: 'Fire', altitude: 'High/<br>low', select: 'Select<br>bonus', use: 'Use<br>bonus' },
   loading: 'Loading…',
