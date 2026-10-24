@@ -195,6 +195,10 @@ export class TouchControls {
     this.root.addEventListener('pointermove', (e) => this.move(e));
     for (const type of ['pointerup', 'pointercancel'] as const) this.root.addEventListener(type, (e) => this.release(e));
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
+    // iOS zooms on a double tap (two quick taps on Feuer) despite touch-action: none, and then reports the zoomed
+    // viewport as window.innerWidth/innerHeight, which squeezes the layout. Cancelling touchend stops the zoom;
+    // nothing here needs the click it would synthesise (the game reads pointer events).
+    document.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
     window.addEventListener('blur', () => this.releaseAll());
   }
 
