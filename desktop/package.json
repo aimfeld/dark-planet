@@ -9,7 +9,8 @@
   "scripts": {
     "game": "cd ../game && npm run build:desktop",
     "start": "npm run game && electron .",
-    "dist": "npm run game && electron-builder --win --linux"
+    "dist": "npm run game && electron-builder --win --linux",
+    "dist:linux": "npm run game && electron-builder --linux"
   },
   "devDependencies": {
     "electron": "45.0.0",
@@ -24,6 +25,6 @@
     "asar": true,
     "electronLanguages": ["en-US", "de"],
     "win": { "target": "dir", "icon": "app/icons/icon-512.png", "executableName": "DarkPlanet" },
-    "linux": { "target": "dir", "icon": "app/icons/icon-512.png", "executableName": "darkplanet", "category": "Game" }
+    "linux": { "target": ["dir", "AppImage"], "artifactName": "DarkPlanet-${version}.${ext}", "icon": "app/icons/icon-512.png", "executableName": "darkplanet", "category": "Game" }
   }
 }

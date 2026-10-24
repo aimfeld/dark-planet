@@ -80,6 +80,8 @@ caches belong to the origin, so they stay, unless the uninstall dialog's "also c
 - `npm run dist`: the same build, packaged by electron-builder as `dist/win-unpacked/` (`DarkPlanet.exe`) and
   `dist/linux-unpacked/` (`darkplanet`), the folders a Steam depot uploads. Building for Windows on Linux
   needs Wine (for the exe's icon and version info).
+- `npm run dist:linux`: only the Linux build (no Wine needed): `dist/linux-unpacked/` and
+  `dist/DarkPlanet-<version>.AppImage`, one file for testing on a Steam Deck before the Steam release.
 - `npx electron smoke.mjs <dir>`: a check without a visible window. It goes from the start screen through the
   intro to the main menu, streams and seeks a music track, presses R, and leaves screenshots, the page's
   console and the `settings.json` it wrote in `<dir>`.
@@ -95,6 +97,18 @@ the app through the bridge the preload script provides (`game/src/platform.ts`):
 - The app starts fullscreen. F, Alt+Enter and F11 toggle it. Exit in the main menu quits the app.
 - The music starts without a key press (`autoplayPolicy`). There are no touch controls by default. On a Steam
   Deck, the player uses its controls.
+
+### Steam Deck test with the AppImage
+1. Copy `dist/DarkPlanet-<version>.AppImage` to the Deck (USB stick, KDE Connect, `scp`), e.g. to `~/Games/`
+   (`/home` survives SteamOS updates).
+2. Desktop Mode: Dolphin → Properties → Permissions → "Is executable" (or `chmod +x`).
+3. Steam → Games → Add a Non-Steam Game → Browse… (file type "All files") → the AppImage. Or in Konsole:
+   `steamos-add-to-steam ~/Games/DarkPlanet-<version>.AppImage` while Steam runs.
+4. Game Mode: controller layout "Gamepad with Mouse Trackpad" (the default planned for Steamworks, PLAN.md).
+
+The AppImage's AppRun adds `--no-sandbox` by itself when the system blocks user namespaces. It doesn't update
+itself: copy the new file over the old one. A PWA in Flatpak Chrome works too, but needs Flatpak overrides and
+was poor to use (tried in session 29).
 
 ## Hosting
 The game is published on GitHub Pages: https://aimfeld.github.io/dark-planet/

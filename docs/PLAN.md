@@ -462,6 +462,18 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
   hangar, a briefing, a level (fly, pause, quit) and into the shop. Text is large enough: the 6 px DEFAULT font
   becomes 24 px at 4× (the minimum is 9 px at 1280 × 800). Target Verified, but Playable is fine. Controls in
   `docs/controls.md` "Gamepad".
+- [x] AppImage for testing on the Deck before the Steam release (session 29, 2026-10-24): the linux target is now
+  `["dir", "AppImage"]`; `npm run dist:linux` builds `dist/linux-unpacked/` and `dist/DarkPlanet-0.1.0.AppImage`
+  (168 MB) without Windows/Wine. Its AppRun adds `--no-sandbox` by itself when `unshare -Ur` fails. Smoke test
+  passes (one earlier run hung after the hangar, the rerun passed: flaky timing). The PWA route on the Deck
+  (Flatpak Chrome) was tried first and dropped: Flatpak overrides, no .desktop launcher, poor usability.
+- [ ] **User:** copy the AppImage to the Deck, add it as a non-Steam game, play in Game Mode
+  (development.md "Steam Deck test with the AppImage"). **Status (user, 2026-10-24):** it runs in Desktop Mode
+  (double-click). In Game Mode, Steam's spinner turns forever and no window appears, also with the launch option
+  `--ozone-platform=x11`. "Exit game" hangs at "Exiting game..." (left through the power menu). Cause unknown;
+  no log yet. Next: run it in a nested gamescope in Desktop Mode (`gamescope -W 1280 -H 800 -- <AppImage>`),
+  where its output shows in Konsole. Suspects to check against that output: Electron's Wayland/X11 choice, the
+  window being created hidden until `ready-to-show`, the AppImage's FUSE mount.
 - [ ] **User:** play with a real gamepad (Windows PC) and later on the Deck. Check the pointer speed in the hangar
   and shop, the A/B mapping, pause/quit, and two players with two pads. I couldn't test real hardware: browser
   gamepad support can vary by controller and OS.
