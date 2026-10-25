@@ -477,6 +477,13 @@ Electron as already planned in "Architecture": the same Chromium on Windows, Lin
 - [ ] **User:** play with a real gamepad (Windows PC) and later on the Deck. Check the pointer speed in the hangar
   and shop, the A/B mapping, pause/quit, and two players with two pads. I couldn't test real hardware: browser
   gamepad support can vary by controller and OS.
+  **Status (user, 2026-10-25, Windows 11 laptop):** menus and the hangar pointer worked, but in a level the ship
+  neither moved nor fired, with P1 on Keyboard or Joystick. Cause (inferred; reproduced in the smoke test with a fake
+  idle pad in slot 0): the menus read all pads at once, a level reads one by index, and Windows lists pads that
+  aren't played (one controller as XInput and HID, virtual pads), so pad #0 was an idle one. Fix: a pad counts
+  only once used (a button, or a stick moved from its resting position; a stuck axis doesn't count). Also fixed:
+  an inactive Joystick P2 no longer pushes a keyboard P1 to the second pad. `desktop/smoke.mjs` now puts an idle
+  pad first. New `dist/DarkPlanet-win.zip` built (2026-10-25); the user tests again.
 - [ ] Steamworks (at upload): controller support "Full"; Steam Input default layout "Gamepad with Mouse
   Trackpad", so the Deck's right trackpad is the mouse.
 - [ ] Steam Deck: the legend below the picture takes about 50 px of 800, so classic shows at 3.75× instead of a

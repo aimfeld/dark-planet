@@ -46,7 +46,9 @@ the shoulder buttons L1/R1/L2/R2.
 | Pause | Menu or A = resume, B or View = quit the level |
 
 In a level the Keyboard player also takes the first gamepad, so neither keys nor pad need choosing. If two players
-use keys, player 2 takes a second pad. "Joystick" in the options still gives a player the first pad by itself.
+use keys, player 2 takes a second pad. "Joystick" in the options still gives a player the first pad by itself. A
+pad counts once it is used (a button or a stick), so idle pads that Windows lists (a controller seen twice, virtual
+pads) don't take a player's place.
 On a Steam Deck the right trackpad is the mouse (Steam Input's "Gamepad with Mouse Trackpad" layout) and the
 touchscreen taps as clicks, so the hangar and the shop also work that way.
 

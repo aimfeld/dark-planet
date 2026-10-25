@@ -200,6 +200,22 @@ describe('gamepads (remake: no Joystick setting needed)', () => {
     expect(padAssignment([2, 4], [true, true])).toEqual([-1, 0]);
     expect(padAssignment([1, 3], [true, true])).toEqual([1, 0]);
     expect(padAssignment([5, 1], [true, false])).toEqual([-1, -1]);
+    expect(padAssignment([1, 3], [true, false])).toEqual([0, -1]); // P2's Joystick doesn't play: P1 keeps the pad
+  });
+
+  it('only pads in use count: an idle or stuck extra pad (Windows lists those) takes no player\'s place', () => {
+    const idle = fakePad(), stuck = fakePad([], [-1, -1, 0, 0]);
+    connect(idle, stuck, fakePad());
+    const pad = new Gamepad();
+    pad.sample('menu');
+    expect([pad.count, pad.anyKey(), pad.used]).toEqual([0, false, false]);
+    connect(idle, stuck, fakePad([0], [0.9, 0, 0, 0]));
+    pad.sample('level');
+    expect(pad.count).toBe(1);
+    expect(pad.player(0)).toMatchObject({ right: true, left: false, up: false, fire: true });
+    connect(idle, stuck, fakePad([], [0, 0, 0, 0]));
+    pad.sample('level');
+    expect(pad.count).toBe(1); // still in use without a button held
   });
 
   it('a keyboard player also flies with its pad; P2 gets the second pad', () => {

@@ -30,10 +30,14 @@ async function shot(win, name) {
   writeFileSync(join(out, `${name}.png`), (await win.webContents.capturePage()).toPNG());
 }
 
-/** A fake standard gamepad (navigator.getGamepads): the buttons in `window.__pad.buttons`, the axes in `.axes`. */
+/**
+ * A fake standard gamepad (navigator.getGamepads): the buttons in `window.__pad.buttons`, the axes in `.axes`.
+ * An idle pad comes first, as Windows lists them (one controller twice, virtual pads).
+ */
 const FAKE_PAD = `window.__pad = { buttons: [], axes: [0, 0, 0, 0] };
-  navigator.getGamepads = () => [{ connected: true, mapping: 'standard', axes: window.__pad.axes,
-    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: window.__pad.buttons.includes(i), value: 0 })) }];
+  const fake = (id, buttons, axes) => ({ id, connected: true, mapping: 'standard', axes,
+    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: buttons.includes(i), value: 0 })) });
+  navigator.getGamepads = () => [fake('idle', [], [0, 0, 0, 0]), fake('pad', window.__pad.buttons, window.__pad.axes)];
   0;`; // (executeJavaScript returns the last value, and a function can't be sent back)
 const A = 0, B = 1, MENU = 9;
 

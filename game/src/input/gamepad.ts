@@ -7,6 +7,8 @@
 // start screen to the ending with a pad alone. The screen decides how (`PadMode`, main.ts): in the menus the
 // buttons are keys (A Enter, B Esc, ...), in the hangar and the shop, which the original drives with the mouse,
 // the sticks move the pointer and A / B are the left / right button.
+// Windows often lists more pads than are plugged in (one controller as both XInput and HID, Steam's or vJoy's
+// virtual pads), so a pad only counts once it is used: a button pressed or a stick moved from where it rested.
 
 import { NO_INPUT, type PlayerInput } from '../sim/state';
 
@@ -43,7 +45,10 @@ function curve(v: number): number {
 }
 
 export class Gamepad {
+  /** The pads in use, in slot order (a player's pad index counts among these). */
   private pads: globalThis.Gamepad[] = [];
+  /** Per slot of navigator.getGamepads(): the pad's id, its axes when first seen, and whether it has been used. */
+  private readonly slots = new Map<number, { id: string; rest: number[]; live: boolean }>();
   private readonly codes = new Set<string>();
   /** Pointer mode: how far the pads move the pointer this tick (screen pixels) and the mouse buttons they hold. */
   readonly pointer = { dx: 0, dy: 0, buttons: 0 };
@@ -52,9 +57,19 @@ export class Gamepad {
 
   /** Read the connected gamepads for the next tick. */
   sample(mode: PadMode = 'level'): void {
-    this.pads = typeof navigator.getGamepads === 'function'
-      ? navigator.getGamepads().filter((p): p is globalThis.Gamepad => p !== null && p.connected)
-      : [];
+    const all = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
+    this.pads = [];
+    all.forEach((p, slot) => {
+      if (p === null || !p.connected) {
+        this.slots.delete(slot);
+        return;
+      }
+      let s = this.slots.get(slot);
+      if (s === undefined || s.id !== p.id) this.slots.set(slot, (s = { id: p.id, rest: [...p.axes], live: false }));
+      const rest = s.rest;
+      s.live ||= p.buttons.some((b) => b.pressed) || p.axes.some((v, i) => Math.abs(v - (rest[i] ?? 0)) > DEAD_ZONE);
+      if (s.live) this.pads.push(p);
+    });
     this.codes.clear();
     Object.assign(this.pointer, { dx: 0, dy: 0, buttons: 0 });
     this.used = false;
@@ -77,7 +92,7 @@ export class Gamepad {
     }
   }
 
-  /** How many gamepads are connected. */
+  /** How many gamepads are in use. */
   get count(): number {
     return this.pads.length;
   }

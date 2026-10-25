@@ -18,13 +18,13 @@ export function mousePlayer(m: Mouse): PlayerInput {
 }
 
 /**
- * The gamepad (index among the connected ones) each player takes, or -1: a Joystick player the first, then the
- * keyboard players (types 1 and 4) in the game, in order, the next ones. With one pad and two keyboard players,
+ * The gamepad (index among the ones in use) each player takes, or -1: a Joystick player in the game the first,
+ * then the keyboard players (types 1 and 4) in the game, in order, the next ones. With one pad and two keyboard players,
  * P1 has it; a second pad goes to P2.
  */
 export function padAssignment(control: readonly number[], active: readonly boolean[]): number[] {
-  let next = control.includes(3) ? 1 : 0;
-  return control.map((c, i) => (c === 3 ? 0 : (c === 1 || c === 4) && active[i] ? next++ : -1));
+  let next = control.some((c, i) => c === 3 && active[i]) ? 1 : 0;
+  return control.map((c, i) => (!active[i] ? -1 : c === 3 ? 0 : c === 1 || c === 4 ? next++ : -1));
 }
 
 /** Both inputs' flags together (a keyboard player with a pad); the keyboard's device stays. */
